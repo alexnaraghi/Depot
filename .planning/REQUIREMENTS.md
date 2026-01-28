@@ -62,21 +62,21 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ARCH-01 | TBD | Pending |
-| ARCH-02 | TBD | Pending |
-| ARCH-03 | TBD | Pending |
-| CORE-01 | TBD | Pending |
-| CORE-02 | TBD | Pending |
-| CORE-03 | TBD | Pending |
-| CORE-04 | TBD | Pending |
-| CORE-05 | TBD | Pending |
-| CORE-06 | TBD | Pending |
+| ARCH-01 | Phase 1 | Pending |
+| ARCH-02 | Phase 1 | Pending |
+| ARCH-03 | Phase 1 | Pending |
+| CORE-01 | Phase 2 | Pending |
+| CORE-02 | Phase 2 | Pending |
+| CORE-03 | Phase 2 | Pending |
+| CORE-04 | Phase 2 | Pending |
+| CORE-05 | Phase 2 | Pending |
+| CORE-06 | Phase 2 | Pending |
 
 **Coverage:**
 - v1 requirements: 9 total
-- Mapped to phases: 0
-- Unmapped: 9 ⚠️
+- Mapped to phases: 9
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-01-27*
-*Last updated: 2026-01-27 after initial definition*
+*Last updated: 2026-01-27 after roadmap creation*
