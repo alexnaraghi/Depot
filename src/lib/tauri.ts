@@ -42,6 +42,7 @@ export interface SyncProgress {
 export interface P4ClientInfo {
   client_name: string;
   client_root: string;
+  client_stream: string | null;
   user_name: string;
   server_address: string;
 }
@@ -100,10 +101,10 @@ export async function invokeP4Info(): Promise<P4ClientInfo> {
  * Get file status for paths (or all workspace files if empty).
  * Use for refreshing file tree or checking specific file status.
  * @param paths - Specific paths to check, or empty for all workspace files
- * @param clientRoot - P4 workspace root directory (from p4 info)
+ * @param depotPath - Depot path to query (e.g., "//stream/main/...") when paths is empty
  */
-export async function invokeP4Fstat(paths: string[] = [], clientRoot?: string): Promise<P4FileInfo[]> {
-  return invoke<P4FileInfo[]>('p4_fstat', { paths, clientRoot });
+export async function invokeP4Fstat(paths: string[] = [], depotPath?: string): Promise<P4FileInfo[]> {
+  return invoke<P4FileInfo[]>('p4_fstat', { paths, depotPath });
 }
 
 /**
@@ -150,15 +151,15 @@ export async function invokeP4Submit(changelist: number, description?: string): 
  * Sync files with streaming progress.
  * Use for syncing workspace to latest revision.
  * @param paths - Specific paths to sync, or empty for all workspace files
- * @param clientRoot - P4 workspace root directory (from p4 info)
+ * @param depotPath - Depot path to sync (e.g., "//stream/main/...") when paths is empty
  * @param onProgress - Callback for streaming progress updates
  */
 export async function invokeP4Sync(
   paths: string[],
-  clientRoot: string | undefined,
+  depotPath: string | undefined,
   onProgress: (progress: SyncProgress) => void
 ): Promise<string> {
   const channel = new Channel<SyncProgress>();
   channel.onmessage = onProgress;
-  return invoke<string>('p4_sync', { paths, clientRoot, onProgress: channel });
+  return invoke<string>('p4_sync', { paths, depotPath, onProgress: channel });
 }

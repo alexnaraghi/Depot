@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { invokeP4Sync, invokeKillProcess, SyncProgress } from '@/lib/tauri';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { invokeP4Sync, invokeKillProcess, invokeP4Info, SyncProgress } from '@/lib/tauri';
 import { useOperationStore } from '@/store/operation';
 import { useFileTreeStore } from '@/stores/fileTreeStore';
 
@@ -19,6 +20,8 @@ export interface SyncConflict {
  * - Supports cancellation via process kill
  */
 export function useSync() {
+  const queryClient = useQueryClient();
+
   const {
     startOperation,
     setProcessId,
@@ -30,7 +33,20 @@ export function useSync() {
     currentOperation,
   } = useOperationStore();
 
-  const { updateFile, rootPath } = useFileTreeStore();
+  const { updateFile } = useFileTreeStore();
+
+  // Get client info for depot path
+  const { data: clientInfo } = useQuery({
+    queryKey: ['p4Info'],
+    queryFn: invokeP4Info,
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+  });
+
+  // Build depot path for syncing (e.g., "//stream/main/...")
+  const depotPath = clientInfo?.client_stream
+    ? `${clientInfo.client_stream}/...`
+    : undefined;
 
   const [conflict, setConflict] = useState<SyncConflict | null>(null);
   const [totalFiles, setTotalFiles] = useState(0);
@@ -62,10 +78,10 @@ export function useSync() {
         syncArgs.unshift('-f');
       }
 
-      // Pass rootPath to sync from correct directory
+      // Pass depot path for syncing (avoids -d flag issues with DVCS)
       const processId = await invokeP4Sync(
         syncArgs,
-        rootPath ?? undefined,
+        depotPath,
         (progress: SyncProgress) => {
           // Handle conflict detection
           if (progress.is_conflict) {
@@ -123,6 +139,10 @@ export function useSync() {
       // Sync completes when backend process exits
       // For now, mark as complete (backend will send completion via events in future)
       completeOperation(true);
+
+      // Invalidate file tree query to refresh all file states
+      // This ensures reverted files, synced files, etc. are all updated
+      await queryClient.invalidateQueries({ queryKey: ['fileTree'] });
     } catch (error) {
       completeOperation(false, String(error));
       throw error;
@@ -136,9 +156,10 @@ export function useSync() {
     completeOperation,
     addOutputLine,
     updateFile,
-    rootPath,
+    depotPath,
     syncedFiles,
     totalFiles,
+    queryClient,
   ]);
 
   /**

@@ -1,22 +1,22 @@
 import { useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useOperationStore } from '@/store/operation';
-import { useFileTreeStore } from '@/stores/fileTreeStore';
 import { invokeP4Edit, invokeP4Revert, invokeP4Submit } from '@/lib/tauri';
 import toast from 'react-hot-toast';
-import { FileStatus } from '@/types/p4';
 
 /**
  * Hook for P4 file operations with state management
  *
  * Provides checkout, revert, and submit operations with:
  * - Operation store integration for status bar feedback
- * - File tree store updates after server confirmation
+ * - Query invalidation for UI refresh after server confirmation
  * - Toast notifications for user feedback
+ * - Output panel logging
  * - Error handling
  */
 export function useFileOperations() {
-  const { startOperation, completeOperation } = useOperationStore();
-  const { updateFile } = useFileTreeStore();
+  const queryClient = useQueryClient();
+  const { startOperation, completeOperation, addOutputLine } = useOperationStore();
 
   /**
    * Checkout files for editing
@@ -29,27 +29,33 @@ export function useFileOperations() {
     const operationId = `edit-${Date.now()}`;
     startOperation(operationId, `Checking out ${paths.length} file(s)`);
 
+    // Log to output panel
+    addOutputLine(`p4 edit ${paths.join(' ')}`, false);
+
     try {
       const result = await invokeP4Edit(paths, changelist);
 
-      // Update store with new file status (after server confirmation)
+      // Log each checked out file
       for (const file of result) {
-        updateFile(file.depot_path, {
-          status: FileStatus.CheckedOut,
-          action: file.action as any,
-          changelist: file.changelist,
-        });
+        addOutputLine(`${file.depot_path}#${file.revision} - opened for ${file.action || 'edit'}`, false);
       }
 
       completeOperation(true);
+
+      // Invalidate queries to refresh file tree and changelist panel
+      await queryClient.invalidateQueries({ queryKey: ['fileTree'] });
+      await queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
+      await queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
+
       toast.success(`Checked out ${result.length} file(s)`);
       return result;
     } catch (error) {
+      addOutputLine(`Error: ${error}`, true);
       completeOperation(false, String(error));
       toast.error(`Checkout failed: ${error}`);
       throw error;
     }
-  }, [startOperation, completeOperation, updateFile]);
+  }, [startOperation, completeOperation, addOutputLine, queryClient]);
 
   /**
    * Revert files to depot state (discard local changes)
@@ -61,27 +67,33 @@ export function useFileOperations() {
     const operationId = `revert-${Date.now()}`;
     startOperation(operationId, `Reverting ${paths.length} file(s)`);
 
+    // Log to output panel
+    addOutputLine(`p4 revert ${paths.join(' ')}`, false);
+
     try {
       const reverted = await invokeP4Revert(paths);
 
-      // Update store: reverted files are now synced
+      // Log each reverted file
       for (const depotPath of reverted) {
-        updateFile(depotPath, {
-          status: FileStatus.Synced,
-          action: undefined,
-          changelist: undefined,
-        });
+        addOutputLine(`${depotPath} - reverted`, false);
       }
 
       completeOperation(true);
+
+      // Invalidate queries to refresh file tree and changelist panel
+      await queryClient.invalidateQueries({ queryKey: ['fileTree'] });
+      await queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
+      await queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
+
       toast.success(`Reverted ${reverted.length} file(s)`);
       return reverted;
     } catch (error) {
+      addOutputLine(`Error: ${error}`, true);
       completeOperation(false, String(error));
       toast.error(`Revert failed: ${error}`);
       throw error;
     }
-  }, [startOperation, completeOperation, updateFile]);
+  }, [startOperation, completeOperation, addOutputLine, queryClient]);
 
   /**
    * Submit changelist to depot
@@ -94,17 +106,29 @@ export function useFileOperations() {
     const operationId = `submit-${Date.now()}`;
     startOperation(operationId, `Submitting changelist ${changelist}`);
 
+    // Log to output panel
+    addOutputLine(`p4 submit -c ${changelist}`, false);
+
     try {
       const submittedCl = await invokeP4Submit(changelist, description);
+
+      addOutputLine(`Change ${submittedCl} submitted.`, false);
       completeOperation(true);
+
+      // Invalidate queries to refresh file tree and changelist panel
+      await queryClient.invalidateQueries({ queryKey: ['fileTree'] });
+      await queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
+      await queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
+
       toast.success(`Submitted as changelist ${submittedCl}`);
       return submittedCl;
     } catch (error) {
+      addOutputLine(`Error: ${error}`, true);
       completeOperation(false, String(error));
       toast.error(`Submit failed: ${error}`);
       throw error;
     }
-  }, [startOperation, completeOperation]);
+  }, [startOperation, completeOperation, addOutputLine, queryClient]);
 
   return {
     checkout,

@@ -28,14 +28,18 @@ export interface ChangelistTreeNode {
  * Build hierarchical file tree from flat file list
  *
  * @param files - Flat list of P4 files
- * @param rootPath - Workspace root path (e.g., "//depot/project")
+ * @param rootPath - Local workspace root path (e.g., "C:\\workspace" or "/home/user/workspace")
  * @returns Array of top-level tree nodes
  */
 export function buildFileTree(files: P4File[], rootPath: string): FileTreeNode[] {
   if (files.length === 0) return [];
 
-  // Normalize root path
-  const normalizedRoot = rootPath.endsWith('/') ? rootPath : `${rootPath}/`;
+  // Normalize root path - handle both Windows and Unix paths
+  // Replace backslashes with forward slashes for consistent comparison
+  let normalizedRoot = rootPath.replace(/\\/g, '/');
+  if (!normalizedRoot.endsWith('/')) {
+    normalizedRoot += '/';
+  }
 
   // Map of path -> node for O(1) lookups
   const nodeMap = new Map<string, FileTreeNode>();
@@ -49,19 +53,22 @@ export function buildFileTree(files: P4File[], rootPath: string): FileTreeNode[]
   };
   nodeMap.set(normalizedRoot, rootNode);
 
-  // Sort files by depot path for consistent ordering
+  // Sort files by local path for consistent ordering
   const sortedFiles = [...files].sort((a, b) =>
-    a.depotPath.localeCompare(b.depotPath)
+    a.localPath.localeCompare(b.localPath)
   );
 
   // Process each file
   for (const file of sortedFiles) {
+    // Normalize local path for comparison
+    const normalizedLocalPath = file.localPath.replace(/\\/g, '/');
+
     // Get relative path from root
-    if (!file.depotPath.startsWith(normalizedRoot)) {
+    if (!normalizedLocalPath.startsWith(normalizedRoot)) {
       continue; // Skip files outside root
     }
 
-    const relativePath = file.depotPath.slice(normalizedRoot.length);
+    const relativePath = normalizedLocalPath.slice(normalizedRoot.length);
     const segments = relativePath.split('/').filter(s => s.length > 0);
 
     if (segments.length === 0) continue;
@@ -90,7 +97,7 @@ export function buildFileTree(files: P4File[], rootPath: string): FileTreeNode[]
       parentNode = folderNode;
     }
 
-    // Add file node as leaf
+    // Add file node as leaf (use depotPath as id for uniqueness)
     const fileName = segments[segments.length - 1];
     const fileNode: FileTreeNode = {
       id: file.depotPath,

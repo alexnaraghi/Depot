@@ -35,11 +35,10 @@ impl ProcessManager {
             // Use taskkill for reliable tree killing.
             #[cfg(target_os = "windows")]
             {
-                if let Some(pid) = child.id() {
-                    let _ = std::process::Command::new("taskkill")
-                        .args(["/F", "/T", "/PID", &pid.to_string()])
-                        .output();
-                }
+                let pid = child.id();
+                let _ = std::process::Command::new("taskkill")
+                    .args(["/F", "/T", "/PID", &pid.to_string()])
+                    .output();
             }
             child.kill().map_err(|e| e.to_string())?;
             Ok(true)
@@ -54,11 +53,10 @@ impl ProcessManager {
         for (_, mut child) in processes.drain() {
             #[cfg(target_os = "windows")]
             {
-                if let Some(pid) = child.id() {
-                    let _ = std::process::Command::new("taskkill")
-                        .args(["/F", "/T", "/PID", &pid.to_string()])
-                        .output();
-                }
+                let pid = child.id();
+                let _ = std::process::Command::new("taskkill")
+                    .args(["/F", "/T", "/PID", &pid.to_string()])
+                    .output();
             }
             let _ = child.kill();
         }

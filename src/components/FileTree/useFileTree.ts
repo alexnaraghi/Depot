@@ -60,7 +60,7 @@ function mapP4FileInfo(info: P4FileInfo): P4File {
 export function useFileTree() {
   const { rootPath, setFiles, setLoading, setRootPath } = useFileTreeStore();
 
-  // First, query for P4 client info to get the workspace root
+  // First, query for P4 client info to get the workspace root and stream
   const { data: clientInfo, isLoading: clientInfoLoading, error: clientInfoError } = useQuery({
     queryKey: ['p4Info'],
     queryFn: invokeP4Info,
@@ -75,14 +75,19 @@ export function useFileTree() {
     }
   }, [clientInfo, rootPath, setRootPath]);
 
+  // Build depot path for querying (e.g., "//stream/main/...")
+  const depotPath = clientInfo?.client_stream
+    ? `${clientInfo.client_stream}/...`
+    : undefined;
+
   // Query for workspace files (only after we have rootPath)
   const { data: files = [], isLoading: filesLoading, error: filesError, refetch } = useQuery({
-    queryKey: ['fileTree', rootPath],
+    queryKey: ['fileTree', rootPath, depotPath],
     queryFn: async () => {
       setLoading(true);
       try {
-        // Pass rootPath to p4 fstat so it runs from the correct directory
-        const fileInfos = await invokeP4Fstat([], rootPath ?? undefined);
+        // Pass depot path to query files (avoids -d flag issues with DVCS)
+        const fileInfos = await invokeP4Fstat([], depotPath);
         const mappedFiles = fileInfos.map(mapP4FileInfo);
         setFiles(mappedFiles);
         return mappedFiles;

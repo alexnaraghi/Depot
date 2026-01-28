@@ -35,6 +35,7 @@ pub struct P4Changelist {
 pub struct P4ClientInfo {
     pub client_name: String,
     pub client_root: String,
+    pub client_stream: Option<String>,
     pub user_name: String,
     pub server_address: String,
 }
@@ -57,6 +58,7 @@ pub async fn p4_info() -> Result<P4ClientInfo, String> {
     // Parse -ztag info output
     let mut client_name = String::new();
     let mut client_root = String::new();
+    let mut client_stream: Option<String> = None;
     let mut user_name = String::new();
     let mut server_address = String::new();
 
@@ -66,6 +68,7 @@ pub async fn p4_info() -> Result<P4ClientInfo, String> {
                 match key {
                     "clientName" => client_name = value.to_string(),
                     "clientRoot" => client_root = value.to_string(),
+                    "clientStream" => client_stream = Some(value.to_string()),
                     "userName" => user_name = value.to_string(),
                     "serverAddress" => server_address = value.to_string(),
                     _ => {}
@@ -81,29 +84,28 @@ pub async fn p4_info() -> Result<P4ClientInfo, String> {
     Ok(P4ClientInfo {
         client_name,
         client_root,
+        client_stream,
         user_name,
         server_address,
     })
 }
 
 /// Get file status information for given paths
+///
+/// When paths is empty, uses depot_path if provided (e.g., "//stream/main/...")
+/// to query all files in the workspace. This avoids issues with -d flag in DVCS setups.
 #[tauri::command]
-pub async fn p4_fstat(paths: Vec<String>, client_root: Option<String>) -> Result<Vec<P4FileInfo>, String> {
-    // Build command: p4 [-d client_root] -ztag fstat <paths>
+pub async fn p4_fstat(paths: Vec<String>, depot_path: Option<String>) -> Result<Vec<P4FileInfo>, String> {
+    // Build command: p4 -ztag fstat <paths>
     let mut args: Vec<String> = Vec::new();
-
-    // Add -d flag if client_root provided (run from workspace directory)
-    if let Some(ref root) = client_root {
-        args.push("-d".to_string());
-        args.push(root.clone());
-    }
 
     args.push("-ztag".to_string());
     args.push("fstat".to_string());
 
     if paths.is_empty() {
-        // Default to all files in workspace
-        args.push("...".to_string());
+        // Use depot_path if provided (e.g., "//stream/main/..."), otherwise fall back to "//..."
+        let query_path = depot_path.unwrap_or_else(|| "//...".to_string());
+        args.push(query_path);
     } else {
         args.extend(paths);
     }
@@ -454,25 +456,40 @@ pub async fn p4_revert(
 }
 
 /// Submit a changelist
+///
+/// For the default changelist (id=0), uses `p4 submit -d "description"`.
+/// For numbered changelists, uses `p4 submit -c <changelist>`.
 #[tauri::command]
 pub async fn p4_submit(
     changelist: i32,
     description: Option<String>,
     app: AppHandle,
 ) -> Result<i32, String> {
-    // If description provided, update the changelist first
-    if let Some(desc) = description {
-        update_changelist_description(changelist, &desc)?;
-    }
-
-    // Execute: p4 submit -c <changelist>
-    let output = Command::new("p4")
-        .args(&["submit", "-c", &changelist.to_string()])
-        .output()
-        .map_err(|e| format!("Failed to execute p4 submit: {}", e))?;
+    let output = if changelist == 0 {
+        // Default changelist: must use -d flag with description
+        let desc = description.unwrap_or_else(|| "Submitted from P4Now".to_string());
+        Command::new("p4")
+            .args(&["submit", "-d", &desc])
+            .output()
+            .map_err(|e| format!("Failed to execute p4 submit: {}", e))?
+    } else {
+        // Named changelist: update description if provided, then submit with -c
+        if let Some(ref desc) = description {
+            update_changelist_description(changelist, desc)?;
+        }
+        Command::new("p4")
+            .args(&["submit", "-c", &changelist.to_string()])
+            .output()
+            .map_err(|e| format!("Failed to execute p4 submit: {}", e))?
+    };
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
+
+    // Check for errors first
+    if !output.status.success() {
+        return Err(stderr.to_string());
+    }
 
     // Parse output to get submitted changelist number
     // p4 submit output: "Change 12345 submitted."
@@ -485,11 +502,6 @@ pub async fn p4_submit(
                 .and_then(|s| s.parse::<i32>().ok())
         })
         .unwrap_or(changelist);
-
-    // Check for errors
-    if !output.status.success() {
-        return Err(stderr.to_string());
-    }
 
     // Emit changelist-submitted event
     let _ = app.emit("changelist-submitted", serde_json::json!({
@@ -573,27 +585,26 @@ pub struct SyncProgress {
 }
 
 /// Sync files from depot (get latest)
+///
+/// When paths is empty, uses depot_path if provided (e.g., "//stream/main/...")
+/// to sync all files in the workspace.
 #[tauri::command]
 pub async fn p4_sync(
     paths: Vec<String>,
-    client_root: Option<String>,
+    depot_path: Option<String>,
     on_progress: Channel<SyncProgress>,
     state: State<'_, ProcessManager>,
     app: AppHandle,
 ) -> Result<String, String> {
-    // Build command: p4 [-d client_root] sync <paths>
+    // Build command: p4 sync <paths>
     let mut args: Vec<String> = Vec::new();
-
-    // Add -d flag if client_root provided (run from workspace directory)
-    if let Some(ref root) = client_root {
-        args.push("-d".to_string());
-        args.push(root.clone());
-    }
 
     args.push("sync".to_string());
 
     if paths.is_empty() {
-        args.push("...".to_string());
+        // Use depot_path if provided (e.g., "//stream/main/..."), otherwise fall back to "//..."
+        let query_path = depot_path.unwrap_or_else(|| "//...".to_string());
+        args.push(query_path);
     } else {
         args.extend(paths);
     }
@@ -632,12 +643,19 @@ pub async fn p4_sync(
         std::thread::spawn(move || {
             let reader = BufReader::new(stderr);
             for line in reader.lines().map_while(Result::ok) {
-                // Emit errors as conflict progress
+                // Skip informational messages that P4 sends to stderr
+                if line.contains("file(s) up-to-date") {
+                    // This is not an error - workspace is already synced
+                    continue;
+                }
+
+                // Only emit actual errors/conflicts
+                let is_conflict = line.contains("can't clobber") || line.contains("can't overwrite");
                 let _ = on_progress.send(SyncProgress {
                     depot_path: line.clone(),
-                    action: "error".to_string(),
+                    action: if is_conflict { "conflict" } else { "error" }.to_string(),
                     revision: 0,
-                    is_conflict: true,
+                    is_conflict,
                 });
             }
         });

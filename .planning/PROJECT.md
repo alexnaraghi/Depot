@@ -10,19 +10,22 @@ The user is never blocked — operations are always cancellable, errors are non-
 
 ## Requirements
 
-### Validated
+### Validated (v1.0 MVP - Shipped 2026-01-28)
 
-(None yet — ship to validate)
+- [x] Sync / Get Latest from depot
+- [x] View pending changelist (checked-out and modified files)
+- [x] Submit changes with changelist description
+- [x] Checkout files for editing
+- [x] Revert changes (discard local modifications)
+- [x] File status indicators (modified, synced, checked out)
+- [x] Graceful error handling — non-blocking, cancellable, recoverable
+- [x] All operations async (never freeze UI)
 
 ### Active
 
 - [ ] Configure P4 connection (server, user, client workspace) in app settings
-- [ ] Sync / Get Latest from depot
-- [ ] View pending changelist (checked-out and modified files)
-- [ ] Submit changes with changelist description
 - [ ] Open file diff in external diff tool
 - [ ] View file history
-- [ ] Graceful error handling — non-blocking, cancellable, recoverable
 - [ ] Clean, modern visual design
 - [ ] Keyboard shortcuts for common operations
 
@@ -49,9 +52,10 @@ The user is never blocked — operations are always cancellable, errors are non-
 - Works over VPN — connection can be intermittent
 
 **Tech direction:**
-- Web tech stack (Electron or Tauri) for AI-friendly development
-- No requirement for heavy IDE — should work with simple editors
-- Windows target platform
+- Tauri 2.0 + React 19 for desktop app
+- Rust backend for P4 process management
+- TanStack Query for data fetching, Zustand for state
+- shadcn/ui components with Tailwind CSS
 
 ## Constraints
 
@@ -63,9 +67,23 @@ The user is never blocked — operations are always cancellable, errors are non-
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| External diff tool only | Avoids building complex diff UI; leverages existing tools | — Pending |
-| Single workspace | Simplifies POC; multi-workspace adds significant complexity | — Pending |
-| Settings in app (not P4CONFIG) | More explicit control, easier to debug connection issues | — Pending |
+| External diff tool only | Avoids building complex diff UI; leverages existing tools | Validated |
+| Single workspace | Simplifies POC; multi-workspace adds significant complexity | Validated |
+| Settings in app (not P4CONFIG) | More explicit control, easier to debug connection issues | Validated |
+| Tauri 2.0 over Electron | Smaller binary, Rust backend for process management | Validated |
+| tokio::sync::Mutex | Async safety across await points in Rust | Validated |
+| TanStack Query + Zustand | Query for server data, Zustand for UI state | Validated |
+| react-arborist | Virtualized tree for 10,000+ files | Validated |
+| Query invalidation pattern | UI updates via query invalidation, not store updates | Validated |
+| Depot path for P4 commands | DVCS support (avoid -d flag that breaks RSH) | Validated |
+
+## Milestones
+
+| Version | Status | Date |
+|---------|--------|------|
+| v1.0 MVP | Complete | 2026-01-28 |
+
+See `.planning/milestones/` for archived roadmaps and requirements.
 
 ---
-*Last updated: 2026-01-27 after initialization*
+*Last updated: 2026-01-28 after v1.0 MVP completion*
