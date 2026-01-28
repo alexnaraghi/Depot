@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::io::{BufRead, BufReader};
 use std::process::{Command, Stdio};
 use serde::Serialize;
-use tauri::{AppHandle, ipc::Channel, State};
+use tauri::{AppHandle, Emitter, ipc::Channel, State};
 
 use crate::state::ProcessManager;
 
