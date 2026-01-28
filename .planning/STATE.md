@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-01-27)
 ## Current Position
 
 Phase: 2 of 2 (Core Workflows)
-Plan: 5 of 9 in current phase
+Plan: 6 of 9 in current phase
 Status: In progress
-Last activity: 2026-01-28 — Completed 02-05-PLAN.md (Workspace file tree)
+Last activity: 2026-01-28 — Completed 02-06-PLAN.md (Changelist panel)
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
-- Average duration: 4 min
-- Total execution time: 42 min
+- Total plans completed: 11
+- Average duration: 5 min
+- Total execution time: 52 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-non-blocking-foundation | 5 | 26 min | 5 min |
-| 02-core-workflows | 5 | 16 min | 3 min |
+| 02-core-workflows | 6 | 26 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-01 (3 min), 02-02 (3 min), 02-03 (3 min), 02-04 (3 min), 02-05 (4 min)
-- Trend: Excellent velocity, consistent 3-4 minute execution
+- Last 5 plans: 02-02 (3 min), 02-03 (3 min), 02-04 (3 min), 02-05 (4 min), 02-06 (10 min)
+- Trend: Good velocity, 02-06 took longer due to TypeScript type inference challenges
 
 *Updated after each plan completion*
 
@@ -76,6 +76,10 @@ Recent decisions affecting current work:
 - 02-05: TanStack Query with 30-second stale time for file tree data caching
 - 02-05: Context menu only on files (not folders) with conditional actions based on status
 - 02-05: Tree auto-sizes to container without explicit width/height props
+- 02-06: react-arborist Tree reused for changelist view with drag-drop support
+- 02-06: Explicit type casting (as unknown as ChangelistTreeNode) for react-arborist type issues
+- 02-06: Hover-based submit button on changelists to keep UI clean
+- 02-06: shadcn/ui AlertDialog for submit confirmation with editable description
 
 ### Pending Todos
 
@@ -92,10 +96,10 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-28 (plan 02-05 execution)
-Stopped at: Completed 02-05-PLAN.md - Workspace file tree
+Last session: 2026-01-28 (plan 02-06 execution)
+Stopped at: Completed 02-06-PLAN.md - Changelist panel
 Resume file: None
 
 ---
-**Phase 2 in Progress:** 5 of 9 plans complete
+**Phase 2 in Progress:** 6 of 9 plans complete
 *Next: Continue with remaining UI components and workflows*
