@@ -48,15 +48,23 @@ Plans:
 
 **Success Criteria** (what must be TRUE):
   1. User can sync workspace from depot and UI shows progress without freezing
-  2. User can checkout file for editing and see optimistic status update immediately
+  2. User can checkout file for editing and see status update after server confirmation
   3. User can view pending changelist showing all modified and checked-out files with status indicators
   4. User can submit changelist with description and see non-blocking progress feedback
   5. User can revert checked-out file and file returns to depot state
 
-**Plans**: TBD
+**Plans**: 9 plans
 
 Plans:
-- [ ] 02-01: TBD during planning
+- [ ] 02-01-PLAN.md — P4 types, Zustand stores (fileTree, changelist), event subscription hook
+- [ ] 02-02-PLAN.md — Install react-arborist, create FileNode and ChangelistNode components
+- [ ] 02-03-PLAN.md — Rust backend: P4 commands (fstat, opened, edit, revert, submit, sync)
+- [ ] 02-04-PLAN.md — Frontend: tauri invokers, tree builder utils, useFileOperations hook
+- [ ] 02-05-PLAN.md — FileTree component with context menu (checkout, revert)
+- [ ] 02-06-PLAN.md — ChangelistPanel with drag-drop and SubmitDialog
+- [ ] 02-07-PLAN.md — Sync workflow: useSync hook, SyncToolbar, SyncConflictDialog
+- [ ] 02-08-PLAN.md — MainLayout integration: file tree + changelist sidebar + toolbar
+- [ ] 02-09-PLAN.md — Phase 2 verification checkpoint
 
 ## Progress
 
@@ -66,4 +74,4 @@ Phases execute in numeric order: 1 → 2
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Non-Blocking Foundation | 5/5 | ✓ Complete | 2026-01-28 |
-| 2. Core Workflows | 0/0 (TBD) | Not started | - |
+| 2. Core Workflows | 0/9 | Planning complete | - |
