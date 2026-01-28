@@ -10,6 +10,7 @@ export interface FileNodeData {
   isFolder: boolean;
   file?: P4File;
   children?: FileNodeData[];
+  onContextMenu?: (event: React.MouseEvent, file: P4File) => void;
 }
 
 /**
@@ -17,9 +18,16 @@ export interface FileNodeData {
  * Handles both folders and files with status icons
  */
 export function FileNode({ node, style, dragHandle }: NodeRendererProps<FileNodeData>) {
-  const { name, isFolder, file } = node.data;
+  const { name, isFolder, file, onContextMenu } = node.data;
   const isSelected = node.isSelected;
   const isOpen = node.isOpen;
+
+  function handleContextMenu(event: React.MouseEvent) {
+    if (!isFolder && file && onContextMenu) {
+      event.preventDefault();
+      onContextMenu(event, file);
+    }
+  }
 
   return (
     <div
@@ -31,6 +39,7 @@ export function FileNode({ node, style, dragHandle }: NodeRendererProps<FileNode
         isSelected && 'bg-blue-900/50'
       )}
       onClick={() => node.isInternal && node.toggle()}
+      onContextMenu={handleContextMenu}
     >
       {/* Folder or file icon */}
       {isFolder ? (
