@@ -30,10 +30,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Developer can close app during active p4 operation and no orphaned p4.exe processes remain in Task Manager
   4. DevTools performance monitor shows no main thread blocking >16ms during p4 operations
 
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 01-01: TBD during planning
+- [ ] 01-01-PLAN.md — Scaffold Tauri 2.0 + React 19 with dependencies
+- [ ] 01-02-PLAN.md — Rust backend: ProcessManager, commands, close handler
+- [ ] 01-03-PLAN.md — Frontend state: Zustand store, TanStack Query hooks
+- [ ] 01-04-PLAN.md — UI components: StatusBar, OutputPanel, Toaster
+- [ ] 01-05-PLAN.md — Verification checkpoint for phase success criteria
 
 ### Phase 2: Core Workflows
 **Goal**: Implement daily Perforce operations (sync, submit, changelists, file operations) with non-blocking UI proven
@@ -61,5 +65,5 @@ Phases execute in numeric order: 1 → 2
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Non-Blocking Foundation | 0/0 (TBD) | Not started | - |
+| 1. Non-Blocking Foundation | 0/5 | Ready to execute | - |
 | 2. Core Workflows | 0/0 (TBD) | Not started | - |
