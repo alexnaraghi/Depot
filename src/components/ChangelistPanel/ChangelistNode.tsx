@@ -1,24 +1,25 @@
 import { NodeRendererProps } from 'react-arborist';
-import { List } from 'lucide-react';
-import { P4Changelist, P4File } from '@/types/p4';
+import { List, Send } from 'lucide-react';
+import { P4Changelist } from '@/types/p4';
 import { FileStatusIcon } from '@/components/FileTree/FileStatusIcon';
+import { ChangelistTreeNode } from '@/utils/treeBuilder';
 import { cn } from '@/lib/utils';
 
-export type ChangelistNodeData =
-  | { type: 'changelist'; data: P4Changelist }
-  | { type: 'file'; data: P4File };
+interface ChangelistNodeProps extends NodeRendererProps<ChangelistTreeNode> {
+  onSubmit?: () => void;
+}
 
 /**
  * Tree node renderer for changelist display in react-arborist
  * Handles both changelist headers and file entries
  */
-export function ChangelistNode({ node, style, dragHandle }: NodeRendererProps<ChangelistNodeData>) {
+export function ChangelistNode({ node, style, dragHandle, onSubmit }: ChangelistNodeProps) {
   const isSelected = node.isSelected;
   const nodeData = node.data;
 
   // Render changelist header
   if (nodeData.type === 'changelist') {
-    const changelist = nodeData.data;
+    const changelist = nodeData.data as P4Changelist;
     const isDefault = changelist.id === 0;
 
     return (
@@ -26,7 +27,7 @@ export function ChangelistNode({ node, style, dragHandle }: NodeRendererProps<Ch
         ref={dragHandle}
         style={style}
         className={cn(
-          'flex items-center gap-2 px-2 py-1 cursor-pointer text-sm',
+          'group flex items-center gap-2 px-2 py-1 cursor-pointer text-sm',
           'hover:bg-slate-800 transition-colors',
           isSelected && 'bg-blue-900/50'
         )}
@@ -51,12 +52,26 @@ export function ChangelistNode({ node, style, dragHandle }: NodeRendererProps<Ch
         <span className="px-2 py-0.5 text-xs bg-slate-700 rounded-full text-slate-300 flex-shrink-0">
           {changelist.fileCount}
         </span>
+
+        {/* Submit button - appears on hover */}
+        {changelist.fileCount > 0 && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onSubmit?.();
+            }}
+            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-600 rounded transition-opacity"
+            title="Submit"
+          >
+            <Send className="w-4 h-4 text-slate-300" />
+          </button>
+        )}
       </div>
     );
   }
 
   // Render file row
-  const file = nodeData.data;
+  const file = nodeData.data as import('@/types/p4').P4File;
   // Extract just the filename from the depot path
   const fileName = file.depotPath.split('/').pop() || file.depotPath;
 

@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useChangelistStore } from '@/stores/changelistStore';
 import { invokeP4Changes, invokeP4Opened } from '@/lib/tauri';
-import { buildChangelistTree } from '@/utils/treeBuilder';
+import { buildChangelistTree, ChangelistTreeNode } from '@/utils/treeBuilder';
 import { P4Changelist, P4File, FileStatus } from '@/types/p4';
 
 /**
@@ -13,7 +13,11 @@ import { P4Changelist, P4File, FileStatus } from '@/types/p4';
  *
  * Default changelist (id=0) always exists.
  */
-export function useChangelists() {
+export function useChangelists(): {
+  treeData: ChangelistTreeNode[];
+  isLoading: boolean;
+  changelists: P4Changelist[];
+} {
   const { changelists, setChangelists } = useChangelistStore();
 
   // Load pending changelists
