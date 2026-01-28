@@ -153,3 +153,233 @@ fn derive_file_status(action: &Option<String>, have_rev: i32, head_rev: i32) -> 
         "synced".to_string()
     }
 }
+
+/// Get all files opened by current user
+#[tauri::command]
+pub async fn p4_opened() -> Result<Vec<P4FileInfo>, String> {
+    // Execute: p4 -ztag opened
+    let output = Command::new("p4")
+        .args(&["-ztag", "opened"])
+        .output()
+        .map_err(|e| format!("Failed to execute p4 opened: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Parse -ztag format (similar to fstat)
+    let files = parse_ztag_fstat(&stdout)?;
+
+    Ok(files)
+}
+
+/// Get changelists for current user
+#[tauri::command]
+pub async fn p4_changes(status: Option<String>) -> Result<Vec<P4Changelist>, String> {
+    // Build command: p4 -ztag changes -s <status> -u <user> -c <client>
+    let mut args = vec!["-ztag".to_string(), "changes".to_string()];
+
+    // Add status filter (default to pending)
+    let status_filter = status.unwrap_or_else(|| "pending".to_string());
+    args.push("-s".to_string());
+    args.push(status_filter);
+
+    // Filter by current user and client
+    args.push("-u".to_string());
+    args.push("$P4USER".to_string());  // p4 will expand this
+    args.push("-c".to_string());
+    args.push("$P4CLIENT".to_string());  // p4 will expand this
+
+    // Execute command
+    let output = Command::new("p4")
+        .args(&args)
+        .output()
+        .map_err(|e| format!("Failed to execute p4 changes: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Parse -ztag output
+    let changelists = parse_ztag_changes(&stdout)?;
+
+    Ok(changelists)
+}
+
+/// Parse p4 -ztag changes output into P4Changelist structs
+fn parse_ztag_changes(output: &str) -> Result<Vec<P4Changelist>, String> {
+    let mut changelists = Vec::new();
+    let mut current: HashMap<String, String> = HashMap::new();
+
+    for line in output.lines() {
+        let line = line.trim();
+
+        if line.is_empty() {
+            if !current.is_empty() {
+                if let Some(cl) = build_changelist(&current) {
+                    changelists.push(cl);
+                }
+                current.clear();
+            }
+            continue;
+        }
+
+        if let Some(stripped) = line.strip_prefix("... ") {
+            if let Some((key, value)) = stripped.split_once(' ') {
+                current.insert(key.to_string(), value.to_string());
+            }
+        }
+    }
+
+    // Handle last record
+    if !current.is_empty() {
+        if let Some(cl) = build_changelist(&current) {
+            changelists.push(cl);
+        }
+    }
+
+    Ok(changelists)
+}
+
+/// Build P4Changelist from parsed ztag fields
+fn build_changelist(fields: &HashMap<String, String>) -> Option<P4Changelist> {
+    let id = fields.get("change")?.parse::<i32>().ok()?;
+    let user = fields.get("user")?.clone();
+    let client = fields.get("client")?.clone();
+    let status = fields.get("status")?.clone();
+    let description = fields.get("desc").cloned().unwrap_or_else(|| "".to_string());
+
+    // File count is not provided by p4 changes, will need separate query
+    // For now, default to 0 and let frontend query if needed
+    let file_count = 0;
+
+    Some(P4Changelist {
+        id,
+        description,
+        user,
+        client,
+        status,
+        file_count,
+    })
+}
+
+/// Open files for edit (or move to different changelist if already opened)
+#[tauri::command]
+pub async fn p4_edit(
+    paths: Vec<String>,
+    changelist: Option<i32>,
+    app: AppHandle,
+) -> Result<Vec<P4FileInfo>, String> {
+    if paths.is_empty() {
+        return Err("No paths provided".to_string());
+    }
+
+    // Build command: p4 edit -c <changelist> <paths>
+    let mut args = vec!["edit".to_string()];
+
+    if let Some(cl) = changelist {
+        args.push("-c".to_string());
+        args.push(cl.to_string());
+    }
+
+    args.extend(paths.clone());
+
+    // Execute command
+    let output = Command::new("p4")
+        .args(&args)
+        .output()
+        .map_err(|e| format!("Failed to execute p4 edit: {}", e))?;
+
+    // Check for errors (but note p4 edit can have partial success)
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    // Parse output to determine which files were successfully opened
+    let mut opened_files = Vec::new();
+
+    for line in stdout.lines() {
+        // p4 edit output: "//depot/path#rev - opened for edit"
+        // or for reopen: "//depot/path#rev - reopened; change X"
+        if line.contains(" - opened for edit") || line.contains(" - reopened") {
+            if let Some(depot_path) = line.split('#').next() {
+                opened_files.push(depot_path.to_string());
+            }
+        }
+    }
+
+    // Get updated file info for opened files
+    let file_info = if !opened_files.is_empty() {
+        p4_fstat(opened_files.clone()).await?
+    } else {
+        Vec::new()
+    };
+
+    // Emit file-status-changed event for each file
+    for file in &file_info {
+        let _ = app.emit("file-status-changed", file.clone());
+    }
+
+    // If there were errors, include them in result
+    if !stderr.is_empty() && file_info.is_empty() {
+        return Err(stderr.to_string());
+    }
+
+    Ok(file_info)
+}
+
+/// Revert files (discard local changes)
+#[tauri::command]
+pub async fn p4_revert(
+    paths: Vec<String>,
+    app: AppHandle,
+) -> Result<Vec<String>, String> {
+    if paths.is_empty() {
+        return Err("No paths provided".to_string());
+    }
+
+    // Execute: p4 revert <paths>
+    let mut args = vec!["revert".to_string()];
+    args.extend(paths);
+
+    let output = Command::new("p4")
+        .args(&args)
+        .output()
+        .map_err(|e| format!("Failed to execute p4 revert: {}", e))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    // Parse output to get reverted files
+    let mut reverted_files = Vec::new();
+
+    for line in stdout.lines() {
+        // p4 revert output: "//depot/path#rev - was edit, reverted"
+        if line.contains(" - was ") && line.contains(", reverted") {
+            if let Some(depot_path) = line.split('#').next() {
+                reverted_files.push(depot_path.to_string());
+            }
+        }
+    }
+
+    // Emit file-status-changed event for each reverted file
+    // Note: Files are now back to "synced" status
+    for depot_path in &reverted_files {
+        let _ = app.emit("file-status-changed", serde_json::json!({
+            "depot_path": depot_path,
+            "status": "synced"
+        }));
+    }
+
+    // Check for errors
+    if !stderr.is_empty() && reverted_files.is_empty() {
+        return Err(stderr.to_string());
+    }
+
+    Ok(reverted_files)
+}
