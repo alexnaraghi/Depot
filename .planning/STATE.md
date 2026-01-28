@@ -5,33 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-01-27)
 
 **Core value:** The user is never blocked — operations are always cancellable, errors are non-blocking, and the app remains responsive.
-**Current focus:** Phase 1 - Non-Blocking Foundation
+**Current focus:** Phase 2 - Core Workflows
 
 ## Current Position
 
-Phase: 1 of 2 (Non-Blocking Foundation)
-Plan: 5 of 5 in current phase (all plans complete)
-Status: Phase complete
-Last activity: 2026-01-28 — Completed 01-05-PLAN.md (Phase 1 verification)
+Phase: 2 of 2 (Core Workflows)
+Plan: 1 of 4 in current phase
+Status: In progress
+Last activity: 2026-01-28 — Completed 02-01-PLAN.md (Data layer foundation)
 
-Progress: [█████░░░░░] 50%
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 5 min
-- Total execution time: 26 min
+- Total plans completed: 6
+- Average duration: 4 min
+- Total execution time: 29 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-non-blocking-foundation | 5 | 26 min | 5 min |
+| 02-core-workflows | 1 | 3 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (8 min), 01-02 (10 min), 01-03 (3 min), 01-04 (3 min), 01-05 (2 min)
-- Trend: Improving velocity, efficient execution
+- Last 5 plans: 01-02 (10 min), 01-03 (3 min), 01-04 (3 min), 01-05 (2 min), 02-01 (3 min)
+- Trend: Excellent velocity, efficient execution
 
 *Updated after each plan completion*
 
@@ -58,6 +59,10 @@ Recent decisions affecting current work:
 - 01-04: OutputPanel uses useDeferredValue for responsiveness during fast output
 - 01-04: Toaster positioned above status bar with theme-matched colors
 - 01-05: Phase 1 foundation verified - all success criteria met through manual testing
+- 02-01: Map-based stores for O(1) lookups (files by depot path, changelists by ID)
+- 02-01: Default changelist (id=0) always exists in changelistStore
+- 02-01: Event hook supports selective subscription via config object
+- 02-01: FileStatus enum covers all P4 states for file tree indicators
 
 ### Pending Todos
 
@@ -72,10 +77,10 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-28 (plan 01-05 execution)
-Stopped at: Completed 01-05-PLAN.md - Phase 1 verification checkpoint
+Last session: 2026-01-28 (plan 02-01 execution)
+Stopped at: Completed 02-01-PLAN.md - Data layer foundation
 Resume file: None
 
 ---
-**Phase 1 Complete:** Non-blocking foundation verified and ready
-*Next step: Plan Phase 2 (Core Workflows)*
+**Phase 2 In Progress:** Core workflows - data layer complete (1/4 plans)
+*Next step: Execute 02-02-PLAN.md (File tree component)*
