@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-01-27)
 ## Current Position
 
 Phase: 2 of 2 (Core Workflows)
-Plan: 6 of 9 in current phase
+Plan: 7 of 9 in current phase
 Status: In progress
-Last activity: 2026-01-28 — Completed 02-06-PLAN.md (Changelist panel)
+Last activity: 2026-01-28 — Completed 02-07-PLAN.md (Sync workflow)
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 11
+- Total plans completed: 12
 - Average duration: 5 min
-- Total execution time: 52 min
+- Total execution time: 55 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-non-blocking-foundation | 5 | 26 min | 5 min |
-| 02-core-workflows | 6 | 26 min | 4 min |
+| 02-core-workflows | 7 | 29 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-02 (3 min), 02-03 (3 min), 02-04 (3 min), 02-05 (4 min), 02-06 (10 min)
-- Trend: Good velocity, 02-06 took longer due to TypeScript type inference challenges
+- Last 5 plans: 02-03 (3 min), 02-04 (3 min), 02-05 (4 min), 02-06 (10 min), 02-07 (3 min)
+- Trend: Good velocity, back to normal pace after 02-06 type challenges
 
 *Updated after each plan completion*
 
@@ -80,6 +80,9 @@ Recent decisions affecting current work:
 - 02-06: Explicit type casting (as unknown as ChangelistTreeNode) for react-arborist type issues
 - 02-06: Hover-based submit button on changelists to keep UI clean
 - 02-06: shadcn/ui AlertDialog for submit confirmation with editable description
+- 02-07: Conflicts pause sync and show dialog for user decision (skip vs overwrite)
+- 02-07: useSync hook tracks synced/total files count for progress display
+- 02-07: Progress streaming updates operation store, output panel, and file tree store
 
 ### Pending Todos
 
@@ -93,13 +96,15 @@ None yet.
 - Handle p4 server connection errors gracefully
 - P4 commands assume connection configured (P4PORT, P4USER, P4CLIENT)
 - File count in P4Changelist needs separate query (p4 opened -c <CL>)
+- Backend p4_sync needs completion event when sync finishes (currently marks complete immediately)
+- File tree store update in useSync assumes file exists (may need to handle new files from sync)
 
 ## Session Continuity
 
-Last session: 2026-01-28 (plan 02-06 execution)
-Stopped at: Completed 02-06-PLAN.md - Changelist panel
+Last session: 2026-01-28 (plan 02-07 execution)
+Stopped at: Completed 02-07-PLAN.md - Sync workflow
 Resume file: None
 
 ---
-**Phase 2 in Progress:** 6 of 9 plans complete
+**Phase 2 in Progress:** 7 of 9 plans complete
 *Next: Continue with remaining UI components and workflows*
