@@ -15,6 +15,13 @@ pub fn run() {
             commands::p4_command,
             commands::kill_process,
             commands::kill_all_processes,
+            commands::p4_fstat,
+            commands::p4_opened,
+            commands::p4_changes,
+            commands::p4_edit,
+            commands::p4_revert,
+            commands::p4_submit,
+            commands::p4_sync,
         ])
         .setup(|app| {
             // Get process manager for cleanup

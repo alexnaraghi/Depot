@@ -1,7 +1,10 @@
 use std::collections::HashMap;
-use std::process::Command;
+use std::io::{BufRead, BufReader};
+use std::process::{Command, Stdio};
 use serde::Serialize;
-use tauri::AppHandle;
+use tauri::{AppHandle, ipc::Channel, State};
+
+use crate::state::ProcessManager;
 
 /// File information from p4 fstat
 #[derive(Debug, Clone, Serialize)]
@@ -382,4 +385,234 @@ pub async fn p4_revert(
     }
 
     Ok(reverted_files)
+}
+
+/// Submit a changelist
+#[tauri::command]
+pub async fn p4_submit(
+    changelist: i32,
+    description: Option<String>,
+    app: AppHandle,
+) -> Result<i32, String> {
+    // If description provided, update the changelist first
+    if let Some(desc) = description {
+        update_changelist_description(changelist, &desc)?;
+    }
+
+    // Execute: p4 submit -c <changelist>
+    let output = Command::new("p4")
+        .args(&["submit", "-c", &changelist.to_string()])
+        .output()
+        .map_err(|e| format!("Failed to execute p4 submit: {}", e))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    // Parse output to get submitted changelist number
+    // p4 submit output: "Change 12345 submitted."
+    let submitted_cl = stdout
+        .lines()
+        .find(|line| line.contains("Change") && line.contains("submitted"))
+        .and_then(|line| {
+            line.split_whitespace()
+                .nth(1)
+                .and_then(|s| s.parse::<i32>().ok())
+        })
+        .unwrap_or(changelist);
+
+    // Check for errors
+    if !output.status.success() {
+        return Err(stderr.to_string());
+    }
+
+    // Emit changelist-submitted event
+    let _ = app.emit("changelist-submitted", serde_json::json!({
+        "changelist": submitted_cl
+    }));
+
+    Ok(submitted_cl)
+}
+
+/// Update changelist description
+fn update_changelist_description(changelist: i32, description: &str) -> Result<(), String> {
+    // Get current changelist form
+    let output = Command::new("p4")
+        .args(&["change", "-o", &changelist.to_string()])
+        .output()
+        .map_err(|e| format!("Failed to get changelist: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.to_string());
+    }
+
+    let form = String::from_utf8_lossy(&output.stdout);
+
+    // Update description in form
+    let mut new_form = String::new();
+    let mut in_description = false;
+
+    for line in form.lines() {
+        if line.starts_with("Description:") {
+            new_form.push_str("Description:\n");
+            new_form.push_str(&format!("\t{}\n", description));
+            in_description = true;
+        } else if in_description && line.starts_with('\t') {
+            // Skip old description lines
+            continue;
+        } else if in_description && !line.starts_with('\t') {
+            in_description = false;
+            new_form.push_str(line);
+            new_form.push('\n');
+        } else {
+            new_form.push_str(line);
+            new_form.push('\n');
+        }
+    }
+
+    // Submit updated form
+    let mut child = Command::new("p4")
+        .args(&["change", "-i"])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("Failed to spawn p4 change: {}", e))?;
+
+    use std::io::Write;
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin.write_all(new_form.as_bytes())
+            .map_err(|e| format!("Failed to write changelist form: {}", e))?;
+    }
+
+    let result = child
+        .wait_with_output()
+        .map_err(|e| format!("Failed to update changelist: {}", e))?;
+
+    if !result.status.success() {
+        let stderr = String::from_utf8_lossy(&result.stderr);
+        return Err(stderr.to_string());
+    }
+
+    Ok(())
+}
+
+/// Progress information for sync operation
+#[derive(Clone, Serialize)]
+pub struct SyncProgress {
+    pub depot_path: String,
+    pub action: String,  // updating, adding, deleting, can't clobber
+    pub revision: i32,
+    pub is_conflict: bool,
+}
+
+/// Sync files from depot (get latest)
+#[tauri::command]
+pub async fn p4_sync(
+    paths: Vec<String>,
+    on_progress: Channel<SyncProgress>,
+    state: State<'_, ProcessManager>,
+    app: AppHandle,
+) -> Result<String, String> {
+    // Build command: p4 sync <paths>
+    let mut args = vec!["sync".to_string()];
+
+    if paths.is_empty() {
+        args.push("...".to_string());
+    } else {
+        args.extend(paths);
+    }
+
+    // Spawn process
+    let mut child = Command::new("p4")
+        .args(&args)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("Failed to spawn p4 sync: {}", e))?;
+
+    // Take stdout/stderr
+    let stdout = child.stdout.take();
+    let stderr = child.stderr.take();
+
+    // Register process
+    let process_id = state.register(child).await;
+    let process_id_clone = process_id.clone();
+
+    // Stream stdout in background thread
+    let on_progress_clone = on_progress.clone();
+    if let Some(stdout) = stdout {
+        std::thread::spawn(move || {
+            let reader = BufReader::new(stdout);
+            for line in reader.lines().map_while(Result::ok) {
+                if let Some(progress) = parse_sync_line(&line) {
+                    let _ = on_progress_clone.send(progress);
+                }
+            }
+        });
+    }
+
+    // Stream stderr in background thread (for errors/conflicts)
+    if let Some(stderr) = stderr {
+        std::thread::spawn(move || {
+            let reader = BufReader::new(stderr);
+            for line in reader.lines().map_while(Result::ok) {
+                // Emit errors as conflict progress
+                let _ = on_progress.send(SyncProgress {
+                    depot_path: line.clone(),
+                    action: "error".to_string(),
+                    revision: 0,
+                    is_conflict: true,
+                });
+            }
+        });
+    }
+
+    Ok(process_id_clone)
+}
+
+/// Parse p4 sync output line into SyncProgress
+fn parse_sync_line(line: &str) -> Option<SyncProgress> {
+    // p4 sync output formats:
+    // "//depot/path#rev - updating local/path"
+    // "//depot/path#rev - adding local/path"
+    // "//depot/path#rev - deleting local/path"
+    // "//depot/path#rev - can't clobber writable file local/path"
+
+    let is_conflict = line.contains("can't clobber");
+
+    // Extract depot path and revision
+    if let Some(hash_pos) = line.find('#') {
+        let depot_path = line[..hash_pos].to_string();
+
+        // Extract revision
+        let after_hash = &line[hash_pos + 1..];
+        let revision = after_hash
+            .split_whitespace()
+            .next()
+            .and_then(|s| s.parse::<i32>().ok())
+            .unwrap_or(0);
+
+        // Extract action
+        let action = if line.contains(" - updating ") {
+            "updating"
+        } else if line.contains(" - adding ") {
+            "adding"
+        } else if line.contains(" - deleting ") {
+            "deleting"
+        } else if is_conflict {
+            "can't clobber"
+        } else {
+            "unknown"
+        };
+
+        return Some(SyncProgress {
+            depot_path,
+            action: action.to_string(),
+            revision,
+            is_conflict,
+        });
+    }
+
+    None
 }
