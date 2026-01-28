@@ -12,7 +12,7 @@ P4Now delivers a non-blocking Windows Perforce GUI in two phases. Phase 1 establ
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Non-Blocking Foundation** - Async architecture, process management, cancellation infrastructure
+- [x] **Phase 1: Non-Blocking Foundation** - Async architecture, process management, cancellation infrastructure
 - [ ] **Phase 2: Core Workflows** - Sync, submit, changelists, file operations with non-blocking UI
 
 ## Phase Details
@@ -33,11 +33,11 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 5 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Scaffold Tauri 2.0 + React 19 with dependencies
-- [ ] 01-02-PLAN.md — Rust backend: ProcessManager, commands, close handler
-- [ ] 01-03-PLAN.md — Frontend state: Zustand store, TanStack Query hooks
-- [ ] 01-04-PLAN.md — UI components: StatusBar, OutputPanel, Toaster
-- [ ] 01-05-PLAN.md — Verification checkpoint for phase success criteria
+- [x] 01-01-PLAN.md — Scaffold Tauri 2.0 + React 19 with dependencies
+- [x] 01-02-PLAN.md — Rust backend: ProcessManager, commands, close handler
+- [x] 01-03-PLAN.md — Frontend state: Zustand store, TanStack Query hooks
+- [x] 01-04-PLAN.md — UI components: StatusBar, OutputPanel, Toaster
+- [x] 01-05-PLAN.md — Verification checkpoint for phase success criteria
 
 ### Phase 2: Core Workflows
 **Goal**: Implement daily Perforce operations (sync, submit, changelists, file operations) with non-blocking UI proven
@@ -65,5 +65,5 @@ Phases execute in numeric order: 1 → 2
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Non-Blocking Foundation | 0/5 | Ready to execute | - |
+| 1. Non-Blocking Foundation | 5/5 | ✓ Complete | 2026-01-28 |
 | 2. Core Workflows | 0/0 (TBD) | Not started | - |

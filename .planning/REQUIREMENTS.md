@@ -18,9 +18,9 @@ Requirements for initial proof of concept. Each maps to roadmap phases.
 
 ### Architecture (Non-Blocking UX)
 
-- [ ] **ARCH-01**: All p4 commands execute asynchronously (never freeze UI)
-- [ ] **ARCH-02**: User can cancel any running operation
-- [ ] **ARCH-03**: Errors are non-modal and recoverable (never trap user in dialog)
+- [x] **ARCH-01**: All p4 commands execute asynchronously (never freeze UI)
+- [x] **ARCH-02**: User can cancel any running operation
+- [x] **ARCH-03**: Errors are non-modal and recoverable (never trap user in dialog)
 
 ## v2 Requirements
 
@@ -62,9 +62,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ARCH-01 | Phase 1 | Pending |
-| ARCH-02 | Phase 1 | Pending |
-| ARCH-03 | Phase 1 | Pending |
+| ARCH-01 | Phase 1 | Complete |
+| ARCH-02 | Phase 1 | Complete |
+| ARCH-03 | Phase 1 | Complete |
 | CORE-01 | Phase 2 | Pending |
 | CORE-02 | Phase 2 | Pending |
 | CORE-03 | Phase 2 | Pending |
@@ -79,4 +79,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-01-27*
-*Last updated: 2026-01-27 after roadmap creation*
+*Last updated: 2026-01-28 after Phase 1 completion*
