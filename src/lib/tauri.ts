@@ -39,6 +39,13 @@ export interface SyncProgress {
   is_conflict: boolean;
 }
 
+export interface P4ClientInfo {
+  client_name: string;
+  client_root: string;
+  user_name: string;
+  server_address: string;
+}
+
 /**
  * Execute a short p4 command and wait for result.
  * Use for quick commands like 'p4 info', 'p4 client'.
@@ -79,6 +86,14 @@ export async function invokeKillProcess(processId: string): Promise<boolean> {
  */
 export async function invokeKillAllProcesses(): Promise<void> {
   return invoke<void>('kill_all_processes');
+}
+
+/**
+ * Get P4 client/workspace info (client root, user, server).
+ * Use to determine workspace root path on startup.
+ */
+export async function invokeP4Info(): Promise<P4ClientInfo> {
+  return invoke<P4ClientInfo>('p4_info');
 }
 
 /**

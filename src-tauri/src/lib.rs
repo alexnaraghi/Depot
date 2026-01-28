@@ -15,6 +15,7 @@ pub fn run() {
             commands::p4_command,
             commands::kill_process,
             commands::kill_all_processes,
+            commands::p4_info,
             commands::p4_fstat,
             commands::p4_opened,
             commands::p4_changes,

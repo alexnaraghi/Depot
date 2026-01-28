@@ -30,6 +30,62 @@ pub struct P4Changelist {
     pub file_count: i32,
 }
 
+/// P4 client/workspace info
+#[derive(Debug, Clone, Serialize)]
+pub struct P4ClientInfo {
+    pub client_name: String,
+    pub client_root: String,
+    pub user_name: String,
+    pub server_address: String,
+}
+
+/// Get P4 client info (client root, user, server)
+#[tauri::command]
+pub async fn p4_info() -> Result<P4ClientInfo, String> {
+    let output = Command::new("p4")
+        .args(["-ztag", "info"])
+        .output()
+        .map_err(|e| format!("Failed to execute p4 info: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("p4 info failed: {}", stderr));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Parse -ztag info output
+    let mut client_name = String::new();
+    let mut client_root = String::new();
+    let mut user_name = String::new();
+    let mut server_address = String::new();
+
+    for line in stdout.lines() {
+        if let Some(stripped) = line.strip_prefix("... ") {
+            if let Some((key, value)) = stripped.split_once(' ') {
+                match key {
+                    "clientName" => client_name = value.to_string(),
+                    "clientRoot" => client_root = value.to_string(),
+                    "userName" => user_name = value.to_string(),
+                    "serverAddress" => server_address = value.to_string(),
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    if client_root.is_empty() {
+        return Err("Could not determine P4 client root. Is P4CLIENT set?".to_string());
+    }
+
+    Ok(P4ClientInfo {
+        client_name,
+        client_root,
+        user_name,
+        server_address,
+    })
+}
+
 /// Get file status information for given paths
 #[tauri::command]
 pub async fn p4_fstat(paths: Vec<String>) -> Result<Vec<P4FileInfo>, String> {

@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useFileTreeStore } from '@/stores/fileTreeStore';
-import { invokeP4Fstat, P4FileInfo } from '@/lib/tauri';
+import { invokeP4Fstat, invokeP4Info, P4FileInfo } from '@/lib/tauri';
 import { buildFileTree } from '@/utils/treeBuilder';
 import { P4File, FileStatus, FileAction } from '@/types/p4';
 
@@ -58,10 +58,25 @@ function mapP4FileInfo(info: P4FileInfo): P4File {
  * Uses TanStack Query for caching and automatic refetch.
  */
 export function useFileTree() {
-  const { rootPath, setFiles, setLoading } = useFileTreeStore();
+  const { rootPath, setFiles, setLoading, setRootPath } = useFileTreeStore();
 
-  // Query for workspace files
-  const { data: files = [], isLoading, error, refetch } = useQuery({
+  // First, query for P4 client info to get the workspace root
+  const { data: clientInfo, isLoading: clientInfoLoading, error: clientInfoError } = useQuery({
+    queryKey: ['p4Info'],
+    queryFn: invokeP4Info,
+    staleTime: Infinity, // Client info doesn't change during session
+    refetchOnWindowFocus: false,
+  });
+
+  // Set the root path from client info
+  useEffect(() => {
+    if (clientInfo?.client_root && rootPath !== clientInfo.client_root) {
+      setRootPath(clientInfo.client_root);
+    }
+  }, [clientInfo, rootPath, setRootPath]);
+
+  // Query for workspace files (only after we have rootPath)
+  const { data: files = [], isLoading: filesLoading, error: filesError, refetch } = useQuery({
     queryKey: ['fileTree', rootPath],
     queryFn: async () => {
       setLoading(true);
@@ -78,6 +93,9 @@ export function useFileTree() {
     staleTime: 30000, // Consider data fresh for 30 seconds
     refetchOnWindowFocus: true,
   });
+
+  const isLoading = clientInfoLoading || filesLoading;
+  const error = clientInfoError || filesError;
 
   // Build tree structure from flat file list
   const tree = useMemo(() => {
