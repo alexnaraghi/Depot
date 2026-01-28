@@ -10,28 +10,28 @@ See: .planning/PROJECT.md (updated 2026-01-27)
 ## Current Position
 
 Phase: 2 of 2 (Core Workflows)
-Plan: 3 of 4 in current phase
-Status: In progress
-Last activity: 2026-01-28 — Completed 02-03-PLAN.md (P4 backend commands)
+Plan: 4 of 4 in current phase
+Status: Phase complete
+Last activity: 2026-01-28 — Completed 02-04-PLAN.md (Frontend integration layer)
 
-Progress: [████████░░] 80%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
+- Total plans completed: 9
 - Average duration: 4 min
-- Total execution time: 35 min
+- Total execution time: 38 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-non-blocking-foundation | 5 | 26 min | 5 min |
-| 02-core-workflows | 3 | 9 min | 3 min |
+| 02-core-workflows | 4 | 12 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-04 (3 min), 01-05 (2 min), 02-01 (3 min), 02-02 (3 min), 02-03 (3 min)
+- Last 5 plans: 01-05 (2 min), 02-01 (3 min), 02-02 (3 min), 02-03 (3 min), 02-04 (3 min)
 - Trend: Excellent velocity, consistent 3-minute execution
 
 *Updated after each plan completion*
@@ -70,6 +70,9 @@ Recent decisions affecting current work:
 - 02-03: p4_edit handles both checkout and reopen (move between changelists)
 - 02-03: Event emission on file operations (edit, revert, submit) for UI reactivity
 - 02-03: Streaming sync progress via Channel for real-time updates
+- 02-04: No optimistic updates - UI updates only after server confirmation
+- 02-04: Tree builders use Map for O(1) lookups during construction
+- 02-04: Operations hook integrates with both operation store and file tree store
 
 ### Pending Todos
 
@@ -86,10 +89,10 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-28 (plan 02-03 execution)
-Stopped at: Completed 02-03-PLAN.md - P4 backend commands
+Last session: 2026-01-28 (plan 02-04 execution)
+Stopped at: Completed 02-04-PLAN.md - Frontend integration layer
 Resume file: None
 
 ---
-**Phase 2 In Progress:** Core workflows - P4 backend commands complete (3/4 plans)
-*Next step: Execute 02-04-PLAN.md (File tree panel)*
+**Phase 2 Complete:** Core workflows foundation complete - All 4 plans executed
+*Next: Ready for UI integration in future phases*
