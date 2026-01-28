@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-01-27)
 ## Current Position
 
 Phase: 2 of 2 (Core Workflows)
-Plan: 4 of 4 in current phase
-Status: Phase complete
-Last activity: 2026-01-28 — Completed 02-04-PLAN.md (Frontend integration layer)
+Plan: 5 of 9 in current phase
+Status: In progress
+Last activity: 2026-01-28 — Completed 02-05-PLAN.md (Workspace file tree)
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
+- Total plans completed: 10
 - Average duration: 4 min
-- Total execution time: 38 min
+- Total execution time: 42 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-non-blocking-foundation | 5 | 26 min | 5 min |
-| 02-core-workflows | 4 | 12 min | 3 min |
+| 02-core-workflows | 5 | 16 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-05 (2 min), 02-01 (3 min), 02-02 (3 min), 02-03 (3 min), 02-04 (3 min)
-- Trend: Excellent velocity, consistent 3-minute execution
+- Last 5 plans: 02-01 (3 min), 02-02 (3 min), 02-03 (3 min), 02-04 (3 min), 02-05 (4 min)
+- Trend: Excellent velocity, consistent 3-4 minute execution
 
 *Updated after each plan completion*
 
@@ -73,6 +73,9 @@ Recent decisions affecting current work:
 - 02-04: No optimistic updates - UI updates only after server confirmation
 - 02-04: Tree builders use Map for O(1) lookups during construction
 - 02-04: Operations hook integrates with both operation store and file tree store
+- 02-05: TanStack Query with 30-second stale time for file tree data caching
+- 02-05: Context menu only on files (not folders) with conditional actions based on status
+- 02-05: Tree auto-sizes to container without explicit width/height props
 
 ### Pending Todos
 
@@ -89,10 +92,10 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-28 (plan 02-04 execution)
-Stopped at: Completed 02-04-PLAN.md - Frontend integration layer
+Last session: 2026-01-28 (plan 02-05 execution)
+Stopped at: Completed 02-05-PLAN.md - Workspace file tree
 Resume file: None
 
 ---
-**Phase 2 Complete:** Core workflows foundation complete - All 4 plans executed
-*Next: Ready for UI integration in future phases*
+**Phase 2 in Progress:** 5 of 9 plans complete
+*Next: Continue with remaining UI components and workflows*
