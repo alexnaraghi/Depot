@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-01-27)
 ## Current Position
 
 Phase: 2 of 2 (Core Workflows)
-Plan: 7 of 9 in current phase
+Plan: 8 of 9 in current phase
 Status: In progress
-Last activity: 2026-01-28 — Completed 02-07-PLAN.md (Sync workflow)
+Last activity: 2026-01-28 — Completed 02-08-PLAN.md (UI Integration)
 
 Progress: [██████████] 100%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
+- Total plans completed: 13
 - Average duration: 5 min
-- Total execution time: 55 min
+- Total execution time: 59 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01-non-blocking-foundation | 5 | 26 min | 5 min |
-| 02-core-workflows | 7 | 29 min | 4 min |
+| 02-core-workflows | 8 | 33 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-03 (3 min), 02-04 (3 min), 02-05 (4 min), 02-06 (10 min), 02-07 (3 min)
-- Trend: Good velocity, back to normal pace after 02-06 type challenges
+- Last 5 plans: 02-04 (3 min), 02-05 (4 min), 02-06 (10 min), 02-07 (3 min), 02-08 (4 min)
+- Trend: Consistent velocity, stable at 3-4 min per plan
 
 *Updated after each plan completion*
 
@@ -83,6 +83,10 @@ Recent decisions affecting current work:
 - 02-07: Conflicts pause sync and show dialog for user decision (skip vs overwrite)
 - 02-07: useSync hook tracks synced/total files count for progress display
 - 02-07: Progress streaming updates operation store, output panel, and file tree store
+- 02-08: MainLayout manages sidebar resize state with min/max width constraints (200px - 50vw)
+- 02-08: FileTree measures container height dynamically for react-arborist height prop
+- 02-08: QueryClient with 30s stale time per 02-05 decision
+- 02-08: useP4Events() called at app level to subscribe to all backend events
 
 ### Pending Todos
 
@@ -101,10 +105,10 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-28 (plan 02-07 execution)
-Stopped at: Completed 02-07-PLAN.md - Sync workflow
+Last session: 2026-01-28 (plan 02-08 execution)
+Stopped at: Completed 02-08-PLAN.md - UI Integration
 Resume file: None
 
 ---
-**Phase 2 in Progress:** 7 of 9 plans complete
-*Next: Continue with remaining UI components and workflows*
+**Phase 2 in Progress:** 8 of 9 plans complete
+*Next: Final plan in Phase 2*
