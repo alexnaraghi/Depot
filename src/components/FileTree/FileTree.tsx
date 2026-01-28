@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Tree } from 'react-arborist';
 import { useFileTree } from './useFileTree';
 import { FileNode, FileNodeData } from './FileNode';
@@ -22,6 +22,25 @@ export function FileTree() {
     x: number;
     y: number;
   } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerHeight, setContainerHeight] = useState(600);
+
+  // Measure container height and update on resize
+  useEffect(() => {
+    const updateHeight = () => {
+      if (containerRef.current) {
+        const height = containerRef.current.clientHeight;
+        setContainerHeight(height);
+      }
+    };
+
+    // Initial measurement
+    updateHeight();
+
+    // Update on window resize
+    window.addEventListener('resize', updateHeight);
+    return () => window.removeEventListener('resize', updateHeight);
+  }, []);
 
   // Attach onContextMenu handler to tree data
   const enhancedTree = useCallback(
@@ -87,12 +106,13 @@ export function FileTree() {
 
   // Tree view
   return (
-    <div className="h-full w-full bg-slate-950">
+    <div ref={containerRef} className="h-full w-full bg-slate-950 tree-container">
       <Tree
         data={enhancedTree(tree)}
         idAccessor="id"
         indent={16}
         rowHeight={28}
+        height={containerHeight}
         overscanCount={10}
         disableDrag
         disableDrop

@@ -66,3 +66,8 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Tree container - enables flex shrinking for dynamic height */
+.tree-container {
+  min-height: 0;
+}
