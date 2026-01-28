@@ -1,70 +1,29 @@
-import { useState } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from '@/components/StatusBar';
 import { OutputPanel } from '@/components/OutputPanel';
 import { Toaster } from '@/components/Toaster';
-import { useP4Command } from '@/hooks/useP4Command';
-import toast from 'react-hot-toast';
+import { MainLayout } from '@/components/MainLayout';
+import { useP4Events } from '@/hooks/useP4Events';
 
-function App() {
-  const { execute, isRunning } = useP4Command();
-  const [result, setResult] = useState<string | null>(null);
+// Create QueryClient outside component to avoid recreation on re-renders
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30000, // 30 seconds as per 02-05 decision
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
-  // Demo: Test p4 info command
-  const handleTestInfo = async () => {
-    try {
-      const output = await execute('info');
-      if (output) {
-        setResult(output);
-        toast.success('p4 info completed');
-      }
-    } catch (error) {
-      toast.error(`Command failed: ${error}`);
-    }
-  };
-
-  // Demo: Test streaming command (would need p4 connected)
-  const handleTestSync = async () => {
-    try {
-      await execute('sync', ['-n'], { streaming: true });
-      toast.success('Sync preview completed');
-    } catch (error) {
-      toast.error(`Sync failed: ${error}`);
-    }
-  };
+function AppContent() {
+  // Subscribe to all P4 backend events for real-time updates
+  useP4Events();
 
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col">
-      {/* Main content area */}
-      <main className="flex-1 p-4 pb-32">
-        <h1 className="text-2xl font-bold mb-4">P4Now</h1>
-        <p className="text-slate-400 mb-6">
-          Non-blocking Perforce GUI — Phase 1 Foundation Test
-        </p>
-
-        {/* Test buttons */}
-        <div className="flex gap-4 mb-6">
-          <button
-            onClick={handleTestInfo}
-            disabled={isRunning}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded transition-colors"
-          >
-            Test p4 info
-          </button>
-          <button
-            onClick={handleTestSync}
-            disabled={isRunning}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-700 disabled:cursor-not-allowed rounded transition-colors"
-          >
-            Test p4 sync -n
-          </button>
-        </div>
-
-        {/* Result display */}
-        {result && (
-          <div className="bg-slate-800 rounded p-4 font-mono text-sm whitespace-pre-wrap">
-            {result}
-          </div>
-        )}
+      {/* Main application layout */}
+      <main className="flex-1 pb-32 overflow-hidden">
+        <MainLayout />
       </main>
 
       {/* Output panel (above status bar) */}
@@ -78,6 +37,14 @@ function App() {
       {/* Toast notifications */}
       <Toaster />
     </div>
+  );
+}
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AppContent />
+    </QueryClientProvider>
   );
 }
 
