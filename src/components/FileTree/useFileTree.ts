@@ -81,7 +81,8 @@ export function useFileTree() {
     queryFn: async () => {
       setLoading(true);
       try {
-        const fileInfos = await invokeP4Fstat([]);
+        // Pass rootPath to p4 fstat so it runs from the correct directory
+        const fileInfos = await invokeP4Fstat([], rootPath ?? undefined);
         const mappedFiles = fileInfos.map(mapP4FileInfo);
         setFiles(mappedFiles);
         return mappedFiles;

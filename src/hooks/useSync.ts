@@ -30,7 +30,7 @@ export function useSync() {
     currentOperation,
   } = useOperationStore();
 
-  const { updateFile } = useFileTreeStore();
+  const { updateFile, rootPath } = useFileTreeStore();
 
   const [conflict, setConflict] = useState<SyncConflict | null>(null);
   const [totalFiles, setTotalFiles] = useState(0);
@@ -62,8 +62,10 @@ export function useSync() {
         syncArgs.unshift('-f');
       }
 
+      // Pass rootPath to sync from correct directory
       const processId = await invokeP4Sync(
         syncArgs,
+        rootPath ?? undefined,
         (progress: SyncProgress) => {
           // Handle conflict detection
           if (progress.is_conflict) {
@@ -134,6 +136,7 @@ export function useSync() {
     completeOperation,
     addOutputLine,
     updateFile,
+    rootPath,
     syncedFiles,
     totalFiles,
   ]);

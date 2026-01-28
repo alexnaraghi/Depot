@@ -88,9 +88,18 @@ pub async fn p4_info() -> Result<P4ClientInfo, String> {
 
 /// Get file status information for given paths
 #[tauri::command]
-pub async fn p4_fstat(paths: Vec<String>) -> Result<Vec<P4FileInfo>, String> {
-    // Build command: p4 -ztag fstat <paths>
-    let mut args = vec!["-ztag".to_string(), "fstat".to_string()];
+pub async fn p4_fstat(paths: Vec<String>, client_root: Option<String>) -> Result<Vec<P4FileInfo>, String> {
+    // Build command: p4 [-d client_root] -ztag fstat <paths>
+    let mut args: Vec<String> = Vec::new();
+
+    // Add -d flag if client_root provided (run from workspace directory)
+    if let Some(ref root) = client_root {
+        args.push("-d".to_string());
+        args.push(root.clone());
+    }
+
+    args.push("-ztag".to_string());
+    args.push("fstat".to_string());
 
     if paths.is_empty() {
         // Default to all files in workspace
@@ -373,8 +382,9 @@ pub async fn p4_edit(
     }
 
     // Get updated file info for opened files
+    // Use None for client_root since we're querying specific depot paths
     let file_info = if !opened_files.is_empty() {
-        p4_fstat(opened_files.clone()).await?
+        p4_fstat(opened_files.clone(), None).await?
     } else {
         Vec::new()
     };
@@ -566,12 +576,21 @@ pub struct SyncProgress {
 #[tauri::command]
 pub async fn p4_sync(
     paths: Vec<String>,
+    client_root: Option<String>,
     on_progress: Channel<SyncProgress>,
     state: State<'_, ProcessManager>,
     app: AppHandle,
 ) -> Result<String, String> {
-    // Build command: p4 sync <paths>
-    let mut args = vec!["sync".to_string()];
+    // Build command: p4 [-d client_root] sync <paths>
+    let mut args: Vec<String> = Vec::new();
+
+    // Add -d flag if client_root provided (run from workspace directory)
+    if let Some(ref root) = client_root {
+        args.push("-d".to_string());
+        args.push(root.clone());
+    }
+
+    args.push("sync".to_string());
 
     if paths.is_empty() {
         args.push("...".to_string());
