@@ -72,6 +72,7 @@ All v1.0 decisions documented in PROJECT.md Key Decisions table.
 1. **Add click-to-dismiss for toasts** (ui) — `.planning/todos/pending/2026-01-28-toast-click-to-dismiss.md`
 2. **Fix changelist drag and drop** (ui) — `.planning/todos/pending/2026-01-29-fix-changelist-drag-and-drop.md`
 3. **Move files when editing default CL description** (ui) — `.planning/todos/pending/2026-01-29-move-files-when-editing-default-cl-description.md`
+4. **Unshelve file to same changelist, not default** (ui) — `.planning/todos/pending/2026-01-29-unshelve-to-same-changelist.md`
 
 ### Blockers/Concerns
 
