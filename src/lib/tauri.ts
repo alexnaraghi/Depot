@@ -360,13 +360,15 @@ export async function invokeP4DeleteShelf(
  * Preview reconcile operation (dry run).
  * Detects files that should be added, edited, or deleted.
  * Returns empty array if no changes detected.
+ * @param depotPath - Depot path to reconcile (e.g., "//stream/main/...") or undefined for "//..."
  */
 export async function invokeP4ReconcilePreview(
+  depotPath: string | undefined,
   server?: string,
   user?: string,
   client?: string
 ): Promise<ReconcilePreview[]> {
-  return invoke<ReconcilePreview[]>('p4_reconcile_preview', { server, user, client });
+  return invoke<ReconcilePreview[]>('p4_reconcile_preview', { depotPath, server, user, client });
 }
 
 /**

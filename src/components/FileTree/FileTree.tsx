@@ -7,6 +7,7 @@ import { FileHistoryDialog } from '@/components/dialogs/FileHistoryDialog';
 import { useDiff } from '@/hooks/useDiff';
 import { P4File } from '@/types/p4';
 import { Loader2, FolderOpen, AlertCircle } from 'lucide-react';
+import { useDndManager } from '@/contexts/DndContext';
 
 /**
  * Main file tree component
@@ -19,6 +20,7 @@ import { Loader2, FolderOpen, AlertCircle } from 'lucide-react';
  */
 export function FileTree() {
   const { tree, isLoading, error, refetch } = useFileTree();
+  const dndManager = useDndManager();
   const [contextMenu, setContextMenu] = useState<{
     file: P4File;
     x: number;
@@ -156,6 +158,7 @@ export function FileTree() {
         disableDrag
         disableDrop
         disableEdit
+        dndManager={dndManager}
       >
         {FileNode}
       </Tree>

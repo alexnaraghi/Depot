@@ -1483,8 +1483,12 @@ pub async fn p4_delete_shelf(
 }
 
 /// Preview reconcile (detect adds, edits, deletes)
+///
+/// When depot_path is provided (e.g., "//stream/main/..."), scans that path.
+/// Otherwise defaults to "//..." to scan entire workspace.
 #[tauri::command]
 pub async fn p4_reconcile_preview(
+    depot_path: Option<String>,
     server: Option<String>,
     user: Option<String>,
     client: Option<String>,
@@ -1494,6 +1498,10 @@ pub async fn p4_reconcile_preview(
 
     cmd.arg("reconcile");
     cmd.arg("-n");  // Dry run
+
+    // Add path argument (defaults to "//..." if not provided)
+    let path = depot_path.unwrap_or_else(|| "//...".to_string());
+    cmd.arg(path);
 
     let output = cmd
         .output()

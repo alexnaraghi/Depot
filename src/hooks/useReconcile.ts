@@ -1,6 +1,6 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useConnectionStore } from '@/stores/connectionStore';
-import { invokeP4ReconcilePreview, invokeP4ReconcileApply, ReconcilePreview } from '@/lib/tauri';
+import { invokeP4ReconcilePreview, invokeP4ReconcileApply, invokeP4Info, ReconcilePreview } from '@/lib/tauri';
 import toast from 'react-hot-toast';
 
 /**
@@ -12,7 +12,22 @@ import toast from 'react-hot-toast';
  */
 export function useReconcile() {
   const queryClient = useQueryClient();
-  const { p4port, p4user, p4client } = useConnectionStore();
+  const { status, p4port, p4user, p4client } = useConnectionStore();
+  const isConnected = status === 'connected';
+
+  // Get client info for depot path (only when connected)
+  const { data: clientInfo } = useQuery({
+    queryKey: ['p4Info', p4port, p4user, p4client],
+    queryFn: () => invokeP4Info(p4port ?? undefined, p4user ?? undefined, p4client ?? undefined),
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    enabled: isConnected,
+  });
+
+  // Build depot path for reconcile (e.g., "//stream/main/...")
+  const depotPath = clientInfo?.client_stream
+    ? `${clientInfo.client_stream}/...`
+    : undefined;
 
   /**
    * Preview reconcile operation (dry run)
@@ -21,6 +36,7 @@ export function useReconcile() {
   const reconcilePreview = useMutation<ReconcilePreview[], Error, void>({
     mutationFn: async () => {
       return invokeP4ReconcilePreview(
+        depotPath,
         p4port ?? undefined,
         p4user ?? undefined,
         p4client ?? undefined

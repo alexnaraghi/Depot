@@ -8,6 +8,9 @@ import { SearchBar } from '@/components/SearchBar';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { DndProvider } from 'react-dnd';
+import { HTML5Backend } from 'react-dnd-html5-backend';
+import { DndContext } from '@/contexts/DndContext';
 
 /**
  * Main application layout
@@ -59,6 +62,8 @@ export function MainLayout() {
   }, [isResizing])
 
   return (
+    <DndProvider backend={HTML5Backend}>
+    <DndContext>
     <div className="flex flex-col h-full">
       {/* Header */}
       <header className="bg-slate-900 border-b border-slate-700">
@@ -153,5 +158,7 @@ export function MainLayout() {
         )}
       </div>
     </div>
+    </DndContext>
+    </DndProvider>
   );
 }
