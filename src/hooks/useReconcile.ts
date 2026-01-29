@@ -63,16 +63,18 @@ export function useReconcile() {
         p4client ?? undefined
       );
     },
-    onSuccess: (_, { filePaths, changelistId }) => {
+    onSuccess: (result, { changelistId }) => {
       const clTarget = changelistId ? `changelist ${changelistId}` : 'default changelist';
-      toast.success(`Reconciled ${filePaths.length} file(s) to ${clTarget}`);
+      const fileCount = result.trim().split('\n').filter(l => l.trim().length > 0).length;
+      toast.success(`Reconciled ${fileCount} file(s) to ${clTarget}`);
       // Invalidate queries to refresh UI
       queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
       queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
       queryClient.invalidateQueries({ queryKey: ['p4', 'fstat'] });
     },
     onError: (error) => {
-      toast.error(`Reconcile failed: ${error.message}`);
+      const msg = error instanceof Error ? error.message : String(error);
+      toast.error(`Reconcile failed: ${msg}`);
     },
   });
 

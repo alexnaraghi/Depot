@@ -1536,8 +1536,14 @@ fn parse_reconcile_output(output: &str) -> Result<Vec<ReconcilePreview>, String>
         // Expected format: "C:\path\file.txt - opened for edit"
         // or "//depot/path#1 - opened for add"
         if let Some(dash_pos) = line.find(" - opened for ") {
-            let path = line[..dash_pos].trim().to_string();
-            let after_dash = &line[dash_pos + 15..]; // Skip " - opened for "
+            let raw_path = line[..dash_pos].trim();
+            // Strip revision specifier (#rev) if present
+            let path = if let Some(hash_pos) = raw_path.rfind('#') {
+                raw_path[..hash_pos].to_string()
+            } else {
+                raw_path.to_string()
+            };
+            let after_dash = &line[dash_pos + 14..]; // Skip " - opened for "
             let action = after_dash.trim().to_string();
 
             previews.push(ReconcilePreview {
@@ -1564,6 +1570,18 @@ pub async fn p4_reconcile_apply(
         return Err("No file paths provided".to_string());
     }
 
+    // Clean paths: strip revision specifiers (#rev) that p4 reconcile -n may include
+    let cleaned_paths: Vec<String> = file_paths
+        .iter()
+        .map(|p| {
+            if let Some(hash_pos) = p.rfind('#') {
+                p[..hash_pos].to_string()
+            } else {
+                p.clone()
+            }
+        })
+        .collect();
+
     let mut cmd = Command::new("p4");
     apply_connection_args(&mut cmd, &server, &user, &client);
 
@@ -1574,7 +1592,7 @@ pub async fn p4_reconcile_apply(
         cmd.arg(cl.to_string());
     }
 
-    cmd.args(&file_paths);
+    cmd.args(&cleaned_paths);
 
     let output = cmd
         .output()
@@ -1584,7 +1602,14 @@ pub async fn p4_reconcile_apply(
     let stderr = String::from_utf8_lossy(&output.stderr);
 
     if !output.status.success() {
-        return Err(stderr.to_string());
+        let err = if stderr.is_empty() { stdout.to_string() } else { stderr.to_string() };
+        return Err(err);
+    }
+
+    // Check if p4 actually reconciled anything
+    let trimmed = stdout.trim();
+    if trimmed.is_empty() {
+        return Err("No files were reconciled. The files may already be open or unchanged.".to_string());
     }
 
     Ok(stdout.to_string())
