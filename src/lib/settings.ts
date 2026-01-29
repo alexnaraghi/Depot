@@ -17,6 +17,8 @@ export async function loadSettings(): Promise<P4Settings> {
     p4port: (await store.get<string>('p4port')) || defaultSettings.p4port,
     p4user: (await store.get<string>('p4user')) || defaultSettings.p4user,
     p4client: (await store.get<string>('p4client')) || defaultSettings.p4client,
+    diffToolPath: (await store.get<string>('diffToolPath')) || defaultSettings.diffToolPath,
+    diffToolArgs: (await store.get<string>('diffToolArgs')) || defaultSettings.diffToolArgs,
   };
 }
 
@@ -25,5 +27,7 @@ export async function saveSettings(settings: P4Settings): Promise<void> {
   await store.set('p4port', settings.p4port);
   await store.set('p4user', settings.p4user);
   await store.set('p4client', settings.p4client);
+  await store.set('diffToolPath', settings.diffToolPath);
+  await store.set('diffToolArgs', settings.diffToolArgs);
   await store.save();
 }

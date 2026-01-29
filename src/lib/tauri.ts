@@ -217,3 +217,68 @@ export async function invokeP4Reopen(paths: string[], changelist: number, server
 export async function invokeP4EditChangeDescription(changelist: number, description: string, server?: string, user?: string, client?: string): Promise<void> {
   return invoke<void>('p4_edit_change_description', { changelist, description, server, user, client });
 }
+
+/**
+ * Revision information from p4 filelog.
+ */
+export interface P4Revision {
+  rev: number;
+  change: number;
+  action: string;
+  file_type: string;
+  time: number;
+  user: string;
+  client: string;
+  desc: string;
+}
+
+/**
+ * Get file revision history.
+ */
+export async function invokeP4Filelog(
+  depotPath: string,
+  maxRevisions?: number,
+  server?: string,
+  user?: string,
+  client?: string
+): Promise<P4Revision[]> {
+  return invoke<P4Revision[]>('p4_filelog', { depotPath, maxRevisions, server, user, client });
+}
+
+/**
+ * Print a specific revision of a file to a temp file.
+ * Returns the path to the temp file.
+ */
+export async function invokeP4PrintToFile(
+  depotPath: string,
+  revision: number,
+  server?: string,
+  user?: string,
+  client?: string
+): Promise<string> {
+  return invoke<string>('p4_print_to_file', { depotPath, revision, server, user, client });
+}
+
+/**
+ * Launch external diff tool with two file paths.
+ */
+export async function invokeLaunchDiffTool(
+  leftPath: string,
+  rightPath: string,
+  diffToolPath: string,
+  diffToolArgs?: string
+): Promise<void> {
+  return invoke<void>('launch_diff_tool', { leftPath, rightPath, diffToolPath, diffToolArgs });
+}
+
+/**
+ * Get submitted changelists with full descriptions.
+ */
+export async function invokeP4ChangesSubmitted(
+  maxChanges?: number,
+  server?: string,
+  user?: string,
+  client?: string
+): Promise<P4ChangelistInfo[]> {
+  return invoke<P4ChangelistInfo[]>('p4_changes_submitted', { maxChanges, server, user, client });
+}
