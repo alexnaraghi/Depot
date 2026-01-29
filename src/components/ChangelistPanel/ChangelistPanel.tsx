@@ -6,11 +6,13 @@ import { ChangelistContextMenu } from './ChangelistContextMenu';
 import { SubmitDialog } from './SubmitDialog';
 import { CreateChangelistDialog } from './CreateChangelistDialog';
 import { EditDescriptionDialog } from './EditDescriptionDialog';
+import { FileHistoryDialog } from '@/components/dialogs/FileHistoryDialog';
 import { ChangelistTreeNode } from '@/utils/treeBuilder';
 import { P4Changelist, P4File } from '@/types/p4';
 import { invokeP4Reopen, invokeP4DeleteChange } from '@/lib/tauri';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryClient } from '@tanstack/react-query';
+import { useDiff } from '@/hooks/useDiff';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { Plus } from 'lucide-react';
@@ -44,6 +46,11 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
     x: number;
     y: number;
   } | null>(null);
+  const [historyDialog, setHistoryDialog] = useState<{
+    depotPath: string;
+    localPath: string;
+  } | null>(null);
+  const { diffAgainstWorkspace } = useDiff();
 
   // Handle drag-and-drop between changelists
   const handleMove: MoveHandler<ChangelistTreeNode> = useCallback(async ({ dragIds, parentId }) => {
@@ -158,6 +165,40 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
     });
   }, []);
 
+  // Handle file history dialog
+  const handleShowHistory = useCallback((depotPath: string, localPath: string) => {
+    setHistoryDialog({ depotPath, localPath });
+  }, []);
+
+  // Handle diff against have
+  const handleDiffAgainstHave = useCallback((depotPath: string, localPath: string) => {
+    // Find the file in tree to get its revision
+    const findFileInTree = (depotPath: string): P4File | null => {
+      const search = (nodes: ChangelistTreeNode[]): P4File | null => {
+        for (const node of nodes) {
+          if (node.type === 'file') {
+            const file = node.data as P4File;
+            if (file.depotPath === depotPath) {
+              return file;
+            }
+          }
+          if (node.children) {
+            const found = search(node.children);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      return search(treeData);
+    };
+
+    const file = findFileInTree(depotPath);
+    if (file) {
+      // Diff workspace file against the have revision (file.revision is the have rev)
+      diffAgainstWorkspace(depotPath, localPath, file.revision);
+    }
+  }, [treeData, diffAgainstWorkspace]);
+
   // Loading state
   if (isLoading) {
     return (
@@ -259,6 +300,16 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
           x={contextMenuState.x}
           y={contextMenuState.y}
           onClose={() => setContextMenuState(null)}
+          onShowHistory={handleShowHistory}
+          onDiffAgainstHave={handleDiffAgainstHave}
+        />
+      )}
+      {historyDialog && (
+        <FileHistoryDialog
+          open={!!historyDialog}
+          onOpenChange={(open) => !open && setHistoryDialog(null)}
+          depotPath={historyDialog.depotPath}
+          localPath={historyDialog.localPath}
         />
       )}
     </div>

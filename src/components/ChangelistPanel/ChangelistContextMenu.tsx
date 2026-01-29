@@ -5,6 +5,7 @@ import { invokeP4Reopen } from '@/lib/tauri';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryClient } from '@tanstack/react-query';
 import { useShelve } from '@/hooks/useShelvedFiles';
+import { FileContextMenuItems } from '@/components/shared/FileContextMenuItems';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 
@@ -15,6 +16,8 @@ interface ChangelistContextMenuProps {
   x: number;
   y: number;
   onClose: () => void;
+  onShowHistory?: (depotPath: string, localPath: string) => void;
+  onDiffAgainstHave?: (depotPath: string, localPath: string) => void;
 }
 
 /**
@@ -32,6 +35,8 @@ export function ChangelistContextMenu({
   x,
   y,
   onClose,
+  onShowHistory,
+  onDiffAgainstHave,
 }: ChangelistContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const submenuRef = useRef<HTMLDivElement>(null);
@@ -148,6 +153,19 @@ export function ChangelistContextMenu({
             <Archive className="w-4 h-4" />
             <span>Shelve Selected Files</span>
           </button>
+        )}
+
+        {/* Shared file operations - only for single file selection */}
+        {files.length === 1 && (
+          <>
+            <div className="h-px bg-slate-700 my-1" />
+            <FileContextMenuItems
+              file={files[0]}
+              onClose={onClose}
+              onShowHistory={onShowHistory}
+              onDiffAgainstHave={onDiffAgainstHave}
+            />
+          </>
         )}
       </div>
 
