@@ -76,11 +76,12 @@ Plans:
   2. User can launch an external diff tool to compare any revision against the previous revision or the workspace version
   3. User can configure the external diff tool path and arguments in settings
   4. User can search submitted changelists by number, author, or description and see results with changelist number, date, user, and description
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 05-01-PLAN.md — Rust backend commands (filelog, print, diff launch, changes search) + TS bindings + diff tool settings
+- [ ] 05-02-PLAN.md — File History dialog, diff hooks, context menu integration, Settings diff tool config
+- [ ] 05-03-PLAN.md — Search bar in header, search results panel, client-side filtering
 
 ### Phase 06: Shelve & Reconcile
 **Goal**: User can shelve/unshelve files safely and reconcile offline work with a preview before applying
