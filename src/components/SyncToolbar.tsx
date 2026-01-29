@@ -1,13 +1,16 @@
-import { RefreshCw, X } from 'lucide-react';
+import { RefreshCw, X, FolderSync } from 'lucide-react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useSync } from '@/hooks/useSync';
 import { SyncConflictDialog } from '@/components/dialogs/SyncConflictDialog';
+import { ReconcilePreviewDialog } from '@/components/dialogs/ReconcilePreviewDialog';
 
 /**
- * Toolbar for sync operations.
+ * Toolbar for sync and reconcile operations.
  *
  * Features:
  * - Sync button with loading state (spinning icon)
+ * - Reconcile button to detect offline changes
  * - Cancel button appears when syncing
  * - Progress counter (files synced)
  * - Current file name display
@@ -26,6 +29,7 @@ export function SyncToolbar() {
     syncedFiles,
     totalFiles,
   } = useSync();
+  const [reconcileDialogOpen, setReconcileDialogOpen] = useState(false);
 
   const handleSync = async () => {
     try {
@@ -61,6 +65,19 @@ export function SyncToolbar() {
           {isRunning ? 'Syncing...' : 'Sync Workspace'}
         </Button>
 
+        {/* Reconcile button */}
+        <Button
+          onClick={() => setReconcileDialogOpen(true)}
+          disabled={isRunning || isCancelling}
+          variant="outline"
+          size="sm"
+          className="border-slate-600 hover:bg-slate-700"
+          title="Reconcile Workspace — detect offline changes"
+        >
+          <FolderSync className="h-4 w-4 mr-2" />
+          Reconcile
+        </Button>
+
         {/* Cancel button (only visible when syncing) */}
         {canCancel && (
           <Button
@@ -90,6 +107,12 @@ export function SyncToolbar() {
         conflict={conflict}
         onSkip={skipConflict}
         onOverwrite={forceSync}
+      />
+
+      {/* Reconcile preview dialog */}
+      <ReconcilePreviewDialog
+        open={reconcileDialogOpen}
+        onOpenChange={setReconcileDialogOpen}
       />
     </>
   );
