@@ -13,7 +13,7 @@ Milestone: v2.0 Feature Complete
 Phase: 06 of 08 (Shelve & Reconcile) — COMPLETE
 Plan: 03 of 03 complete
 Status: Phase complete, verified
-Last activity: 2026-01-29 — Completed Phase 06 (Shelve & Reconcile)
+Last activity: 2026-01-29 — Completed Quick Task 001 (Unify File Context Menus)
 
 Progress: [#########################...] 96% (25/~26 plans estimated)
 
@@ -66,6 +66,8 @@ All v1.0 decisions documented in PROJECT.md Key Decisions table.
 | D-06-03-01 | 06-03 | ReconcilePreviewDialog uses mutation not query for preview scan | User triggers reconcile manually, mutation provides explicit loading/error states |
 | D-06-03-02 | 06-03 | Select all files by default after scan | Most common workflow is reconcile all detected changes, user can deselect unwanted files |
 | D-06-03-03 | 06-03 | Group files by action type with color-coded badges | Visual clarity for add (green), edit (yellow), delete (red) operations |
+| D-Q001-01 | Q-001 | Extract file operations to shared component | DRY principle - single source of truth for common menu items |
+| D-Q001-02 | Q-001 | Show shared items only for single-file selection in changelist panel | Operations like diff and history are single-file only, multi-select should show only move/shelve |
 
 ### Pending Todos
 
@@ -82,7 +84,7 @@ None active.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed Phase 06 (Shelve & Reconcile)
+Stopped at: Completed Quick Task 001 (Unify File Context Menus)
 Resume file: None
 
 ---
