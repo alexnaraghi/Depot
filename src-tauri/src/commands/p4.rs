@@ -1221,13 +1221,18 @@ pub async fn launch_diff_tool(
     // Parse and apply arguments
     if let Some(args_str) = diff_tool_args.filter(|s| !s.is_empty()) {
         // Check for placeholders
-        if args_str.contains("{left}") || args_str.contains("{right}") {
+        if args_str.contains("{left}") || args_str.contains("{right}")
+            || args_str.contains("$LOCAL") || args_str.contains("$REMOTE")
+        {
             // Parse args and substitute placeholders
+            // Supports {left}/{right} and P4-style $LOCAL/$REMOTE
             let args: Vec<String> = args_str
                 .split_whitespace()
                 .map(|arg| {
                     arg.replace("{left}", &left_path)
                        .replace("{right}", &right_path)
+                       .replace("$LOCAL", &left_path)
+                       .replace("$REMOTE", &right_path)
                 })
                 .collect();
             cmd.args(args);
