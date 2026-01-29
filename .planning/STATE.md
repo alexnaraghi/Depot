@@ -10,19 +10,19 @@ See: .planning/PROJECT.md (updated 2026-01-28)
 ## Current Position
 
 Milestone: v2.0 Feature Complete
-Phase: 06 of 08 (Shelve & Reconcile) — COMPLETE
-Plan: 03 of 03 complete
-Status: Phase complete, verified
-Last activity: 2026-01-29 — Completed Quick Task 001 (Unify File Context Menus)
+Phase: 07 of 08 (Context Menus & Keyboard Shortcuts)
+Plan: 01 of 02 complete
+Status: In progress
+Last activity: 2026-01-29 — Completed 07-01-PLAN.md
 
-Progress: [#########################...] 96% (25/~26 plans estimated)
+Progress: [##########################..] 96% (26/~27 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 25 (14 v1.0 + 11 v2.0)
+- Total plans completed: 26 (14 v1.0 + 12 v2.0)
 - Average duration: 7 min
-- Total execution time: ~175 min (104 v1.0 + ~71 v2.0)
+- Total execution time: ~183 min (104 v1.0 + ~79 v2.0)
 
 ## Accumulated Context
 
@@ -68,6 +68,9 @@ All v1.0 decisions documented in PROJECT.md Key Decisions table.
 | D-06-03-03 | 06-03 | Group files by action type with color-coded badges | Visual clarity for add (green), edit (yellow), delete (red) operations |
 | D-Q001-01 | Q-001 | Extract file operations to shared component | DRY principle - single source of truth for common menu items |
 | D-Q001-02 | Q-001 | Show shared items only for single-file selection in changelist panel | Operations like diff and history are single-file only, multi-select should show only move/shelve |
+| D-07-01-01 | 07-01 | Custom events for cross-component shortcuts | Use window.dispatchEvent for global shortcuts to avoid prop drilling, cleaner than state lifting for Sync and New Changelist triggers |
+| D-07-01-02 | 07-01 | revealItemInDir for Open in Explorer | Shows file selected in folder, better UX than just opening directory |
+| D-07-01-03 | 07-01 | enableOnFormTags: false for all shortcuts | Prevents shortcuts from firing when typing in input fields, standard pattern for keyboard navigation |
 
 ### Pending Todos
 
@@ -89,8 +92,8 @@ None active.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed Quick Task 001 (Unify File Context Menus)
+Stopped at: Completed 07-01-PLAN.md (Keyboard Shortcuts & Changelist Header Menu)
 Resume file: None
 
 ---
-**v2.0 In Progress:** Phases 03-06 complete (11/11 plans), Phase 07-08 remaining (~1-2 plans)
+**v2.0 In Progress:** Phases 03-06 complete (11/11 plans), Phase 07 in progress (1/2 plans), Phase 08 remaining (~1 plan)
