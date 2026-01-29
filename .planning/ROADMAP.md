@@ -109,11 +109,11 @@ Plans:
   3. Right-clicking a file in workspace view shows Checkout, Add, Diff, File History, and Get Revision actions
   4. Keyboard shortcuts work for core operations (Refresh, Sync, Submit, Revert, Diff, History) and are displayed in menus/tooltips
   5. User can open a command palette (Ctrl+K or Ctrl+Shift+P) with fuzzy search for all operations
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 07-01: TBD
-- [ ] 07-02: TBD
+- [ ] 07-01-PLAN.md — Shortcut registry, changelist header menu, global keyboard shortcuts, shortcut hints in menus/tooltips
+- [ ] 07-02-PLAN.md — Command palette with fuzzy search, workspace menu additions, context-sensitive shortcuts
 
 ### Phase 08: Visual Polish
 **Goal**: The app looks professional and feels polished with consistent design and proper loading states
