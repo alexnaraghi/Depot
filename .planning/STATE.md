@@ -43,7 +43,7 @@ All v1.0 decisions documented in PROJECT.md Key Decisions table.
 
 ### Pending Todos
 
-None.
+1. **Add click-to-dismiss for toasts** (ui) — `.planning/todos/pending/2026-01-28-toast-click-to-dismiss.md`
 
 ### Blockers/Concerns
 
