@@ -50,6 +50,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       p4port: '',
       p4user: '',
       p4client: '',
+      diffToolPath: '',
+      diffToolArgs: '',
     },
     mode: 'onSubmit',
   });
@@ -66,7 +68,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           const settings = await loadSettings();
           // Only reset form if there are actual saved settings
           // Prevents wiping user-typed values with empty defaults
-          if (settings.p4port || settings.p4user || settings.p4client) {
+          if (settings.p4port || settings.p4user || settings.p4client || settings.diffToolPath) {
             form.reset(settings);
           }
         } catch (error) {
@@ -222,6 +224,50 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 )}
               />
             )}
+
+            <div className="border-t border-slate-700 pt-4 mt-2">
+              <h3 className="text-sm font-medium mb-3">Diff Tool</h3>
+
+              <FormField
+                control={form.control}
+                name="diffToolPath"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Diff Tool Path</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="code, p4merge, /path/to/difftool"
+                        {...field}
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      Path to your external diff tool (e.g., code, p4merge, or full path)
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="diffToolArgs"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Diff Tool Arguments (optional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="--diff {left} {right}"
+                        {...field}
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      Optional: Use {'{left}'} and {'{right}'} as placeholders, or leave empty to append files as final arguments
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <DialogFooter>
               <Button

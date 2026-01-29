@@ -3,6 +3,8 @@ import { Tree } from 'react-arborist';
 import { useFileTree } from './useFileTree';
 import { FileNode, FileNodeData } from './FileNode';
 import { FileContextMenu } from './FileContextMenu';
+import { FileHistoryDialog } from '@/components/dialogs/FileHistoryDialog';
+import { useDiff } from '@/hooks/useDiff';
 import { P4File } from '@/types/p4';
 import { Loader2, FolderOpen, AlertCircle } from 'lucide-react';
 
@@ -22,6 +24,11 @@ export function FileTree() {
     x: number;
     y: number;
   } | null>(null);
+  const [historyDialog, setHistoryDialog] = useState<{
+    depotPath: string;
+    localPath: string;
+  } | null>(null);
+  const { diffAgainstWorkspace } = useDiff();
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerHeight, setContainerHeight] = useState(600);
 
@@ -65,6 +72,38 @@ export function FileTree() {
 
   function closeContextMenu() {
     setContextMenu(null);
+  }
+
+  function handleShowHistory(depotPath: string, localPath: string) {
+    setHistoryDialog({ depotPath, localPath });
+  }
+
+  function handleDiffAgainstHave(depotPath: string, localPath: string) {
+    // For "Diff against Have", we need to get the have revision from the file
+    // The "have" revision is the file's current revision (what's on disk)
+    // We'll diff the local file against the head revision
+    const file = findFileInTree(depotPath);
+    if (file) {
+      // Diff workspace file against the have revision (file.revision is the have rev)
+      diffAgainstWorkspace(depotPath, localPath, file.revision);
+    }
+  }
+
+  // Helper to find file in tree by depot path
+  function findFileInTree(depotPath: string): P4File | null {
+    function search(nodes: FileNodeData[]): P4File | null {
+      for (const node of nodes) {
+        if (node.file && node.file.depotPath === depotPath) {
+          return node.file;
+        }
+        if (node.children) {
+          const found = search(node.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    }
+    return search(tree);
   }
 
   // Loading state
@@ -128,6 +167,18 @@ export function FileTree() {
           x={contextMenu.x}
           y={contextMenu.y}
           onClose={closeContextMenu}
+          onShowHistory={handleShowHistory}
+          onDiffAgainstHave={handleDiffAgainstHave}
+        />
+      )}
+
+      {/* File History Dialog */}
+      {historyDialog && (
+        <FileHistoryDialog
+          open={!!historyDialog}
+          onOpenChange={(open) => !open && setHistoryDialog(null)}
+          depotPath={historyDialog.depotPath}
+          localPath={historyDialog.localPath}
         />
       )}
     </div>
