@@ -44,11 +44,11 @@ Key accomplishments:
   3. Settings persist across app restarts without re-entry
   4. Connection status (connected/disconnected/error) is visible at all times in the UI
   5. Current workspace name and stream/repository are displayed in the header or status bar
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
+- [ ] 03-01-PLAN.md — Settings persistence infrastructure and Rust backend commands
+- [ ] 03-02-PLAN.md — Settings dialog UI, connection status, and header integration
 
 ### Phase 04: Changelist Management
 **Goal**: User can organize pending work across multiple changelists with full CRUD and file movement
