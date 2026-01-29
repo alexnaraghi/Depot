@@ -60,11 +60,12 @@ Plans:
   3. User can drag-and-drop files between changelists and the files move on the server
   4. User can move files between changelists via a right-click "Move to Changelist" option
   5. User can submit any specific numbered changelist (not only the default)
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
+- [ ] 04-01-PLAN.md — Rust backend commands (create, delete, reopen, edit description) + TypeScript bindings
+- [ ] 04-02-PLAN.md — Changelist CRUD UI (create/edit dialogs, delete button, default CL handling)
+- [ ] 04-03-PLAN.md — File context menu with "Move to Changelist" submenu, DnD reopen fix, verification
 
 ### Phase 05: History, Diff & Search
 **Goal**: User can investigate file history, compare revisions with an external diff tool, and search submitted changelists
@@ -136,7 +137,7 @@ Phases execute in numeric order: 03 -> 04 -> 05 -> 06 -> 07 -> 08
 | 01. Non-Blocking Foundation | v1.0 | 8/8 | Complete | 2026-01-28 |
 | 02. Core Workflows | v1.0 | 6/6 | Complete | 2026-01-28 |
 | 03. Settings & Infrastructure | v2.0 | 2/2 | Complete | 2026-01-29 |
-| 04. Changelist Management | v2.0 | 0/TBD | Not started | - |
+| 04. Changelist Management | v2.0 | 0/3 | Not started | - |
 | 05. History, Diff & Search | v2.0 | 0/TBD | Not started | - |
 | 06. Shelve & Reconcile | v2.0 | 0/TBD | Not started | - |
 | 07. Context Menus & Keyboard Shortcuts | v2.0 | 0/TBD | Not started | - |
