@@ -7,12 +7,12 @@
 
 ### Connection & Settings
 
-- [ ] **CONN-01**: User can configure P4 connection (server, user, client workspace) in a settings UI
-- [ ] **CONN-04**: User can browse and select from available workspaces
-- [ ] **CONN-05**: Connection settings persist across app restarts
-- [ ] **CONN-06**: Visual connection status indicator (connected/disconnected/error) visible at all times
-- [ ] **CONN-07**: Current repository/stream name displayed in header or status bar
-- [ ] **CONN-08**: Current workspace name displayed in header or status bar
+- [x] **CONN-01**: User can configure P4 connection (server, user, client workspace) in a settings UI
+- [x] **CONN-04**: User can browse and select from available workspaces
+- [x] **CONN-05**: Connection settings persist across app restarts
+- [x] **CONN-06**: Visual connection status indicator (connected/disconnected/error) visible at all times
+- [x] **CONN-07**: Current repository/stream name displayed in header or status bar
+- [x] **CONN-08**: Current workspace name displayed in header or status bar
 
 ### Changelist Management
 
@@ -106,12 +106,12 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CONN-01 | Phase 03 | Pending |
-| CONN-04 | Phase 03 | Pending |
-| CONN-05 | Phase 03 | Pending |
-| CONN-06 | Phase 03 | Pending |
-| CONN-07 | Phase 03 | Pending |
-| CONN-08 | Phase 03 | Pending |
+| CONN-01 | Phase 03 | Complete |
+| CONN-04 | Phase 03 | Complete |
+| CONN-05 | Phase 03 | Complete |
+| CONN-06 | Phase 03 | Complete |
+| CONN-07 | Phase 03 | Complete |
+| CONN-08 | Phase 03 | Complete |
 | CL-01 | Phase 04 | Pending |
 | CL-02 | Phase 04 | Pending |
 | CL-03 | Phase 04 | Pending |

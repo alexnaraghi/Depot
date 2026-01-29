@@ -25,7 +25,7 @@ Key accomplishments:
 
 **Milestone Goal:** Transform P4Now from MVP into a full daily-driver Perforce client with settings, history, diff, changelists, shelving, reconcile, and polish.
 
-- [ ] **Phase 03: Settings & Infrastructure** - Connection settings UI, status indicator, and persistent configuration
+- [x] **Phase 03: Settings & Infrastructure** - Connection settings UI, status indicator, and persistent configuration
 - [ ] **Phase 04: Changelist Management** - Multiple changelists with create, edit, delete, and drag-drop file moves
 - [ ] **Phase 05: History, Diff & Search** - File history viewer, external diff integration, and submitted changelist search
 - [ ] **Phase 06: Shelve & Reconcile** - Shelve/unshelve workflows and offline reconcile with preview
@@ -47,8 +47,8 @@ Key accomplishments:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Settings persistence infrastructure and Rust backend commands
-- [ ] 03-02-PLAN.md — Settings dialog UI, connection status, and header integration
+- [x] 03-01-PLAN.md — Settings persistence infrastructure and Rust backend commands
+- [x] 03-02-PLAN.md — Settings dialog UI, connection status, and header integration
 
 ### Phase 04: Changelist Management
 **Goal**: User can organize pending work across multiple changelists with full CRUD and file movement
@@ -135,7 +135,7 @@ Phases execute in numeric order: 03 -> 04 -> 05 -> 06 -> 07 -> 08
 |-------|-----------|----------------|--------|-----------|
 | 01. Non-Blocking Foundation | v1.0 | 8/8 | Complete | 2026-01-28 |
 | 02. Core Workflows | v1.0 | 6/6 | Complete | 2026-01-28 |
-| 03. Settings & Infrastructure | v2.0 | 0/TBD | Not started | - |
+| 03. Settings & Infrastructure | v2.0 | 2/2 | Complete | 2026-01-29 |
 | 04. Changelist Management | v2.0 | 0/TBD | Not started | - |
 | 05. History, Diff & Search | v2.0 | 0/TBD | Not started | - |
 | 06. Shelve & Reconcile | v2.0 | 0/TBD | Not started | - |
@@ -143,4 +143,4 @@ Phases execute in numeric order: 03 -> 04 -> 05 -> 06 -> 07 -> 08
 | 08. Visual Polish | v2.0 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-01-28 after v2.0 roadmap creation*
+*Last updated: 2026-01-29 after Phase 03 completion*
