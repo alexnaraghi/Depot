@@ -4,6 +4,7 @@ import { OutputPanel } from '@/components/OutputPanel';
 import { Toaster } from '@/components/Toaster';
 import { MainLayout } from '@/components/MainLayout';
 import { useP4Events } from '@/hooks/useP4Events';
+import { useSettings } from '@/hooks/useSettings';
 
 // Create QueryClient outside component to avoid recreation on re-renders
 const queryClient = new QueryClient({
@@ -16,6 +17,9 @@ const queryClient = new QueryClient({
 });
 
 function AppContent() {
+  // Load settings and test connection on app startup
+  useSettings();
+
   // Subscribe to all P4 backend events for real-time updates
   useP4Events();
 

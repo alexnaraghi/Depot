@@ -2,7 +2,11 @@ import { useState, useEffect } from 'react';
 import { FileTree } from '@/components/FileTree/FileTree';
 import { ChangelistPanel } from '@/components/ChangelistPanel/ChangelistPanel';
 import { SyncToolbar } from '@/components/SyncToolbar';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ConnectionStatus } from '@/components/ConnectionStatus';
+import { SettingsDialog } from '@/components/SettingsDialog';
+import { useConnectionStore } from '@/stores/connectionStore';
+import { ChevronLeft, ChevronRight, Settings } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 /**
  * Main application layout
@@ -17,6 +21,8 @@ export function MainLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(320); // Default width in pixels
   const [isResizing, setIsResizing] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const { workspace, stream } = useConnectionStore();
 
   const handleMouseDown = () => {
     setIsResizing(true);
@@ -55,11 +61,38 @@ export function MainLayout() {
     <div className="flex flex-col h-full">
       {/* Header */}
       <header className="bg-slate-900 border-b border-slate-700">
-        <div className="px-4 py-2 flex items-center justify-between">
+        <div className="px-4 py-2 flex items-center justify-between gap-4">
           <h1 className="text-lg font-semibold text-slate-100">P4Now</h1>
+
+          {/* Workspace and stream display */}
+          <div className="flex-1 flex items-baseline gap-2">
+            <span className="font-medium text-slate-100">
+              {workspace || 'No workspace'}
+            </span>
+            {stream && (
+              <span className="text-sm text-slate-400">{stream}</span>
+            )}
+          </div>
+
+          {/* Connection status and settings */}
+          <div className="flex items-center gap-2">
+            <ConnectionStatus />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSettingsOpen(true)}
+              title="Settings"
+              className="text-slate-400 hover:text-slate-100"
+            >
+              <Settings className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
         <SyncToolbar />
       </header>
+
+      {/* Settings dialog */}
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
 
       {/* Main content area */}
       <div className="flex-1 flex overflow-hidden">
