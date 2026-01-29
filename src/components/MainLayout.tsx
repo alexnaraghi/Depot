@@ -7,6 +7,7 @@ import { SyncToolbar } from '@/components/SyncToolbar';
 import { ConnectionStatus } from '@/components/ConnectionStatus';
 import { SettingsDialog } from '@/components/SettingsDialog';
 import { SearchBar } from '@/components/SearchBar';
+import { CommandPalette } from '@/components/CommandPalette';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -29,8 +30,14 @@ export function MainLayout() {
   const [sidebarWidth, setSidebarWidth] = useState(320); // Default width in pixels
   const [isResizing, setIsResizing] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const { workspace, stream } = useConnectionStore();
   const queryClient = useQueryClient();
+
+  // Expose queryClient globally for command palette
+  useEffect(() => {
+    (window as any).__queryClient = queryClient;
+  }, [queryClient]);
 
   // Global keyboard shortcuts
   useHotkeys(SHORTCUTS.REFRESH.keys, () => {
@@ -45,10 +52,34 @@ export function MainLayout() {
     window.dispatchEvent(new CustomEvent('p4now:new-changelist'));
   }, { enableOnFormTags: false, preventDefault: true });
 
-  // Reserve command palette shortcuts for future use
+  // Command palette shortcuts
   useHotkeys(SHORTCUTS.COMMAND_PALETTE.keys, () => {
-    // Will be wired in plan 02
+    setCommandPaletteOpen(true);
   }, { enableOnFormTags: false, preventDefault: true });
+
+  // Context-sensitive shortcuts (dispatch events for components to handle)
+  useHotkeys(SHORTCUTS.DIFF.keys, () => {
+    window.dispatchEvent(new CustomEvent('p4now:diff-selected'));
+  }, { enableOnFormTags: false, preventDefault: true });
+
+  useHotkeys(SHORTCUTS.HISTORY.keys, () => {
+    window.dispatchEvent(new CustomEvent('p4now:history-selected'));
+  }, { enableOnFormTags: false, preventDefault: true });
+
+  useHotkeys(SHORTCUTS.REVERT.keys, () => {
+    window.dispatchEvent(new CustomEvent('p4now:revert-selected'));
+  }, { enableOnFormTags: false, preventDefault: true });
+
+  useHotkeys(SHORTCUTS.SUBMIT.keys, () => {
+    window.dispatchEvent(new CustomEvent('p4now:submit'));
+  }, { enableOnFormTags: false, preventDefault: true });
+
+  // Listen for 'p4now:open-settings' custom event to open settings dialog
+  useEffect(() => {
+    const handleOpenSettings = () => setSettingsOpen(true);
+    window.addEventListener('p4now:open-settings', handleOpenSettings);
+    return () => window.removeEventListener('p4now:open-settings', handleOpenSettings);
+  }, []);
 
   const handleMouseDown = () => {
     setIsResizing(true);
@@ -122,6 +153,9 @@ export function MainLayout() {
 
       {/* Settings dialog */}
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+
+      {/* Command palette */}
+      <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
 
       {/* Main content area */}
       <div className="flex-1 flex overflow-hidden">
