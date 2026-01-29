@@ -1286,3 +1286,297 @@ pub async fn p4_changes_submitted(
     let stdout = String::from_utf8_lossy(&output.stdout);
     parse_ztag_changes(&stdout)
 }
+
+/// Shelved file information from p4 describe -S
+#[derive(Debug, Clone, Serialize)]
+pub struct P4ShelvedFile {
+    pub depot_path: String,
+    pub action: String,
+    pub file_type: String,
+    pub revision: i32,
+}
+
+/// Reconcile preview information from p4 reconcile -n
+#[derive(Debug, Clone, Serialize)]
+pub struct ReconcilePreview {
+    pub depot_path: String,
+    pub local_path: String,
+    pub action: String,
+}
+
+/// Shelve files to a changelist
+#[tauri::command]
+pub async fn p4_shelve(
+    changelist_id: i32,
+    file_paths: Vec<String>,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<String, String> {
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+
+    cmd.arg("shelve");
+    cmd.arg("-c");
+    cmd.arg(changelist_id.to_string());
+
+    if !file_paths.is_empty() {
+        cmd.args(&file_paths);
+    }
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 shelve: {}", e))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    if !output.status.success() {
+        return Err(stderr.to_string());
+    }
+
+    Ok(stdout.to_string())
+}
+
+/// Describe shelved files in a changelist
+#[tauri::command]
+pub async fn p4_describe_shelved(
+    changelist_id: i32,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<Vec<P4ShelvedFile>, String> {
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+
+    cmd.arg("-ztag");
+    cmd.arg("describe");
+    cmd.arg("-S");
+    cmd.arg(changelist_id.to_string());
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 describe: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    parse_ztag_describe_shelved(&stdout)
+}
+
+/// Parse p4 -ztag describe -S output into P4ShelvedFile structs
+/// Similar to filelog parsing - uses indexed fields (depotFile0, action0, type0, rev0, etc.)
+fn parse_ztag_describe_shelved(output: &str) -> Result<Vec<P4ShelvedFile>, String> {
+    let mut fields: HashMap<String, String> = HashMap::new();
+
+    // First pass: collect all fields
+    for line in output.lines() {
+        let line = line.trim();
+        if let Some(stripped) = line.strip_prefix("... ") {
+            if let Some((key, value)) = stripped.split_once(' ') {
+                fields.insert(key.to_string(), value.to_string());
+            }
+        }
+    }
+
+    // Second pass: extract shelved files by index
+    let mut files = Vec::new();
+    let mut index = 0;
+
+    loop {
+        let depot_file_key = format!("depotFile{}", index);
+        let action_key = format!("action{}", index);
+        let type_key = format!("type{}", index);
+        let rev_key = format!("rev{}", index);
+
+        // Check if this index exists
+        if let Some(depot_path) = fields.get(&depot_file_key) {
+            let action = fields.get(&action_key).cloned().unwrap_or_default();
+            let file_type = fields.get(&type_key).cloned().unwrap_or_else(|| "text".to_string());
+            let revision = fields.get(&rev_key)
+                .and_then(|s| s.parse::<i32>().ok())
+                .unwrap_or(0);
+
+            files.push(P4ShelvedFile {
+                depot_path: depot_path.clone(),
+                action,
+                file_type,
+                revision,
+            });
+
+            index += 1;
+        } else {
+            break;
+        }
+    }
+
+    Ok(files)
+}
+
+/// Unshelve files from a changelist
+#[tauri::command]
+pub async fn p4_unshelve(
+    changelist_id: i32,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<String, String> {
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+
+    cmd.arg("unshelve");
+    cmd.arg("-s");
+    cmd.arg(changelist_id.to_string());
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 unshelve: {}", e))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    // Include stderr in result as it may contain conflict info
+    let result = if stderr.is_empty() {
+        stdout.to_string()
+    } else {
+        format!("{}\n{}", stdout, stderr)
+    };
+
+    if !output.status.success() {
+        return Err(result);
+    }
+
+    Ok(result)
+}
+
+/// Delete shelved files from a changelist
+#[tauri::command]
+pub async fn p4_delete_shelf(
+    changelist_id: i32,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<String, String> {
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+
+    cmd.arg("shelve");
+    cmd.arg("-d");
+    cmd.arg("-c");
+    cmd.arg(changelist_id.to_string());
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 shelve -d: {}", e))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    if !output.status.success() {
+        return Err(stderr.to_string());
+    }
+
+    Ok(stdout.to_string())
+}
+
+/// Preview reconcile (detect adds, edits, deletes)
+#[tauri::command]
+pub async fn p4_reconcile_preview(
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<Vec<ReconcilePreview>, String> {
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+
+    cmd.arg("reconcile");
+    cmd.arg("-n");  // Dry run
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 reconcile -n: {}", e))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    // Stderr may contain "no file(s) to reconcile" - treat as empty result, not error
+    if stderr.contains("no file(s) to reconcile") {
+        return Ok(Vec::new());
+    }
+
+    // Parse output line by line
+    let previews = parse_reconcile_output(&stdout)?;
+
+    Ok(previews)
+}
+
+/// Parse p4 reconcile -n output into ReconcilePreview structs
+/// Output format: "<path> - opened for <action>"
+fn parse_reconcile_output(output: &str) -> Result<Vec<ReconcilePreview>, String> {
+    let mut previews = Vec::new();
+
+    for line in output.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+
+        // Expected format: "C:\path\file.txt - opened for edit"
+        // or "//depot/path#1 - opened for add"
+        if let Some(dash_pos) = line.find(" - opened for ") {
+            let path = line[..dash_pos].trim().to_string();
+            let after_dash = &line[dash_pos + 15..]; // Skip " - opened for "
+            let action = after_dash.trim().to_string();
+
+            previews.push(ReconcilePreview {
+                depot_path: path,
+                local_path: String::new(),  // UI will handle display
+                action,
+            });
+        }
+    }
+
+    Ok(previews)
+}
+
+/// Apply reconcile to specific files
+#[tauri::command]
+pub async fn p4_reconcile_apply(
+    file_paths: Vec<String>,
+    changelist_id: Option<i32>,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<String, String> {
+    if file_paths.is_empty() {
+        return Err("No file paths provided".to_string());
+    }
+
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+
+    cmd.arg("reconcile");
+
+    if let Some(cl) = changelist_id {
+        cmd.arg("-c");
+        cmd.arg(cl.to_string());
+    }
+
+    cmd.args(&file_paths);
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 reconcile: {}", e))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    if !output.status.success() {
+        return Err(stderr.to_string());
+    }
+
+    Ok(stdout.to_string())
+}

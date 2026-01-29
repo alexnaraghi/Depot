@@ -34,6 +34,12 @@ pub fn run() {
             commands::p4_print_to_file,
             commands::launch_diff_tool,
             commands::p4_changes_submitted,
+            commands::p4_shelve,
+            commands::p4_describe_shelved,
+            commands::p4_unshelve,
+            commands::p4_delete_shelf,
+            commands::p4_reconcile_preview,
+            commands::p4_reconcile_apply,
         ])
         .setup(|app| {
             // Get process manager for cleanup

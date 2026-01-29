@@ -283,3 +283,104 @@ export async function invokeP4ChangesSubmitted(
 ): Promise<P4ChangelistInfo[]> {
   return invoke<P4ChangelistInfo[]>('p4_changes_submitted', { maxChanges, server, user, client });
 }
+
+/**
+ * Shelved file information from p4 describe -S.
+ */
+export interface P4ShelvedFile {
+  depotPath: string;
+  action: string;
+  fileType: string;
+  revision: number;
+}
+
+/**
+ * Reconcile preview information from p4 reconcile -n.
+ */
+export interface ReconcilePreview {
+  depotPath: string;
+  localPath: string;
+  action: string;
+}
+
+/**
+ * Shelve files to a changelist.
+ * @param changelistId - Target changelist ID
+ * @param filePaths - Specific files to shelve, or empty array to shelve all files in changelist
+ */
+export async function invokeP4Shelve(
+  changelistId: number,
+  filePaths: string[],
+  server?: string,
+  user?: string,
+  client?: string
+): Promise<string> {
+  return invoke<string>('p4_shelve', { changelistId, filePaths, server, user, client });
+}
+
+/**
+ * Describe shelved files in a changelist.
+ * Returns structured data about each shelved file.
+ */
+export async function invokeP4DescribeShelved(
+  changelistId: number,
+  server?: string,
+  user?: string,
+  client?: string
+): Promise<P4ShelvedFile[]> {
+  return invoke<P4ShelvedFile[]>('p4_describe_shelved', { changelistId, server, user, client });
+}
+
+/**
+ * Unshelve all files from a changelist back to the original changelist.
+ * Returns success message or error (including conflict info).
+ */
+export async function invokeP4Unshelve(
+  changelistId: number,
+  server?: string,
+  user?: string,
+  client?: string
+): Promise<string> {
+  return invoke<string>('p4_unshelve', { changelistId, server, user, client });
+}
+
+/**
+ * Delete all shelved files from a changelist.
+ */
+export async function invokeP4DeleteShelf(
+  changelistId: number,
+  server?: string,
+  user?: string,
+  client?: string
+): Promise<string> {
+  return invoke<string>('p4_delete_shelf', { changelistId, server, user, client });
+}
+
+/**
+ * Preview reconcile operation (dry run).
+ * Detects files that should be added, edited, or deleted.
+ * Returns empty array if no changes detected.
+ */
+export async function invokeP4ReconcilePreview(
+  server?: string,
+  user?: string,
+  client?: string
+): Promise<ReconcilePreview[]> {
+  return invoke<ReconcilePreview[]>('p4_reconcile_preview', { server, user, client });
+}
+
+/**
+ * Apply reconcile to specific selected files.
+ * Opens files for add/edit/delete based on local filesystem state.
+ * @param filePaths - Specific files to reconcile
+ * @param changelistId - Optional changelist to open files in (uses default if not specified)
+ */
+export async function invokeP4ReconcileApply(
+  filePaths: string[],
+  changelistId?: number,
+  server?: string,
+  user?: string,
+  client?: string
+): Promise<string> {
+  return invoke<string>('p4_reconcile_apply', { filePaths, changelistId, server, user, client });
+}
