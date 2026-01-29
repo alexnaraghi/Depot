@@ -1,13 +1,14 @@
-import { useCallback, useState } from 'react';
-import { Tree, MoveHandler } from 'react-arborist';
+import { useCallback, useState, useRef } from 'react';
+import { Tree, MoveHandler, TreeApi } from 'react-arborist';
 import { useChangelists } from './useChangelists';
 import { ChangelistNode } from './ChangelistNode';
+import { ChangelistContextMenu } from './ChangelistContextMenu';
 import { SubmitDialog } from './SubmitDialog';
 import { CreateChangelistDialog } from './CreateChangelistDialog';
 import { EditDescriptionDialog } from './EditDescriptionDialog';
 import { ChangelistTreeNode } from '@/utils/treeBuilder';
-import { P4Changelist } from '@/types/p4';
-import { invokeP4Edit, invokeP4DeleteChange } from '@/lib/tauri';
+import { P4Changelist, P4File } from '@/types/p4';
+import { invokeP4Reopen, invokeP4DeleteChange } from '@/lib/tauri';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
@@ -27,13 +28,20 @@ interface ChangelistPanelProps {
  * Submit button appears on hover for changelists with files.
  */
 export function ChangelistPanel({ className }: ChangelistPanelProps) {
-  const { treeData, isLoading } = useChangelists();
+  const { treeData, isLoading, changelists } = useChangelists();
   const { p4port, p4user, p4client } = useConnectionStore();
   const queryClient = useQueryClient();
+  const treeRef = useRef<TreeApi<ChangelistTreeNode>>(null);
   const [selectedChangelist, setSelectedChangelist] = useState<P4Changelist | null>(null);
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [contextMenuState, setContextMenuState] = useState<{
+    files: P4File[];
+    currentClId: number;
+    x: number;
+    y: number;
+  } | null>(null);
 
   // Handle drag-and-drop between changelists
   const handleMove: MoveHandler<ChangelistTreeNode> = useCallback(async ({ dragIds, parentId }) => {
@@ -60,15 +68,25 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
     if (filePaths.length === 0) return;
 
     try {
-      // Move files to new changelist via p4 edit -c <changelist>
-      // Note: p4 edit with already-opened files acts as p4 reopen, moving
-      // files to the specified changelist. See 02-03-PLAN.md Task 2 for details.
-      await invokeP4Edit(filePaths, targetClId);
+      // Move files to new changelist via p4 reopen
+      await invokeP4Reopen(
+        filePaths,
+        targetClId,
+        p4port ?? undefined,
+        p4user ?? undefined,
+        p4client ?? undefined
+      );
       toast.success(`Moved ${filePaths.length} file(s) to changelist ${targetClId}`);
+      // Invalidate queries to refresh UI
+      queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
+      queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
     } catch (error) {
       toast.error(`Failed to move files: ${error}`);
+      // Invalidate queries even on error to ensure UI shows correct state
+      queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
+      queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
     }
-  }, []);
+  }, [p4port, p4user, p4client, queryClient]);
 
   // Handle submit button click on changelist
   const handleSubmitClick = useCallback((cl: P4Changelist) => {
@@ -102,6 +120,41 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
       toast.error(`Failed to delete changelist: ${error}`);
     }
   }, [p4port, p4user, p4client, queryClient]);
+
+  // Handle right-click on file
+  const handleContextMenu = useCallback((e: React.MouseEvent, file: P4File) => {
+    // Get all selected files if multi-select is active
+    const selectedNodes = treeRef.current?.selectedNodes;
+    let files: P4File[] = [file];
+
+    if (selectedNodes && selectedNodes.length > 0) {
+      // Check if right-clicked file is in selection
+      const isInSelection = selectedNodes.some(node => {
+        if (node.data.type === 'file') {
+          const nodeFile = node.data.data as P4File;
+          return nodeFile.depotPath === file.depotPath;
+        }
+        return false;
+      });
+
+      if (isInSelection) {
+        // Use all selected files
+        files = selectedNodes
+          .filter(node => node.data.type === 'file')
+          .map(node => node.data.data as P4File);
+      }
+    }
+
+    // Find the changelist ID the file belongs to
+    const currentClId = file.changelist ?? 0;
+
+    setContextMenuState({
+      files,
+      currentClId,
+      x: e.clientX,
+      y: e.clientY,
+    });
+  }, []);
 
   // Loading state
   if (isLoading) {
@@ -137,6 +190,7 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
 
       <div className="flex-1 overflow-hidden">
         <Tree<ChangelistTreeNode>
+          ref={treeRef}
           data={treeData}
           width="100%"
           height={400}
@@ -168,6 +222,7 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
                   handleDeleteClick(node.data.data as P4Changelist);
                 }
               }}
+              onContextMenu={handleContextMenu}
             />
           )}
         </Tree>
@@ -187,6 +242,16 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
       />
+      {contextMenuState && (
+        <ChangelistContextMenu
+          files={contextMenuState.files}
+          changelists={changelists}
+          currentChangelistId={contextMenuState.currentClId}
+          x={contextMenuState.x}
+          y={contextMenuState.y}
+          onClose={() => setContextMenuState(null)}
+        />
+      )}
     </div>
   );
 }

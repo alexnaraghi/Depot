@@ -1,6 +1,6 @@
 import { NodeRendererProps } from 'react-arborist';
 import { List, Send, Pencil, Trash2 } from 'lucide-react';
-import { P4Changelist } from '@/types/p4';
+import { P4Changelist, P4File } from '@/types/p4';
 import { FileStatusIcon } from '@/components/FileTree/FileStatusIcon';
 import { ChangelistTreeNode } from '@/utils/treeBuilder';
 import { cn } from '@/lib/utils';
@@ -9,13 +9,14 @@ interface ChangelistNodeProps extends NodeRendererProps<ChangelistTreeNode> {
   onSubmit?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  onContextMenu?: (e: React.MouseEvent, file: P4File) => void;
 }
 
 /**
  * Tree node renderer for changelist display in react-arborist
  * Handles both changelist headers and file entries
  */
-export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDelete }: ChangelistNodeProps) {
+export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDelete, onContextMenu }: ChangelistNodeProps) {
   const isSelected = node.isSelected;
   const nodeData = node.data;
 
@@ -103,7 +104,7 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
   }
 
   // Render file row
-  const file = nodeData.data as import('@/types/p4').P4File;
+  const file = nodeData.data as P4File;
   // Extract just the filename from the depot path
   const fileName = file.depotPath.split('/').pop() || file.depotPath;
 
@@ -116,6 +117,10 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
         'hover:bg-slate-800 transition-colors',
         isSelected && 'bg-blue-900/50'
       )}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onContextMenu?.(e, file);
+      }}
     >
       {/* Status icon */}
       <FileStatusIcon status={file.status} className="flex-shrink-0" />
