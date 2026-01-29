@@ -10,19 +10,19 @@ See: .planning/PROJECT.md (updated 2026-01-28)
 ## Current Position
 
 Milestone: v2.0 Feature Complete
-Phase: 04 of 08 (Changelist Management) — COMPLETE
-Plan: 03 of 03 complete
-Status: Phase complete, verified
-Last activity: 2026-01-29 — Completed Phase 04 (Changelist Management)
+Phase: 05 of 08 (History, Diff & Search) — IN PROGRESS
+Plan: 01 of 04 complete
+Status: In progress
+Last activity: 2026-01-29 — Completed 05-01-PLAN.md
 
-Progress: [####################........] 73% (19/~26 plans estimated)
+Progress: [#####################.......] 77% (20/~26 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 19 (14 v1.0 + 5 v2.0)
+- Total plans completed: 20 (14 v1.0 + 6 v2.0)
 - Average duration: 7 min
-- Total execution time: ~141 min (104 v1.0 + ~37 v2.0)
+- Total execution time: ~146 min (104 v1.0 + ~42 v2.0)
 
 ## Accumulated Context
 
@@ -48,6 +48,9 @@ All v1.0 decisions documented in PROJECT.md Key Decisions table.
 | D-04-02-03 | 04-02 | Delete validation prevents deletion of default or non-empty CLs | Default CL is permanent, non-empty CLs would orphan files |
 | D-04-03-01 | 04-03 | Follow FileContextMenu.tsx pattern for context menu | Consistency with existing codebase patterns |
 | D-04-03-02 | 04-03 | Use invokeP4Reopen for both DnD and context menu moves | Makes file movement intent explicit per D-04-01-02 |
+| D-05-01-01 | 05-01 | Parse filelog indexed fields in single record | p4 filelog -ztag produces indexed fields (rev0, change0, etc.) in one record |
+| D-05-01-02 | 05-01 | Use tempfile::Builder with .keep() for persistent temp files | Enables syntax highlighting in diff tools, prevents premature deletion |
+| D-05-01-03 | 05-01 | Support placeholder and append-style diff tool arguments | Supports both modern and traditional diff tool argument patterns |
 
 ### Pending Todos
 
@@ -62,8 +65,8 @@ None active.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed Phase 04 (Changelist Management)
+Stopped at: Completed 05-01-PLAN.md
 Resume file: None
 
 ---
-**v2.0 In Progress:** Phases 03-04 complete (5/5 plans), Phase 05 next
+**v2.0 In Progress:** Phases 03-04 complete (5/5 plans), Phase 05 in progress (1/4 plans)
