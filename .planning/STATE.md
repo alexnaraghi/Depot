@@ -59,6 +59,10 @@ All v1.0 decisions documented in PROJECT.md Key Decisions table.
 | D-05-03-02 | 05-03 | Client-side filtering for instant results | All filtering in useMemo on cached data, auto-detects search type (number/user/description) |
 | D-05-03-03 | 05-03 | GitKraken-style expandable search bar | Icon button expands to input with dropdown results, 300ms debounce |
 | D-05-03-04 | 05-03 | Added time field to P4Changelist | Users need to know when changelists were submitted for search context |
+| D-06-02-01 | 06-02 | Shelved files as special tree node type (shelved-section) | Integrates cleanly with react-arborist virtualization, maintains visual hierarchy |
+| D-06-02-02 | 06-02 | Conflict detection before unshelve compares depot paths | Warns user when shelved files overlap with opened files to prevent conflicts |
+| D-06-02-03 | 06-02 | Purple/violet color scheme for shelved files | Visual distinction from pending files using violet-400/violet-300 colors |
+| D-06-02-04 | 06-02 | Shelve action only for numbered changelists | Default CL cannot have shelves per Perforce rules |
 | D-06-03-01 | 06-03 | ReconcilePreviewDialog uses mutation not query for preview scan | User triggers reconcile manually, mutation provides explicit loading/error states |
 | D-06-03-02 | 06-03 | Select all files by default after scan | Most common workflow is reconcile all detected changes, user can deselect unwanted files |
 | D-06-03-03 | 06-03 | Group files by action type with color-coded badges | Visual clarity for add (green), edit (yellow), delete (red) operations |
