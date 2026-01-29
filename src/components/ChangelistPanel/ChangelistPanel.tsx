@@ -14,6 +14,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { Plus } from 'lucide-react';
+import { useDndManager } from '@/contexts/DndContext';
 
 interface ChangelistPanelProps {
   className?: string;
@@ -29,6 +30,7 @@ interface ChangelistPanelProps {
  */
 export function ChangelistPanel({ className }: ChangelistPanelProps) {
   const { treeData, isLoading, changelists } = useChangelists();
+  const dndManager = useDndManager();
   const { p4port, p4user, p4client } = useConnectionStore();
   const queryClient = useQueryClient();
   const treeRef = useRef<TreeApi<ChangelistTreeNode>>(null);
@@ -197,9 +199,16 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
           indent={16}
           rowHeight={32}
           openByDefault
-          disableDrag={(node) => (node.data as unknown as ChangelistTreeNode).type === 'changelist'}
-          disableDrop={({ parentNode }) => parentNode.data.type === 'file'}
+          disableDrag={(node) => {
+            const nodeType = (node.data as unknown as ChangelistTreeNode).type;
+            return nodeType === 'changelist' || nodeType === 'shelved-section';
+          }}
+          disableDrop={({ parentNode }) => {
+            const nodeType = parentNode.data.type;
+            return nodeType === 'file' || nodeType === 'shelved-section';
+          }}
           onMove={handleMove}
+          dndManager={dndManager}
         >
           {({ node, style, dragHandle, tree }) => (
             <ChangelistNode

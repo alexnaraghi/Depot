@@ -3,6 +3,7 @@ import { List, Send, Pencil, Trash2 } from 'lucide-react';
 import { P4Changelist, P4File } from '@/types/p4';
 import { FileStatusIcon } from '@/components/FileTree/FileStatusIcon';
 import { ChangelistTreeNode } from '@/utils/treeBuilder';
+import { ShelvedFilesSection } from './ShelvedFilesSection';
 import { cn } from '@/lib/utils';
 
 interface ChangelistNodeProps extends NodeRendererProps<ChangelistTreeNode> {
@@ -19,6 +20,16 @@ interface ChangelistNodeProps extends NodeRendererProps<ChangelistTreeNode> {
 export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDelete, onContextMenu }: ChangelistNodeProps) {
   const isSelected = node.isSelected;
   const nodeData = node.data;
+
+  // Render shelved files section
+  if (nodeData.type === 'shelved-section') {
+    const sectionData = nodeData.data as { changelistId: number };
+    return (
+      <div style={style}>
+        <ShelvedFilesSection changelistId={sectionData.changelistId} />
+      </div>
+    );
+  }
 
   // Render changelist header
   if (nodeData.type === 'changelist') {
@@ -110,13 +121,29 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
 
   return (
     <div
-      ref={dragHandle}
+      ref={(el) => {
+        console.log('[DnD Debug] dragHandle ref called', { el: !!el, dragHandle: typeof dragHandle, isDraggable: node.isDraggable });
+        if (dragHandle) dragHandle(el);
+        if (el) {
+          console.log('[DnD Debug] element draggable attr:', el.getAttribute('draggable'));
+          // Check again after a tick (after react-dnd connects)
+          setTimeout(() => {
+            console.log('[DnD Debug] element draggable attr (after tick):', el.getAttribute('draggable'));
+          }, 100);
+        }
+      }}
       style={style}
       className={cn(
         'flex items-center gap-2 px-2 py-1 pl-6 cursor-pointer text-sm',
         'hover:bg-slate-800 transition-colors',
         isSelected && 'bg-blue-900/50'
       )}
+      onDragStart={(e) => {
+        console.log('[DnD Debug] native onDragStart fired!', e);
+      }}
+      onMouseDown={(e) => {
+        console.log('[DnD Debug] mouseDown on file row', { button: e.button, target: (e.target as HTMLElement).tagName });
+      }}
       onContextMenu={(e) => {
         e.preventDefault();
         onContextMenu?.(e, file);

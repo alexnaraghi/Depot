@@ -14,13 +14,13 @@ export interface FileTreeNode {
 
 /**
  * Changelist tree node for react-arborist
- * Represents a changelist or file within a changelist
+ * Represents a changelist, file, or shelved files section within a changelist
  */
 export interface ChangelistTreeNode {
   id: string;
   name: string;
-  type: 'changelist' | 'file';
-  data: P4Changelist | P4File;
+  type: 'changelist' | 'file' | 'shelved-section';
+  data: P4Changelist | P4File | { changelistId: number };
   children?: ChangelistTreeNode[];
 }
 
@@ -113,26 +113,40 @@ export function buildFileTree(files: P4File[], rootPath: string): FileTreeNode[]
 
 /**
  * Build changelist tree from list of changelists
- * Each changelist becomes a parent node, files are children
+ * Each changelist becomes a parent node, files are children, followed by shelved-section
  *
  * @param changelists - List of changelists with files
  * @returns Array of changelist tree nodes
  */
 export function buildChangelistTree(changelists: P4Changelist[]): ChangelistTreeNode[] {
   return changelists.map(changelist => {
+    const children: ChangelistTreeNode[] = [];
+
+    // Add file nodes
     const fileChildren: ChangelistTreeNode[] = changelist.files.map(file => ({
       id: `${changelist.id}-${file.depotPath}`,
       name: getFileName(file.depotPath),
       type: 'file',
       data: file,
     }));
+    children.push(...fileChildren);
+
+    // Add shelved files section for numbered changelists
+    if (changelist.id > 0) {
+      children.push({
+        id: `${changelist.id}-shelved-section`,
+        name: 'Shelved Files',
+        type: 'shelved-section',
+        data: { changelistId: changelist.id },
+      });
+    }
 
     return {
       id: String(changelist.id),
       name: changelist.description || `Changelist ${changelist.id}`,
       type: 'changelist',
       data: changelist,
-      children: fileChildren,
+      children,
     };
   });
 }

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Archive } from 'lucide-react';
 import { P4File, P4Changelist } from '@/types/p4';
 import { invokeP4Reopen } from '@/lib/tauri';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryClient } from '@tanstack/react-query';
+import { useShelve } from '@/hooks/useShelvedFiles';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 
@@ -37,6 +38,7 @@ export function ChangelistContextMenu({
   const [submenuOpen, setSubmenuOpen] = useState(false);
   const { p4port, p4user, p4client } = useConnectionStore();
   const queryClient = useQueryClient();
+  const shelve = useShelve();
 
   // Handle click outside to close
   useEffect(() => {
@@ -95,6 +97,18 @@ export function ChangelistContextMenu({
 
   const fileCount = files.length;
   const menuLabel = fileCount > 1 ? `Move ${fileCount} files to Changelist` : 'Move to Changelist';
+  const canShelve = currentChangelistId > 0; // Only numbered CLs can have shelves
+
+  async function handleShelve() {
+    try {
+      const filePaths = files.map((f) => f.depotPath);
+      await shelve.mutateAsync({ changelistId: currentChangelistId, filePaths });
+      onClose();
+    } catch (error) {
+      // Error handling is done in the mutation hook
+      onClose();
+    }
+  }
 
   return (
     <>
@@ -115,6 +129,26 @@ export function ChangelistContextMenu({
           <span>{menuLabel}</span>
           <ArrowRight className="w-4 h-4" />
         </button>
+
+        {/* Separator */}
+        {canShelve && <div className="h-px bg-slate-700 my-1" />}
+
+        {/* Shelve option - only for numbered changelists */}
+        {canShelve && (
+          <button
+            onClick={handleShelve}
+            disabled={shelve.isPending}
+            className={cn(
+              'w-full px-4 py-2 text-left text-sm text-slate-200',
+              'hover:bg-slate-800 transition-colors',
+              'flex items-center gap-2',
+              'disabled:opacity-50 disabled:cursor-not-allowed'
+            )}
+          >
+            <Archive className="w-4 h-4" />
+            <span>Shelve Selected Files</span>
+          </button>
+        )}
       </div>
 
       {/* Submenu */}
