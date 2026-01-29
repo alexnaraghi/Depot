@@ -58,6 +58,7 @@ pub struct P4Changelist {
     pub client: String,
     pub status: String,
     pub file_count: i32,
+    pub time: i64,
 }
 
 /// P4 client/workspace info
@@ -390,6 +391,7 @@ fn build_changelist(fields: &HashMap<String, String>) -> Option<P4Changelist> {
     let client = fields.get("client")?.clone();
     let status = fields.get("status")?.clone();
     let description = fields.get("desc").cloned().unwrap_or_else(|| "".to_string());
+    let time = fields.get("time")?.parse::<i64>().ok()?;
 
     // File count is not provided by p4 changes, will need separate query
     // For now, default to 0 and let frontend query if needed
@@ -402,6 +404,7 @@ fn build_changelist(fields: &HashMap<String, String>) -> Option<P4Changelist> {
         client,
         status,
         file_count,
+        time,
     })
 }
 

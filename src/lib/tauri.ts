@@ -30,6 +30,7 @@ export interface P4ChangelistInfo {
   client: string;
   status: string;
   file_count: number;
+  time: number;
 }
 
 export interface SyncProgress {

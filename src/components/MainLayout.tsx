@@ -4,6 +4,7 @@ import { ChangelistPanel } from '@/components/ChangelistPanel/ChangelistPanel';
 import { SyncToolbar } from '@/components/SyncToolbar';
 import { ConnectionStatus } from '@/components/ConnectionStatus';
 import { SettingsDialog } from '@/components/SettingsDialog';
+import { SearchBar } from '@/components/SearchBar';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { ChevronLeft, ChevronRight, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -74,8 +75,9 @@ export function MainLayout() {
             )}
           </div>
 
-          {/* Connection status and settings */}
+          {/* Search, connection status, and settings */}
           <div className="flex items-center gap-2">
+            <SearchBar />
             <ConnectionStatus />
             <Button
               variant="ghost"
