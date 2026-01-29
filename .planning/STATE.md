@@ -10,19 +10,19 @@ See: .planning/PROJECT.md (updated 2026-01-28)
 ## Current Position
 
 Milestone: v2.0 Feature Complete
-Phase: 03 of 08 (Settings & Infrastructure) — COMPLETE
-Plan: 02 of 02 complete
-Status: Phase complete
-Last activity: 2026-01-29 — Completed 03-02-PLAN.md (Settings Dialog UI)
+Phase: 04 of 08 (Changelist Management) — IN PROGRESS
+Plan: 01 of ~03 complete
+Status: In progress
+Last activity: 2026-01-29 — Completed 04-01-PLAN.md (Changelist Backend Commands)
 
-Progress: [################............] 62% (16/~26 plans estimated)
+Progress: [#################...........] 65% (17/~26 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16 (14 v1.0 + 2 v2.0)
+- Total plans completed: 17 (14 v1.0 + 3 v2.0)
 - Average duration: 7 min
-- Total execution time: ~128 min (104 v1.0 + ~24 v2.0)
+- Total execution time: ~131 min (104 v1.0 + ~27 v2.0)
 
 ## Accumulated Context
 
@@ -30,7 +30,7 @@ Progress: [################............] 62% (16/~26 plans estimated)
 
 All v1.0 decisions documented in PROJECT.md Key Decisions table.
 
-**v2.0 Decisions (Phase 03):**
+**v2.0 Decisions (Phases 03-04):**
 
 | ID | Phase | Decision | Rationale |
 |----|-------|----------|-----------|
@@ -40,6 +40,9 @@ All v1.0 decisions documented in PROJECT.md Key Decisions table.
 | D-03-02-01 | 03-02 | Use form.watch() for Browse button values | getValues() returns stale values before Controller onChange flushes |
 | D-03-02-02 | 03-02 | Override P4PORT/P4USER/P4CLIENT env vars + clear P4CONFIG | Complete isolation from DVCS/P4CONFIG that override -p/-u/-c args |
 | D-03-02-03 | 03-02 | Gate frontend queries on connection status | Prevents querying before settings loaded and connection established |
+| D-04-01-01 | 04-01 | p4_create_change removes Files section from template | New changelists should be created empty |
+| D-04-01-02 | 04-01 | p4_reopen preferred over p4_edit for file movement | Makes file movement intent explicit and clear |
+| D-04-01-03 | 04-01 | p4_edit_change_description wraps existing private function | Reuse existing form-parsing logic, avoid duplication |
 
 ### Pending Todos
 
@@ -51,9 +54,9 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-01-29 06:05 UTC
-Stopped at: Phase 03 complete, awaiting verification
+Last session: 2026-01-29 06:54 UTC
+Stopped at: Completed 04-01-PLAN.md (Changelist Backend Commands)
 Resume file: None
 
 ---
-**v2.0 In Progress:** Phase 03 complete (2/2 plans), Phase 04 next
+**v2.0 In Progress:** Phase 03 complete (2/2 plans), Phase 04 in progress (1/~3 plans)
