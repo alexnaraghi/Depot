@@ -1298,6 +1298,7 @@ pub struct P4ShelvedFile {
 
 /// Reconcile preview information from p4 reconcile -n
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ReconcilePreview {
     pub depot_path: String,
     pub local_path: String,
