@@ -61,12 +61,6 @@ impl ProcessManager {
             let _ = child.kill();
         }
     }
-
-    /// Remove a process from tracking (when it completes naturally).
-    pub async fn unregister(&self, id: &str) {
-        let mut processes = self.processes.lock().await;
-        processes.remove(id);
-    }
 }
 
 impl Default for ProcessManager {
