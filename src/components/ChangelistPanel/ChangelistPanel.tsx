@@ -3,11 +3,16 @@ import { Tree, MoveHandler } from 'react-arborist';
 import { useChangelists } from './useChangelists';
 import { ChangelistNode } from './ChangelistNode';
 import { SubmitDialog } from './SubmitDialog';
+import { CreateChangelistDialog } from './CreateChangelistDialog';
+import { EditDescriptionDialog } from './EditDescriptionDialog';
 import { ChangelistTreeNode } from '@/utils/treeBuilder';
 import { P4Changelist } from '@/types/p4';
-import { invokeP4Edit } from '@/lib/tauri';
+import { invokeP4Edit, invokeP4DeleteChange } from '@/lib/tauri';
+import { useConnectionStore } from '@/stores/connectionStore';
+import { useQueryClient } from '@tanstack/react-query';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import { Plus } from 'lucide-react';
 
 interface ChangelistPanelProps {
   className?: string;
@@ -23,8 +28,12 @@ interface ChangelistPanelProps {
  */
 export function ChangelistPanel({ className }: ChangelistPanelProps) {
   const { treeData, isLoading } = useChangelists();
+  const { p4port, p4user, p4client } = useConnectionStore();
+  const queryClient = useQueryClient();
   const [selectedChangelist, setSelectedChangelist] = useState<P4Changelist | null>(null);
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   // Handle drag-and-drop between changelists
   const handleMove: MoveHandler<ChangelistTreeNode> = useCallback(async ({ dragIds, parentId }) => {
@@ -67,6 +76,33 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
     setSubmitDialogOpen(true);
   }, []);
 
+  // Handle edit button click on changelist
+  const handleEditClick = useCallback((cl: P4Changelist) => {
+    setSelectedChangelist(cl);
+    setEditDialogOpen(true);
+  }, []);
+
+  // Handle delete button click on changelist
+  const handleDeleteClick = useCallback(async (cl: P4Changelist) => {
+    // Validation: cannot delete default or non-empty changelist
+    if (cl.id === 0) {
+      toast.error('Cannot delete default changelist');
+      return;
+    }
+    if (cl.fileCount > 0) {
+      toast.error('Cannot delete changelist with files');
+      return;
+    }
+
+    try {
+      await invokeP4DeleteChange(cl.id, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined);
+      toast.success(`Deleted changelist #${cl.id}`);
+      queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
+    } catch (error) {
+      toast.error(`Failed to delete changelist: ${error}`);
+    }
+  }, [p4port, p4user, p4client, queryClient]);
+
   // Loading state
   if (isLoading) {
     return (
@@ -90,7 +126,13 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
     <div className={cn('flex flex-col h-full', className)}>
       <div className="flex items-center justify-between p-4 pb-2">
         <h2 className="text-lg font-semibold">Pending Changes</h2>
-        {/* Future: Add new changelist button */}
+        <button
+          onClick={() => setCreateDialogOpen(true)}
+          className="p-1 hover:bg-slate-700 rounded transition-colors"
+          title="New Changelist"
+        >
+          <Plus className="w-5 h-5 text-slate-300" />
+        </button>
       </div>
 
       <div className="flex-1 overflow-hidden">
@@ -116,6 +158,16 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
                   handleSubmitClick(node.data.data as P4Changelist);
                 }
               }}
+              onEdit={() => {
+                if (node.data.type === 'changelist') {
+                  handleEditClick(node.data.data as P4Changelist);
+                }
+              }}
+              onDelete={() => {
+                if (node.data.type === 'changelist') {
+                  handleDeleteClick(node.data.data as P4Changelist);
+                }
+              }}
             />
           )}
         </Tree>
@@ -125,6 +177,15 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
         changelist={selectedChangelist}
         open={submitDialogOpen}
         onOpenChange={setSubmitDialogOpen}
+      />
+      <CreateChangelistDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+      />
+      <EditDescriptionDialog
+        changelist={selectedChangelist}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
       />
     </div>
   );

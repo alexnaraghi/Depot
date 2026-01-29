@@ -98,9 +98,15 @@ export function useChangelists(): {
   // Build tree from store
   const treeData = useMemo(() => {
     const clArray = Array.from(changelists.values());
-    // Only show changelists with files or non-empty description
-    const nonEmpty = clArray.filter(cl => cl.fileCount > 0 || cl.id !== 0);
-    return buildChangelistTree(nonEmpty);
+    // Always show default CL (id === 0), and numbered CLs with files or description
+    const visible = clArray.filter(cl => cl.id === 0 || cl.fileCount > 0 || cl.description);
+    // Sort: default CL first, then numbered CLs by ID ascending
+    const sorted = visible.sort((a, b) => {
+      if (a.id === 0) return -1;
+      if (b.id === 0) return 1;
+      return a.id - b.id;
+    });
+    return buildChangelistTree(sorted);
   }, [changelists]);
 
   const isLoading = clLoading || openedLoading;

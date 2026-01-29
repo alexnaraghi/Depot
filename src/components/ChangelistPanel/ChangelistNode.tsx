@@ -1,5 +1,5 @@
 import { NodeRendererProps } from 'react-arborist';
-import { List, Send } from 'lucide-react';
+import { List, Send, Pencil, Trash2 } from 'lucide-react';
 import { P4Changelist } from '@/types/p4';
 import { FileStatusIcon } from '@/components/FileTree/FileStatusIcon';
 import { ChangelistTreeNode } from '@/utils/treeBuilder';
@@ -7,13 +7,15 @@ import { cn } from '@/lib/utils';
 
 interface ChangelistNodeProps extends NodeRendererProps<ChangelistTreeNode> {
   onSubmit?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 /**
  * Tree node renderer for changelist display in react-arborist
  * Handles both changelist headers and file entries
  */
-export function ChangelistNode({ node, style, dragHandle, onSubmit }: ChangelistNodeProps) {
+export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDelete }: ChangelistNodeProps) {
   const isSelected = node.isSelected;
   const nodeData = node.data;
 
@@ -36,8 +38,12 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit }: Changelist
         {/* List icon */}
         <List className="w-4 h-4 text-slate-400 flex-shrink-0" />
 
-        {/* Changelist description */}
-        <span className="flex-1 truncate text-slate-200">
+        {/* Changelist number and description */}
+        <span className={cn(
+          "flex-1 truncate",
+          isDefault ? "text-slate-400" : "text-slate-200"
+        )}>
+          {!isDefault && `#${changelist.id} — `}
           {changelist.description || '(no description)'}
         </span>
 
@@ -64,6 +70,32 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit }: Changelist
             title="Submit"
           >
             <Send className="w-4 h-4 text-slate-300" />
+          </button>
+        )}
+
+        {/* Edit button - appears on hover for all CLs */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit?.();
+          }}
+          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-600 rounded transition-opacity"
+          title="Edit"
+        >
+          <Pencil className="w-4 h-4 text-slate-300" />
+        </button>
+
+        {/* Delete button - appears on hover only for empty, non-default CLs */}
+        {changelist.id !== 0 && changelist.fileCount === 0 && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete?.();
+            }}
+            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-600 rounded transition-opacity"
+            title="Delete"
+          >
+            <Trash2 className="w-4 h-4 text-slate-300" />
           </button>
         )}
       </div>
