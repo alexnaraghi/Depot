@@ -27,7 +27,7 @@ Key accomplishments:
 
 - [x] **Phase 03: Settings & Infrastructure** - Connection settings UI, status indicator, and persistent configuration
 - [x] **Phase 04: Changelist Management** - Multiple changelists with create, edit, delete, and drag-drop file moves
-- [ ] **Phase 05: History, Diff & Search** - File history viewer, external diff integration, and submitted changelist search
+- [x] **Phase 05: History, Diff & Search** - File history viewer, external diff integration, and submitted changelist search
 - [ ] **Phase 06: Shelve & Reconcile** - Shelve/unshelve workflows and offline reconcile with preview
 - [ ] **Phase 07: Context Menus & Keyboard Shortcuts** - Right-click menus, keyboard shortcuts, and command palette
 - [ ] **Phase 08: Visual Polish** - Consistent design, loading states, and professional appearance
@@ -79,9 +79,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Rust backend commands (filelog, print, diff launch, changes search) + TS bindings + diff tool settings
-- [ ] 05-02-PLAN.md — File History dialog, diff hooks, context menu integration, Settings diff tool config
-- [ ] 05-03-PLAN.md — Search bar in header, search results panel, client-side filtering
+- [x] 05-01-PLAN.md — Rust backend commands (filelog, print, diff launch, changes search) + TS bindings + diff tool settings
+- [x] 05-02-PLAN.md — File History dialog, diff hooks, context menu integration, Settings diff tool config
+- [x] 05-03-PLAN.md — Search bar in header, search results panel, client-side filtering
 
 ### Phase 06: Shelve & Reconcile
 **Goal**: User can shelve/unshelve files safely and reconcile offline work with a preview before applying
@@ -139,10 +139,10 @@ Phases execute in numeric order: 03 -> 04 -> 05 -> 06 -> 07 -> 08
 | 02. Core Workflows | v1.0 | 6/6 | Complete | 2026-01-28 |
 | 03. Settings & Infrastructure | v2.0 | 2/2 | Complete | 2026-01-29 |
 | 04. Changelist Management | v2.0 | 3/3 | Complete | 2026-01-29 |
-| 05. History, Diff & Search | v2.0 | 0/TBD | Not started | - |
+| 05. History, Diff & Search | v2.0 | 3/3 | Complete | 2026-01-29 |
 | 06. Shelve & Reconcile | v2.0 | 0/TBD | Not started | - |
 | 07. Context Menus & Keyboard Shortcuts | v2.0 | 0/TBD | Not started | - |
 | 08. Visual Polish | v2.0 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-01-29 after Phase 04 completion*
+*Last updated: 2026-01-29 after Phase 05 completion*

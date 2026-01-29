@@ -5,15 +5,15 @@
 See: .planning/PROJECT.md (updated 2026-01-28)
 
 **Core value:** The user is never blocked — operations are always cancellable, errors are non-blocking, and the app remains responsive.
-**Current focus:** v2.0 Feature Complete — Phase 05 History, Diff & Search
+**Current focus:** v2.0 Feature Complete — Phase 06 Shelve & Reconcile
 
 ## Current Position
 
 Milestone: v2.0 Feature Complete
-Phase: 05 of 08 (History, Diff & Search) — IN PROGRESS
-Plan: 03 of 04 complete
-Status: In progress
-Last activity: 2026-01-29 — Completed 05-03-PLAN.md
+Phase: 05 of 08 (History, Diff & Search) — COMPLETE
+Plan: 03 of 03 complete
+Status: Phase complete, verified
+Last activity: 2026-01-29 — Completed Phase 05 (History, Diff & Search)
 
 Progress: [######################......] 85% (22/~26 plans estimated)
 
@@ -73,8 +73,8 @@ None active.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed 05-03-PLAN.md
+Stopped at: Completed Phase 05 (History, Diff & Search)
 Resume file: None
 
 ---
-**v2.0 In Progress:** Phases 03-04 complete (5/5 plans), Phase 05 in progress (3/4 plans)
+**v2.0 In Progress:** Phases 03-05 complete (8/8 plans), Phase 06 next

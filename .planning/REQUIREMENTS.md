@@ -40,15 +40,15 @@
 
 ### File History
 
-- [ ] **HIST-01**: User can view file history showing revision, action, changelist, date, user, description
-- [ ] **HIST-02**: User can diff a revision against the previous revision (launches external diff tool)
-- [ ] **HIST-03**: User can diff a revision against the workspace version
+- [x] **HIST-01**: User can view file history showing revision, action, changelist, date, user, description
+- [x] **HIST-02**: User can diff a revision against the previous revision (launches external diff tool)
+- [x] **HIST-03**: User can diff a revision against the workspace version
 
 ### External Diff
 
-- [ ] **DIFF-01**: User can configure external diff tool path and arguments in settings
-- [ ] **DIFF-02**: User can launch diff for workspace file vs depot head
-- [ ] **DIFF-03**: User can launch diff between two specific revisions
+- [x] **DIFF-01**: User can configure external diff tool path and arguments in settings
+- [x] **DIFF-02**: User can launch diff for workspace file vs depot head
+- [x] **DIFF-03**: User can launch diff between two specific revisions
 
 ### Reconcile
 
@@ -65,10 +65,10 @@
 
 ### Search
 
-- [ ] **SRCH-01**: User can search submitted changelists by changelist number
-- [ ] **SRCH-02**: User can search submitted changelists by author
-- [ ] **SRCH-03**: User can search submitted changelists by description text
-- [ ] **SRCH-04**: Search results show changelist number, date, user, and description
+- [x] **SRCH-01**: User can search submitted changelists by changelist number
+- [x] **SRCH-02**: User can search submitted changelists by author
+- [x] **SRCH-03**: User can search submitted changelists by description text
+- [x] **SRCH-04**: Search results show changelist number, date, user, and description
 
 ### Visual Design
 
@@ -119,16 +119,16 @@
 | CL-05 | Phase 04 | Complete |
 | CL-06 | Phase 04 | Complete |
 | CL-07 | Phase 04 | Complete |
-| HIST-01 | Phase 05 | Pending |
-| HIST-02 | Phase 05 | Pending |
-| HIST-03 | Phase 05 | Pending |
-| DIFF-01 | Phase 05 | Pending |
-| DIFF-02 | Phase 05 | Pending |
-| DIFF-03 | Phase 05 | Pending |
-| SRCH-01 | Phase 05 | Pending |
-| SRCH-02 | Phase 05 | Pending |
-| SRCH-03 | Phase 05 | Pending |
-| SRCH-04 | Phase 05 | Pending |
+| HIST-01 | Phase 05 | Complete |
+| HIST-02 | Phase 05 | Complete |
+| HIST-03 | Phase 05 | Complete |
+| DIFF-01 | Phase 05 | Complete |
+| DIFF-02 | Phase 05 | Complete |
+| DIFF-03 | Phase 05 | Complete |
+| SRCH-01 | Phase 05 | Complete |
+| SRCH-02 | Phase 05 | Complete |
+| SRCH-03 | Phase 05 | Complete |
+| SRCH-04 | Phase 05 | Complete |
 | SHELV-01 | Phase 06 | Pending |
 | SHELV-02 | Phase 06 | Pending |
 | SHELV-03 | Phase 06 | Pending |
@@ -155,4 +155,4 @@
 
 ---
 *Requirements defined: 2026-01-28*
-*Last updated: 2026-01-29 after Phase 04 completion*
+*Last updated: 2026-01-29 after Phase 05 completion*
