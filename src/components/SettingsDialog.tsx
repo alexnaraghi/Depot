@@ -54,13 +54,21 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     mode: 'onSubmit',
   });
 
-  // Load settings when dialog opens
+  // Watch form values so Browse always has current input values
+  const watchedPort = form.watch('p4port');
+  const watchedUser = form.watch('p4user');
+
+  // Load settings when dialog opens (only reset form if saved settings exist)
   useEffect(() => {
     if (open) {
       const load = async () => {
         try {
           const settings = await loadSettings();
-          form.reset(settings);
+          // Only reset form if there are actual saved settings
+          // Prevents wiping user-typed values with empty defaults
+          if (settings.p4port || settings.p4user || settings.p4client) {
+            form.reset(settings);
+          }
         } catch (error) {
           console.error('Failed to load settings:', error);
         }
@@ -70,17 +78,14 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   }, [open, form]);
 
   const handleBrowseWorkspaces = async () => {
-    const server = form.getValues('p4port');
-    const user = form.getValues('p4user');
-
-    if (!server || !user) {
+    if (!watchedPort || !watchedUser) {
       toast.error('Enter server and user first');
       return;
     }
 
     setIsBrowsing(true);
     try {
-      const result = await invokeListWorkspaces(server, user);
+      const result = await invokeListWorkspaces(watchedPort, watchedUser);
       setWorkspaces(result);
       if (result.length === 0) {
         toast('No workspaces found for this user');
