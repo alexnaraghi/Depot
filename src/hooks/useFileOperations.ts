@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useOperationStore } from '@/store/operation';
+import { useConnectionStore } from '@/stores/connectionStore';
 import { invokeP4Edit, invokeP4Revert, invokeP4Submit } from '@/lib/tauri';
 import toast from 'react-hot-toast';
 
@@ -17,6 +18,7 @@ import toast from 'react-hot-toast';
 export function useFileOperations() {
   const queryClient = useQueryClient();
   const { startOperation, completeOperation, addOutputLine } = useOperationStore();
+  const { p4port, p4user, p4client } = useConnectionStore();
 
   /**
    * Checkout files for editing
@@ -33,7 +35,7 @@ export function useFileOperations() {
     addOutputLine(`p4 edit ${paths.join(' ')}`, false);
 
     try {
-      const result = await invokeP4Edit(paths, changelist);
+      const result = await invokeP4Edit(paths, changelist, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined);
 
       // Log each checked out file
       for (const file of result) {
@@ -55,7 +57,7 @@ export function useFileOperations() {
       toast.error(`Checkout failed: ${error}`);
       throw error;
     }
-  }, [startOperation, completeOperation, addOutputLine, queryClient]);
+  }, [startOperation, completeOperation, addOutputLine, queryClient, p4port, p4user, p4client]);
 
   /**
    * Revert files to depot state (discard local changes)
@@ -71,7 +73,7 @@ export function useFileOperations() {
     addOutputLine(`p4 revert ${paths.join(' ')}`, false);
 
     try {
-      const reverted = await invokeP4Revert(paths);
+      const reverted = await invokeP4Revert(paths, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined);
 
       // Log each reverted file
       for (const depotPath of reverted) {
@@ -93,7 +95,7 @@ export function useFileOperations() {
       toast.error(`Revert failed: ${error}`);
       throw error;
     }
-  }, [startOperation, completeOperation, addOutputLine, queryClient]);
+  }, [startOperation, completeOperation, addOutputLine, queryClient, p4port, p4user, p4client]);
 
   /**
    * Submit changelist to depot
@@ -110,7 +112,7 @@ export function useFileOperations() {
     addOutputLine(`p4 submit -c ${changelist}`, false);
 
     try {
-      const submittedCl = await invokeP4Submit(changelist, description);
+      const submittedCl = await invokeP4Submit(changelist, description, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined);
 
       addOutputLine(`Change ${submittedCl} submitted.`, false);
       completeOperation(true);
@@ -128,7 +130,7 @@ export function useFileOperations() {
       toast.error(`Submit failed: ${error}`);
       throw error;
     }
-  }, [startOperation, completeOperation, addOutputLine, queryClient]);
+  }, [startOperation, completeOperation, addOutputLine, queryClient, p4port, p4user, p4client]);
 
   return {
     checkout,

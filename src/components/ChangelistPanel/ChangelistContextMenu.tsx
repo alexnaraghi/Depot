@@ -44,8 +44,7 @@ export function ChangelistContextMenu({
       if (
         menuRef.current &&
         !menuRef.current.contains(event.target as Node) &&
-        submenuRef.current &&
-        !submenuRef.current.contains(event.target as Node)
+        (!submenuRef.current || !submenuRef.current.contains(event.target as Node))
       ) {
         onClose();
       }

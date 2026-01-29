@@ -308,11 +308,13 @@ pub async fn p4_changes(status: Option<String>, server: Option<String>, user: Op
     cmd.arg("-s");
     cmd.arg(status_filter);
 
-    // Filter by current user and client
-    cmd.arg("-u");
-    cmd.arg("$P4USER");  // p4 will expand this
-    cmd.arg("-c");
-    cmd.arg("$P4CLIENT");  // p4 will expand this
+    // Filter by current user and client (use actual values, not shell vars)
+    if let Some(u) = user.as_ref().filter(|s| !s.is_empty()) {
+        cmd.args(["-u", u]);
+    }
+    if let Some(c) = client.as_ref().filter(|s| !s.is_empty()) {
+        cmd.args(["-c", c]);
+    }
 
     // Execute command
     let output = cmd
