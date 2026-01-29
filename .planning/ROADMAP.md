@@ -26,7 +26,7 @@ Key accomplishments:
 **Milestone Goal:** Transform P4Now from MVP into a full daily-driver Perforce client with settings, history, diff, changelists, shelving, reconcile, and polish.
 
 - [x] **Phase 03: Settings & Infrastructure** - Connection settings UI, status indicator, and persistent configuration
-- [ ] **Phase 04: Changelist Management** - Multiple changelists with create, edit, delete, and drag-drop file moves
+- [x] **Phase 04: Changelist Management** - Multiple changelists with create, edit, delete, and drag-drop file moves
 - [ ] **Phase 05: History, Diff & Search** - File history viewer, external diff integration, and submitted changelist search
 - [ ] **Phase 06: Shelve & Reconcile** - Shelve/unshelve workflows and offline reconcile with preview
 - [ ] **Phase 07: Context Menus & Keyboard Shortcuts** - Right-click menus, keyboard shortcuts, and command palette
@@ -63,9 +63,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Rust backend commands (create, delete, reopen, edit description) + TypeScript bindings
-- [ ] 04-02-PLAN.md — Changelist CRUD UI (create/edit dialogs, delete button, default CL handling)
-- [ ] 04-03-PLAN.md — File context menu with "Move to Changelist" submenu, DnD reopen fix, verification
+- [x] 04-01-PLAN.md — Rust backend commands (create, delete, reopen, edit description) + TypeScript bindings
+- [x] 04-02-PLAN.md — Changelist CRUD UI (create/edit dialogs, delete button, default CL handling)
+- [x] 04-03-PLAN.md — File context menu with "Move to Changelist" submenu, DnD reopen fix, verification
 
 ### Phase 05: History, Diff & Search
 **Goal**: User can investigate file history, compare revisions with an external diff tool, and search submitted changelists
@@ -137,11 +137,11 @@ Phases execute in numeric order: 03 -> 04 -> 05 -> 06 -> 07 -> 08
 | 01. Non-Blocking Foundation | v1.0 | 8/8 | Complete | 2026-01-28 |
 | 02. Core Workflows | v1.0 | 6/6 | Complete | 2026-01-28 |
 | 03. Settings & Infrastructure | v2.0 | 2/2 | Complete | 2026-01-29 |
-| 04. Changelist Management | v2.0 | 0/3 | Not started | - |
+| 04. Changelist Management | v2.0 | 3/3 | Complete | 2026-01-29 |
 | 05. History, Diff & Search | v2.0 | 0/TBD | Not started | - |
 | 06. Shelve & Reconcile | v2.0 | 0/TBD | Not started | - |
 | 07. Context Menus & Keyboard Shortcuts | v2.0 | 0/TBD | Not started | - |
 | 08. Visual Polish | v2.0 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-01-29 after Phase 03 completion*
+*Last updated: 2026-01-29 after Phase 04 completion*

@@ -5,24 +5,24 @@
 See: .planning/PROJECT.md (updated 2026-01-28)
 
 **Core value:** The user is never blocked — operations are always cancellable, errors are non-blocking, and the app remains responsive.
-**Current focus:** v2.0 Feature Complete — Phase 04 Changelist Management
+**Current focus:** v2.0 Feature Complete — Phase 05 History, Diff & Search
 
 ## Current Position
 
 Milestone: v2.0 Feature Complete
-Phase: 04 of 08 (Changelist Management) — IN PROGRESS
-Plan: 02 of ~03 complete
-Status: In progress
-Last activity: 2026-01-29 — Completed 04-02-PLAN.md (Changelist Panel UI)
+Phase: 04 of 08 (Changelist Management) — COMPLETE
+Plan: 03 of 03 complete
+Status: Phase complete, verified
+Last activity: 2026-01-29 — Completed Phase 04 (Changelist Management)
 
-Progress: [##################..........] 69% (18/~26 plans estimated)
+Progress: [####################........] 73% (19/~26 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18 (14 v1.0 + 4 v2.0)
+- Total plans completed: 19 (14 v1.0 + 5 v2.0)
 - Average duration: 7 min
-- Total execution time: ~134 min (104 v1.0 + ~30 v2.0)
+- Total execution time: ~141 min (104 v1.0 + ~37 v2.0)
 
 ## Accumulated Context
 
@@ -46,6 +46,8 @@ All v1.0 decisions documented in PROJECT.md Key Decisions table.
 | D-04-02-01 | 04-02 | Default CL always visible with muted styling | Default CL serves as consistent anchor and drop target |
 | D-04-02-02 | 04-02 | Editing default CL description creates new numbered changelist | Reflects P4's actual behavior - default CL cannot have a description |
 | D-04-02-03 | 04-02 | Delete validation prevents deletion of default or non-empty CLs | Default CL is permanent, non-empty CLs would orphan files |
+| D-04-03-01 | 04-03 | Follow FileContextMenu.tsx pattern for context menu | Consistency with existing codebase patterns |
+| D-04-03-02 | 04-03 | Use invokeP4Reopen for both DnD and context menu moves | Makes file movement intent explicit per D-04-01-02 |
 
 ### Pending Todos
 
@@ -59,9 +61,9 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-01-29 07:00 UTC
-Stopped at: Completed 04-02-PLAN.md (Changelist Panel UI)
+Last session: 2026-01-29
+Stopped at: Completed Phase 04 (Changelist Management)
 Resume file: None
 
 ---
-**v2.0 In Progress:** Phase 03 complete (2/2 plans), Phase 04 in progress (2/~3 plans)
+**v2.0 In Progress:** Phases 03-04 complete (5/5 plans), Phase 05 next

@@ -16,13 +16,13 @@
 
 ### Changelist Management
 
-- [ ] **CL-01**: User can view all pending changelists (default + numbered) with their files
-- [ ] **CL-02**: User can create a new numbered changelist with a description
-- [ ] **CL-03**: User can edit a changelist description inline
-- [ ] **CL-04**: User can delete an empty changelist
-- [ ] **CL-05**: User can move files between changelists via drag-and-drop
-- [ ] **CL-06**: User can move files between changelists via right-click context menu
-- [ ] **CL-07**: User can submit a specific numbered changelist (not just default)
+- [x] **CL-01**: User can view all pending changelists (default + numbered) with their files
+- [x] **CL-02**: User can create a new numbered changelist with a description
+- [x] **CL-03**: User can edit a changelist description inline
+- [x] **CL-04**: User can delete an empty changelist
+- [x] **CL-05**: User can move files between changelists via drag-and-drop
+- [x] **CL-06**: User can move files between changelists via right-click context menu
+- [x] **CL-07**: User can submit a specific numbered changelist (not just default)
 
 ### Shelve/Unshelve
 
@@ -112,13 +112,13 @@
 | CONN-06 | Phase 03 | Complete |
 | CONN-07 | Phase 03 | Complete |
 | CONN-08 | Phase 03 | Complete |
-| CL-01 | Phase 04 | Pending |
-| CL-02 | Phase 04 | Pending |
-| CL-03 | Phase 04 | Pending |
-| CL-04 | Phase 04 | Pending |
-| CL-05 | Phase 04 | Pending |
-| CL-06 | Phase 04 | Pending |
-| CL-07 | Phase 04 | Pending |
+| CL-01 | Phase 04 | Complete |
+| CL-02 | Phase 04 | Complete |
+| CL-03 | Phase 04 | Complete |
+| CL-04 | Phase 04 | Complete |
+| CL-05 | Phase 04 | Complete |
+| CL-06 | Phase 04 | Complete |
+| CL-07 | Phase 04 | Complete |
 | HIST-01 | Phase 05 | Pending |
 | HIST-02 | Phase 05 | Pending |
 | HIST-03 | Phase 05 | Pending |
@@ -155,4 +155,4 @@
 
 ---
 *Requirements defined: 2026-01-28*
-*Last updated: 2026-01-28 after roadmap phase assignment*
+*Last updated: 2026-01-29 after Phase 04 completion*
