@@ -1,4 +1,7 @@
-import { Toaster as HotToaster } from 'react-hot-toast';
+import toast, {
+  Toaster as HotToaster,
+  ToastBar,
+} from 'react-hot-toast';
 
 /**
  * Toast notification container.
@@ -6,6 +9,7 @@ import { Toaster as HotToaster } from 'react-hot-toast';
  * - Non-blocking error notifications
  * - Auto-dismiss after 5-10 seconds
  * - Positioned bottom-right (above status bar)
+ * - Click to dismiss any toast immediately
  */
 export function Toaster() {
   return (
@@ -20,6 +24,7 @@ export function Toaster() {
           background: '#1e293b', // slate-800
           color: '#f1f5f9', // slate-100
           border: '1px solid #334155', // slate-700
+          cursor: 'pointer',
         },
 
         // Error toasts stay longer
@@ -29,6 +34,7 @@ export function Toaster() {
             background: '#7f1d1d', // red-900
             color: '#fef2f2', // red-50
             border: '1px solid #991b1b', // red-800
+            cursor: 'pointer',
           },
         },
 
@@ -39,6 +45,7 @@ export function Toaster() {
             background: '#14532d', // green-900
             color: '#f0fdf4', // green-50
             border: '1px solid #166534', // green-800
+            cursor: 'pointer',
           },
         },
       }}
@@ -46,6 +53,25 @@ export function Toaster() {
       containerStyle={{
         bottom: 32,
       }}
-    />
+    >
+      {(t) => (
+        <ToastBar toast={t}>
+          {({ icon, message }) => (
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={() => toast.dismiss(t.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') toast.dismiss(t.id);
+              }}
+              style={{ display: 'contents' }}
+            >
+              {icon}
+              {message}
+            </div>
+          )}
+        </ToastBar>
+      )}
+    </HotToaster>
   );
 }
