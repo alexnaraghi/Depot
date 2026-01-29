@@ -30,6 +30,10 @@ pub fn run() {
             commands::p4_delete_change,
             commands::p4_reopen,
             commands::p4_edit_change_description,
+            commands::p4_filelog,
+            commands::p4_print_to_file,
+            commands::launch_diff_tool,
+            commands::p4_changes_submitted,
         ])
         .setup(|app| {
             // Get process manager for cleanup

@@ -3,6 +3,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, ipc::Channel, State};
+use tempfile::Builder;
 
 use crate::state::ProcessManager;
 
@@ -76,6 +77,19 @@ pub struct P4Workspace {
     pub root: String,
     pub stream: Option<String>,
     pub description: String,
+}
+
+/// Revision information from p4 filelog
+#[derive(Debug, Clone, Serialize)]
+pub struct P4Revision {
+    pub rev: i32,
+    pub change: i32,
+    pub action: String,
+    pub file_type: String,
+    pub time: i64,
+    pub user: String,
+    pub client: String,
+    pub desc: String,
 }
 
 /// Parse p4 -ztag info output into P4ClientInfo
@@ -1042,4 +1056,225 @@ pub async fn p4_test_connection(server: String, user: String, client: String) ->
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     parse_ztag_info(&stdout)
+}
+
+/// Parse p4 -ztag filelog output into P4Revision structs
+/// Note: p4 filelog -ztag produces indexed fields like rev0, change0, action0, etc.
+/// all in a single record
+fn parse_ztag_filelog(output: &str) -> Result<Vec<P4Revision>, String> {
+    let mut fields: HashMap<String, String> = HashMap::new();
+
+    // First pass: collect all fields
+    for line in output.lines() {
+        let line = line.trim();
+        if let Some(stripped) = line.strip_prefix("... ") {
+            if let Some((key, value)) = stripped.split_once(' ') {
+                fields.insert(key.to_string(), value.to_string());
+            }
+        }
+    }
+
+    // Second pass: extract revisions by index
+    let mut revisions = Vec::new();
+    let mut index = 0;
+
+    loop {
+        let rev_key = format!("rev{}", index);
+        let change_key = format!("change{}", index);
+        let action_key = format!("action{}", index);
+        let type_key = format!("type{}", index);
+        let time_key = format!("time{}", index);
+        let user_key = format!("user{}", index);
+        let client_key = format!("client{}", index);
+        let desc_key = format!("desc{}", index);
+
+        // Check if this index exists
+        if let Some(rev_str) = fields.get(&rev_key) {
+            let rev = rev_str.parse::<i32>().unwrap_or(0);
+            let change = fields.get(&change_key)
+                .and_then(|s| s.parse::<i32>().ok())
+                .unwrap_or(0);
+            let action = fields.get(&action_key).cloned().unwrap_or_default();
+            let file_type = fields.get(&type_key).cloned().unwrap_or_else(|| "text".to_string());
+            let time = fields.get(&time_key)
+                .and_then(|s| s.parse::<i64>().ok())
+                .unwrap_or(0);
+            let user = fields.get(&user_key).cloned().unwrap_or_default();
+            let client = fields.get(&client_key).cloned().unwrap_or_default();
+            let desc = fields.get(&desc_key).cloned().unwrap_or_default();
+
+            revisions.push(P4Revision {
+                rev,
+                change,
+                action,
+                file_type,
+                time,
+                user,
+                client,
+                desc,
+            });
+
+            index += 1;
+        } else {
+            break;
+        }
+    }
+
+    Ok(revisions)
+}
+
+/// Get file history (revisions) for a depot path
+#[tauri::command]
+pub async fn p4_filelog(
+    depot_path: String,
+    max_revisions: Option<i32>,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<Vec<P4Revision>, String> {
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+
+    cmd.arg("-ztag");
+    cmd.arg("filelog");
+
+    if let Some(max) = max_revisions {
+        cmd.arg("-m");
+        cmd.arg(max.to_string());
+    }
+
+    cmd.arg(depot_path);
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 filelog: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    parse_ztag_filelog(&stdout)
+}
+
+/// Print a specific revision of a file to a temp file
+#[tauri::command]
+pub async fn p4_print_to_file(
+    depot_path: String,
+    revision: i32,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<String, String> {
+    // Extract file extension from depot path
+    let extension = depot_path.rsplit('.').next()
+        .filter(|ext| !ext.contains('/'))
+        .map(|ext| format!(".{}", ext))
+        .unwrap_or_else(|| ".txt".to_string());
+
+    // Create temp file with matching extension
+    let temp_file = Builder::new()
+        .suffix(&extension)
+        .tempfile()
+        .map_err(|e| format!("Failed to create temp file: {}", e))?;
+
+    let temp_path = temp_file.path().to_string_lossy().to_string();
+
+    // Print file to temp location
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+
+    cmd.args(["print", "-q", "-o", &temp_path]);
+    cmd.arg(format!("{}#{}", depot_path, revision));
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 print: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.to_string());
+    }
+
+    // Persist the temp file so it doesn't get deleted
+    let (_, persistent_path) = temp_file.keep()
+        .map_err(|e| format!("Failed to persist temp file: {}", e))?;
+
+    Ok(persistent_path.to_string_lossy().to_string())
+}
+
+/// Launch external diff tool
+#[tauri::command]
+pub async fn launch_diff_tool(
+    left_path: String,
+    right_path: String,
+    diff_tool_path: String,
+    diff_tool_args: Option<String>,
+    _app: AppHandle,
+) -> Result<(), String> {
+    let mut cmd = Command::new(&diff_tool_path);
+
+    // Parse and apply arguments
+    if let Some(args_str) = diff_tool_args.filter(|s| !s.is_empty()) {
+        // Check for placeholders
+        if args_str.contains("{left}") || args_str.contains("{right}") {
+            // Parse args and substitute placeholders
+            let args: Vec<String> = args_str
+                .split_whitespace()
+                .map(|arg| {
+                    arg.replace("{left}", &left_path)
+                       .replace("{right}", &right_path)
+                })
+                .collect();
+            cmd.args(args);
+        } else {
+            // No placeholders - append args first, then paths
+            cmd.args(args_str.split_whitespace());
+            cmd.arg(&left_path);
+            cmd.arg(&right_path);
+        }
+    } else {
+        // No args - just pass paths
+        cmd.arg(&left_path);
+        cmd.arg(&right_path);
+    }
+
+    // Spawn without blocking
+    cmd.spawn()
+        .map_err(|e| format!("Failed to launch diff tool: {}", e))?;
+
+    Ok(())
+}
+
+/// Get submitted changelists
+#[tauri::command]
+pub async fn p4_changes_submitted(
+    max_changes: Option<i32>,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<Vec<P4Changelist>, String> {
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+
+    cmd.arg("-ztag");
+    cmd.arg("changes");
+    cmd.arg("-l");  // Long output to get full descriptions
+    cmd.arg("-s");
+    cmd.arg("submitted");
+    cmd.arg("-m");
+    cmd.arg(max_changes.unwrap_or(500).to_string());
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 changes: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    parse_ztag_changes(&stdout)
 }
