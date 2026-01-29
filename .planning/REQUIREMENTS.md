@@ -106,53 +106,53 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CONN-01 | — | Pending |
-| CONN-04 | — | Pending |
-| CONN-05 | — | Pending |
-| CONN-06 | — | Pending |
-| CONN-07 | — | Pending |
-| CONN-08 | — | Pending |
-| CL-01 | — | Pending |
-| CL-02 | — | Pending |
-| CL-03 | — | Pending |
-| CL-04 | — | Pending |
-| CL-05 | — | Pending |
-| CL-06 | — | Pending |
-| CL-07 | — | Pending |
-| SHELV-01 | — | Pending |
-| SHELV-02 | — | Pending |
-| SHELV-03 | — | Pending |
-| SHELV-04 | — | Pending |
-| SHELV-05 | — | Pending |
-| CTX-01 | — | Pending |
-| CTX-02 | — | Pending |
-| CTX-03 | — | Pending |
-| HIST-01 | — | Pending |
-| HIST-02 | — | Pending |
-| HIST-03 | — | Pending |
-| DIFF-01 | — | Pending |
-| DIFF-02 | — | Pending |
-| DIFF-03 | — | Pending |
-| RECON-01 | — | Pending |
-| RECON-02 | — | Pending |
-| RECON-03 | — | Pending |
-| RECON-04 | — | Pending |
-| KEY-01 | — | Pending |
-| KEY-02 | — | Pending |
-| KEY-03 | — | Pending |
-| SRCH-01 | — | Pending |
-| SRCH-02 | — | Pending |
-| SRCH-03 | — | Pending |
-| SRCH-04 | — | Pending |
-| VIS-01 | — | Pending |
-| VIS-02 | — | Pending |
-| VIS-03 | — | Pending |
+| CONN-01 | Phase 03 | Pending |
+| CONN-04 | Phase 03 | Pending |
+| CONN-05 | Phase 03 | Pending |
+| CONN-06 | Phase 03 | Pending |
+| CONN-07 | Phase 03 | Pending |
+| CONN-08 | Phase 03 | Pending |
+| CL-01 | Phase 04 | Pending |
+| CL-02 | Phase 04 | Pending |
+| CL-03 | Phase 04 | Pending |
+| CL-04 | Phase 04 | Pending |
+| CL-05 | Phase 04 | Pending |
+| CL-06 | Phase 04 | Pending |
+| CL-07 | Phase 04 | Pending |
+| HIST-01 | Phase 05 | Pending |
+| HIST-02 | Phase 05 | Pending |
+| HIST-03 | Phase 05 | Pending |
+| DIFF-01 | Phase 05 | Pending |
+| DIFF-02 | Phase 05 | Pending |
+| DIFF-03 | Phase 05 | Pending |
+| SRCH-01 | Phase 05 | Pending |
+| SRCH-02 | Phase 05 | Pending |
+| SRCH-03 | Phase 05 | Pending |
+| SRCH-04 | Phase 05 | Pending |
+| SHELV-01 | Phase 06 | Pending |
+| SHELV-02 | Phase 06 | Pending |
+| SHELV-03 | Phase 06 | Pending |
+| SHELV-04 | Phase 06 | Pending |
+| SHELV-05 | Phase 06 | Pending |
+| RECON-01 | Phase 06 | Pending |
+| RECON-02 | Phase 06 | Pending |
+| RECON-03 | Phase 06 | Pending |
+| RECON-04 | Phase 06 | Pending |
+| CTX-01 | Phase 07 | Pending |
+| CTX-02 | Phase 07 | Pending |
+| CTX-03 | Phase 07 | Pending |
+| KEY-01 | Phase 07 | Pending |
+| KEY-02 | Phase 07 | Pending |
+| KEY-03 | Phase 07 | Pending |
+| VIS-01 | Phase 08 | Pending |
+| VIS-02 | Phase 08 | Pending |
+| VIS-03 | Phase 08 | Pending |
 
 **Coverage:**
 - v2.0 requirements: 40 total
-- Mapped to phases: 0
-- Unmapped: 40 (awaiting roadmap)
+- Mapped to phases: 40
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-01-28*
-*Last updated: 2026-01-28 after initial definition*
+*Last updated: 2026-01-28 after roadmap phase assignment*
