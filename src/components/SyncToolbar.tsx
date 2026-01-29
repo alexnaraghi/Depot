@@ -1,9 +1,10 @@
 import { RefreshCw, X, FolderSync } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useSync } from '@/hooks/useSync';
 import { SyncConflictDialog } from '@/components/dialogs/SyncConflictDialog';
 import { ReconcilePreviewDialog } from '@/components/dialogs/ReconcilePreviewDialog';
+import { SHORTCUTS } from '@/lib/shortcuts';
 
 /**
  * Toolbar for sync and reconcile operations.
@@ -48,6 +49,18 @@ export function SyncToolbar() {
     }
   };
 
+  // Listen for sync keyboard shortcut
+  useEffect(() => {
+    const handleSyncEvent = () => {
+      handleSync();
+    };
+
+    window.addEventListener('p4now:sync', handleSyncEvent);
+    return () => {
+      window.removeEventListener('p4now:sync', handleSyncEvent);
+    };
+  }, [handleSync]);
+
   return (
     <>
       <div className="flex items-center gap-3 px-4 py-2 bg-slate-800 border-b border-slate-700">
@@ -58,6 +71,7 @@ export function SyncToolbar() {
           variant="default"
           size="sm"
           className="bg-blue-600 hover:bg-blue-700"
+          title={`Sync Workspace (${SHORTCUTS.SYNC.label})`}
         >
           <RefreshCw
             className={`h-4 w-4 mr-2 ${isRunning ? 'animate-spin' : ''}`}
@@ -72,7 +86,7 @@ export function SyncToolbar() {
           variant="outline"
           size="sm"
           className="border-slate-600 hover:bg-slate-700"
-          title="Reconcile Workspace — detect offline changes"
+          title="Reconcile Workspace - detect offline changes"
         >
           <FolderSync className="h-4 w-4 mr-2" />
           Reconcile

@@ -1,8 +1,10 @@
-import { Edit3, Undo2, Copy, History, GitCompare } from 'lucide-react';
+import { Edit3, Undo2, Copy, History, GitCompare, FolderOpen } from 'lucide-react';
 import { P4File, FileStatus } from '@/types/p4';
 import { useFileOperations } from '@/hooks/useFileOperations';
+import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
+import { SHORTCUTS } from '@/lib/shortcuts';
 
 interface FileContextMenuItemsProps {
   file: P4File;
@@ -76,34 +78,55 @@ export function FileContextMenuItems({
     onClose();
   }
 
+  async function handleOpenInExplorer() {
+    try {
+      // Reveal the file in its directory (opens explorer and selects the file)
+      await revealItemInDir(file.localPath);
+      onClose();
+    } catch (error) {
+      toast.error(`Failed to open in explorer: ${error}`);
+    }
+  }
+
   return (
     <>
       {canCheckout && (
-        <button
-          onClick={handleCheckout}
-          className={cn(
-            'w-full px-4 py-2 text-left text-sm text-slate-200',
-            'hover:bg-slate-800 transition-colors',
-            'flex items-center gap-2'
-          )}
-        >
-          <Edit3 className="w-4 h-4" />
-          Checkout for Edit
-        </button>
+        <>
+          <button
+            onClick={handleCheckout}
+            className={cn(
+              'w-full px-4 py-2 text-left text-sm text-slate-200',
+              'hover:bg-slate-800 transition-colors',
+              'flex items-center justify-between gap-6'
+            )}
+          >
+            <span className="flex items-center gap-2">
+              <Edit3 className="w-4 h-4" />
+              Checkout for Edit
+            </span>
+          </button>
+          <div className="h-px bg-slate-700 my-1" />
+        </>
       )}
 
       {canRevert && (
-        <button
-          onClick={handleRevert}
-          className={cn(
-            'w-full px-4 py-2 text-left text-sm text-slate-200',
-            'hover:bg-slate-800 transition-colors',
-            'flex items-center gap-2'
-          )}
-        >
-          <Undo2 className="w-4 h-4" />
-          Revert Changes
-        </button>
+        <>
+          <button
+            onClick={handleRevert}
+            className={cn(
+              'w-full px-4 py-2 text-left text-sm text-slate-200',
+              'hover:bg-slate-800 transition-colors',
+              'flex items-center justify-between gap-6'
+            )}
+          >
+            <span className="flex items-center gap-2">
+              <Undo2 className="w-4 h-4" />
+              Revert Changes
+            </span>
+            <span className="text-xs text-slate-500">{SHORTCUTS.REVERT.label}</span>
+          </button>
+          <div className="h-px bg-slate-700 my-1" />
+        </>
       )}
 
       <button
@@ -111,11 +134,14 @@ export function FileContextMenuItems({
         className={cn(
           'w-full px-4 py-2 text-left text-sm text-slate-200',
           'hover:bg-slate-800 transition-colors',
-          'flex items-center gap-2'
+          'flex items-center justify-between gap-6'
         )}
       >
-        <History className="w-4 h-4" />
-        File History
+        <span className="flex items-center gap-2">
+          <History className="w-4 h-4" />
+          File History
+        </span>
+        <span className="text-xs text-slate-500">{SHORTCUTS.HISTORY.label}</span>
       </button>
 
       {canRevert && (
@@ -124,24 +150,45 @@ export function FileContextMenuItems({
           className={cn(
             'w-full px-4 py-2 text-left text-sm text-slate-200',
             'hover:bg-slate-800 transition-colors',
-            'flex items-center gap-2'
+            'flex items-center justify-between gap-6'
           )}
         >
-          <GitCompare className="w-4 h-4" />
-          Diff against Have
+          <span className="flex items-center gap-2">
+            <GitCompare className="w-4 h-4" />
+            Diff against Have
+          </span>
+          <span className="text-xs text-slate-500">{SHORTCUTS.DIFF.label}</span>
         </button>
       )}
+
+      <div className="h-px bg-slate-700 my-1" />
 
       <button
         onClick={handleCopyPath}
         className={cn(
           'w-full px-4 py-2 text-left text-sm text-slate-200',
           'hover:bg-slate-800 transition-colors',
-          'flex items-center gap-2'
+          'flex items-center justify-between gap-6'
         )}
       >
-        <Copy className="w-4 h-4" />
-        Copy Local Path
+        <span className="flex items-center gap-2">
+          <Copy className="w-4 h-4" />
+          Copy Local Path
+        </span>
+      </button>
+
+      <button
+        onClick={handleOpenInExplorer}
+        className={cn(
+          'w-full px-4 py-2 text-left text-sm text-slate-200',
+          'hover:bg-slate-800 transition-colors',
+          'flex items-center justify-between gap-6'
+        )}
+      >
+        <span className="flex items-center gap-2">
+          <FolderOpen className="w-4 h-4" />
+          Open in Explorer
+        </span>
       </button>
     </>
   );

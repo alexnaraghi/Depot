@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useHotkeys } from 'react-hotkeys-hook';
+import { useQueryClient } from '@tanstack/react-query';
 import { FileTree } from '@/components/FileTree/FileTree';
 import { ChangelistPanel } from '@/components/ChangelistPanel/ChangelistPanel';
 import { SyncToolbar } from '@/components/SyncToolbar';
@@ -11,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { DndContext } from '@/contexts/DndContext';
+import { SHORTCUTS } from '@/lib/shortcuts';
 
 /**
  * Main application layout
@@ -27,6 +30,25 @@ export function MainLayout() {
   const [isResizing, setIsResizing] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { workspace, stream } = useConnectionStore();
+  const queryClient = useQueryClient();
+
+  // Global keyboard shortcuts
+  useHotkeys(SHORTCUTS.REFRESH.keys, () => {
+    queryClient.invalidateQueries();
+  }, { enableOnFormTags: false, preventDefault: true });
+
+  useHotkeys(SHORTCUTS.SYNC.keys, () => {
+    window.dispatchEvent(new CustomEvent('p4now:sync'));
+  }, { enableOnFormTags: false, preventDefault: true });
+
+  useHotkeys(SHORTCUTS.NEW_CHANGELIST.keys, () => {
+    window.dispatchEvent(new CustomEvent('p4now:new-changelist'));
+  }, { enableOnFormTags: false, preventDefault: true });
+
+  // Reserve command palette shortcuts for future use
+  useHotkeys(SHORTCUTS.COMMAND_PALETTE.keys, () => {
+    // Will be wired in plan 02
+  }, { enableOnFormTags: false, preventDefault: true });
 
   const handleMouseDown = () => {
     setIsResizing(true);
