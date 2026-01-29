@@ -77,6 +77,12 @@ All v1.0 decisions documented in PROJECT.md Key Decisions table.
 4. **Unshelve file to same changelist, not default** (ui) — `.planning/todos/pending/2026-01-29-unshelve-to-same-changelist.md`
 5. **Add resolve dialog after unshelving conflicting files** (ui) — `.planning/todos/pending/2026-01-29-unshelve-resolve-conflicts.md`
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 001 | Unify file right-click context menus | 2026-01-29 | d68c0b8 | [001-unify-file-right-click-context-menus](./quick/001-unify-file-right-click-context-menus/) |
+
 ### Blockers/Concerns
 
 None active.
