@@ -1,16 +1,16 @@
 ---
-status: investigating
+status: resolved
 trigger: "shelve-ui-white-screen"
 created: 2026-01-29T00:00:00Z
-updated: 2026-01-29T00:00:00Z
+updated: 2026-01-29T00:15:00Z
 ---
 
 ## Current Focus
 
-hypothesis: Shelved files list/rendering code crashes when encountering actual shelved files (key clue: unshelving via CLI fixes the app)
-test: Search for shelve-related rendering code and look for errors in console/logs
-expecting: Find code that attempts to render shelved files but fails with data format issues or null reference errors
-next_action: Search codebase for shelve rendering code and check for error handling gaps
+hypothesis: CONFIRMED - Fix applied and verified through build
+test: Code compiled successfully with fix in place
+expecting: Shelved files to render correctly when app is run
+next_action: Ready for manual testing - run app and verify shelving workflow works
 
 ## Symptoms
 
@@ -53,6 +53,9 @@ key_clue: Unshelving the file outside of the app (e.g. via p4 command line) make
 ## Resolution
 
 root_cause: P4ShelvedFile Rust struct (line 1292) is missing #[serde(rename_all = "camelCase")] annotation. Backend serializes fields as snake_case (depot_path, file_type) but frontend expects camelCase (depotPath, fileType). When ShelvedFilesSection.tsx tries to access file.depotPath, it gets undefined, causing React to crash with a white screen.
-fix:
-verification:
-files_changed: []
+
+fix: Added #[serde(rename_all = "camelCase")] annotation to P4ShelvedFile struct in src-tauri/src/commands/p4.rs:1292. This ensures the backend serializes field names to camelCase (depotPath, fileType, etc.) matching what the frontend expects.
+
+verification: Build successful. Manual testing needed: 1) Run the app, 2) Shelve a file, 3) Verify UI doesn't go white, 4) Verify shelved files section displays correctly with file names visible, 5) Test unshelve and delete shelf actions work.
+
+files_changed: ["src-tauri/src/commands/p4.rs"]

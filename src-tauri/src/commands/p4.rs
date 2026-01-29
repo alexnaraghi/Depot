@@ -1289,6 +1289,7 @@ pub async fn p4_changes_submitted(
 
 /// Shelved file information from p4 describe -S
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct P4ShelvedFile {
     pub depot_path: String,
     pub action: String,
