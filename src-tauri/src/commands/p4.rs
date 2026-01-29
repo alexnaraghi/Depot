@@ -7,26 +7,31 @@ use tauri::{AppHandle, Emitter, ipc::Channel, State};
 use crate::state::ProcessManager;
 
 /// Apply optional connection args to a p4 Command.
-/// When explicit args are provided, also clears P4CONFIG to prevent
-/// DVCS or local config files from overriding the connection settings.
+/// When explicit args are provided, overrides P4 environment variables
+/// and clears P4CONFIG to ensure complete isolation from DVCS/local config.
 fn apply_connection_args(cmd: &mut Command, server: &Option<String>, user: &Option<String>, client: &Option<String>) {
     let has_explicit = server.as_ref().is_some_and(|s| !s.is_empty())
         || user.as_ref().is_some_and(|s| !s.is_empty())
         || client.as_ref().is_some_and(|s| !s.is_empty());
 
     if has_explicit {
-        // Clear P4CONFIG to prevent local config files (e.g., DVCS .p4config) from interfering
+        // Clear P4CONFIG and P4ROOT to prevent DVCS/local config from interfering
         cmd.env("P4CONFIG", "");
+        cmd.env("P4ROOT", "");
     }
 
     if let Some(s) = server.as_ref().filter(|s| !s.is_empty()) {
         cmd.args(["-p", s]);
+        // Also set env var to ensure override even if P4PORT is set in environment
+        cmd.env("P4PORT", s);
     }
     if let Some(u) = user.as_ref().filter(|s| !s.is_empty()) {
         cmd.args(["-u", u]);
+        cmd.env("P4USER", u);
     }
     if let Some(c) = client.as_ref().filter(|s| !s.is_empty()) {
         cmd.args(["-c", c]);
+        cmd.env("P4CLIENT", c);
     }
 }
 
@@ -788,8 +793,11 @@ fn parse_sync_line(line: &str) -> Option<SyncProgress> {
 #[tauri::command]
 pub async fn p4_list_workspaces(server: String, user: String) -> Result<Vec<P4Workspace>, String> {
     let mut cmd = Command::new("p4");
-    // Clear P4CONFIG to prevent DVCS/local config from interfering
+    // Override all P4 env vars to ensure complete isolation from DVCS/local config
     cmd.env("P4CONFIG", "");
+    cmd.env("P4ROOT", "");
+    cmd.env("P4PORT", &server);
+    cmd.env("P4USER", &user);
     cmd.args(["-p", &server, "-u", &user, "-ztag", "clients", "-u", &user]);
     let output = cmd
         .output()
@@ -858,8 +866,12 @@ fn build_workspace(fields: &HashMap<String, String>) -> Option<P4Workspace> {
 #[tauri::command]
 pub async fn p4_test_connection(server: String, user: String, client: String) -> Result<P4ClientInfo, String> {
     let mut cmd = Command::new("p4");
-    // Clear P4CONFIG to prevent DVCS/local config from interfering
+    // Override all P4 env vars to ensure complete isolation from DVCS/local config
     cmd.env("P4CONFIG", "");
+    cmd.env("P4ROOT", "");
+    cmd.env("P4PORT", &server);
+    cmd.env("P4USER", &user);
+    cmd.env("P4CLIENT", &client);
     cmd.args(["-p", &server, "-u", &user, "-c", &client, "-ztag", "info"]);
     let output = cmd
         .output()
