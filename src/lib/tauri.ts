@@ -47,6 +47,13 @@ export interface P4ClientInfo {
   server_address: string;
 }
 
+export interface P4Workspace {
+  name: string;
+  root: string;
+  stream: string | null;
+  description: string;
+}
+
 /**
  * Execute a short p4 command and wait for result.
  * Use for quick commands like 'p4 info', 'p4 client'.
@@ -93,8 +100,8 @@ export async function invokeKillAllProcesses(): Promise<void> {
  * Get P4 client/workspace info (client root, user, server).
  * Use to determine workspace root path on startup.
  */
-export async function invokeP4Info(): Promise<P4ClientInfo> {
-  return invoke<P4ClientInfo>('p4_info');
+export async function invokeP4Info(server?: string, user?: string, client?: string): Promise<P4ClientInfo> {
+  return invoke<P4ClientInfo>('p4_info', { server, user, client });
 }
 
 /**
@@ -103,48 +110,48 @@ export async function invokeP4Info(): Promise<P4ClientInfo> {
  * @param paths - Specific paths to check, or empty for all workspace files
  * @param depotPath - Depot path to query (e.g., "//stream/main/...") when paths is empty
  */
-export async function invokeP4Fstat(paths: string[] = [], depotPath?: string): Promise<P4FileInfo[]> {
-  return invoke<P4FileInfo[]>('p4_fstat', { paths, depotPath });
+export async function invokeP4Fstat(paths: string[] = [], depotPath?: string, server?: string, user?: string, client?: string): Promise<P4FileInfo[]> {
+  return invoke<P4FileInfo[]>('p4_fstat', { paths, depotPath, server, user, client });
 }
 
 /**
  * Get all opened files in the workspace.
  * Use for displaying pending changelist files.
  */
-export async function invokeP4Opened(): Promise<P4FileInfo[]> {
-  return invoke<P4FileInfo[]>('p4_opened');
+export async function invokeP4Opened(server?: string, user?: string, client?: string): Promise<P4FileInfo[]> {
+  return invoke<P4FileInfo[]>('p4_opened', { server, user, client });
 }
 
 /**
  * Get changelists (pending, submitted, or all).
  * Use for displaying changelist panel.
  */
-export async function invokeP4Changes(status?: string): Promise<P4ChangelistInfo[]> {
-  return invoke<P4ChangelistInfo[]>('p4_changes', { status });
+export async function invokeP4Changes(status?: string, server?: string, user?: string, client?: string): Promise<P4ChangelistInfo[]> {
+  return invoke<P4ChangelistInfo[]>('p4_changes', { status, server, user, client });
 }
 
 /**
  * Edit (checkout) files for modification.
  * Use when user wants to edit files.
  */
-export async function invokeP4Edit(paths: string[], changelist?: number): Promise<P4FileInfo[]> {
-  return invoke<P4FileInfo[]>('p4_edit', { paths, changelist });
+export async function invokeP4Edit(paths: string[], changelist?: number, server?: string, user?: string, client?: string): Promise<P4FileInfo[]> {
+  return invoke<P4FileInfo[]>('p4_edit', { paths, changelist, server, user, client });
 }
 
 /**
  * Revert files to depot state (discard local changes).
  * Use when user wants to discard changes.
  */
-export async function invokeP4Revert(paths: string[]): Promise<string[]> {
-  return invoke<string[]>('p4_revert', { paths });
+export async function invokeP4Revert(paths: string[], server?: string, user?: string, client?: string): Promise<string[]> {
+  return invoke<string[]>('p4_revert', { paths, server, user, client });
 }
 
 /**
  * Submit changelist to depot.
  * Use when user wants to commit their changes.
  */
-export async function invokeP4Submit(changelist: number, description?: string): Promise<number> {
-  return invoke<number>('p4_submit', { changelist, description });
+export async function invokeP4Submit(changelist: number, description?: string, server?: string, user?: string, client?: string): Promise<number> {
+  return invoke<number>('p4_submit', { changelist, description, server, user, client });
 }
 
 /**
@@ -157,9 +164,28 @@ export async function invokeP4Submit(changelist: number, description?: string): 
 export async function invokeP4Sync(
   paths: string[],
   depotPath: string | undefined,
+  server: string | undefined,
+  user: string | undefined,
+  client: string | undefined,
   onProgress: (progress: SyncProgress) => void
 ): Promise<string> {
   const channel = new Channel<SyncProgress>();
   channel.onmessage = onProgress;
-  return invoke<string>('p4_sync', { paths, depotPath, onProgress: channel });
+  return invoke<string>('p4_sync', { paths, depotPath, server, user, client, onProgress: channel });
+}
+
+/**
+ * List available workspaces for a given server and user.
+ * Use for browsing workspaces during settings configuration.
+ */
+export async function invokeListWorkspaces(server: string, user: string): Promise<P4Workspace[]> {
+  return invoke<P4Workspace[]>('p4_list_workspaces', { server, user });
+}
+
+/**
+ * Test connection to P4 server with given credentials.
+ * Use to validate settings before saving.
+ */
+export async function invokeTestConnection(server: string, user: string, client: string): Promise<P4ClientInfo> {
+  return invoke<P4ClientInfo>('p4_test_connection', { server, user, client });
 }

@@ -38,7 +38,7 @@ export function useSync() {
   // Get client info for depot path
   const { data: clientInfo } = useQuery({
     queryKey: ['p4Info'],
-    queryFn: invokeP4Info,
+    queryFn: () => invokeP4Info(),
     staleTime: Infinity,
     refetchOnWindowFocus: false,
   });
@@ -82,6 +82,9 @@ export function useSync() {
       const processId = await invokeP4Sync(
         syncArgs,
         depotPath,
+        undefined,
+        undefined,
+        undefined,
         (progress: SyncProgress) => {
           // Handle conflict detection
           if (progress.is_conflict) {

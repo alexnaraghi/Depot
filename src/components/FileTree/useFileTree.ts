@@ -63,7 +63,7 @@ export function useFileTree() {
   // First, query for P4 client info to get the workspace root and stream
   const { data: clientInfo, isLoading: clientInfoLoading, error: clientInfoError } = useQuery({
     queryKey: ['p4Info'],
-    queryFn: invokeP4Info,
+    queryFn: () => invokeP4Info(),
     staleTime: Infinity, // Client info doesn't change during session
     refetchOnWindowFocus: false,
   });

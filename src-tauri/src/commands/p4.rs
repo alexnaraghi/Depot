@@ -40,29 +40,24 @@ pub struct P4ClientInfo {
     pub server_address: String,
 }
 
-/// Get P4 client info (client root, user, server)
-#[tauri::command]
-pub async fn p4_info() -> Result<P4ClientInfo, String> {
-    let output = Command::new("p4")
-        .args(["-ztag", "info"])
-        .output()
-        .map_err(|e| format!("Failed to execute p4 info: {}", e))?;
+/// Workspace information from p4 clients
+#[derive(Debug, Clone, Serialize)]
+pub struct P4Workspace {
+    pub name: String,
+    pub root: String,
+    pub stream: Option<String>,
+    pub description: String,
+}
 
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("p4 info failed: {}", stderr));
-    }
-
-    let stdout = String::from_utf8_lossy(&output.stdout);
-
-    // Parse -ztag info output
+/// Parse p4 -ztag info output into P4ClientInfo
+fn parse_ztag_info(output: &str) -> Result<P4ClientInfo, String> {
     let mut client_name = String::new();
     let mut client_root = String::new();
     let mut client_stream: Option<String> = None;
     let mut user_name = String::new();
     let mut server_address = String::new();
 
-    for line in stdout.lines() {
+    for line in output.lines() {
         if let Some(stripped) = line.strip_prefix("... ") {
             if let Some((key, value)) = stripped.split_once(' ') {
                 match key {
@@ -90,29 +85,53 @@ pub async fn p4_info() -> Result<P4ClientInfo, String> {
     })
 }
 
+/// Get P4 client info (client root, user, server)
+#[tauri::command]
+pub async fn p4_info(server: Option<String>, user: Option<String>, client: Option<String>) -> Result<P4ClientInfo, String> {
+    let mut cmd = Command::new("p4");
+    if let Some(s) = &server { cmd.args(["-p", s]); }
+    if let Some(u) = &user { cmd.args(["-u", u]); }
+    if let Some(c) = &client { cmd.args(["-c", c]); }
+    cmd.args(["-ztag", "info"]);
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 info: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("p4 info failed: {}", stderr));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    parse_ztag_info(&stdout)
+}
+
 /// Get file status information for given paths
 ///
 /// When paths is empty, uses depot_path if provided (e.g., "//stream/main/...")
 /// to query all files in the workspace. This avoids issues with -d flag in DVCS setups.
 #[tauri::command]
-pub async fn p4_fstat(paths: Vec<String>, depot_path: Option<String>) -> Result<Vec<P4FileInfo>, String> {
+pub async fn p4_fstat(paths: Vec<String>, depot_path: Option<String>, server: Option<String>, user: Option<String>, client: Option<String>) -> Result<Vec<P4FileInfo>, String> {
     // Build command: p4 -ztag fstat <paths>
-    let mut args: Vec<String> = Vec::new();
+    let mut cmd = Command::new("p4");
+    if let Some(s) = &server { cmd.args(["-p", s]); }
+    if let Some(u) = &user { cmd.args(["-u", u]); }
+    if let Some(c) = &client { cmd.args(["-c", c]); }
 
-    args.push("-ztag".to_string());
-    args.push("fstat".to_string());
+    cmd.arg("-ztag");
+    cmd.arg("fstat");
 
     if paths.is_empty() {
         // Use depot_path if provided (e.g., "//stream/main/..."), otherwise fall back to "//..."
         let query_path = depot_path.unwrap_or_else(|| "//...".to_string());
-        args.push(query_path);
+        cmd.arg(query_path);
     } else {
-        args.extend(paths);
+        cmd.args(&paths);
     }
 
     // Execute command
-    let output = Command::new("p4")
-        .args(&args)
+    let output = cmd
         .output()
         .map_err(|e| format!("Failed to execute p4 fstat: {}", e))?;
 
@@ -226,10 +245,15 @@ fn derive_file_status(action: &Option<String>, have_rev: i32, head_rev: i32) -> 
 
 /// Get all files opened by current user
 #[tauri::command]
-pub async fn p4_opened() -> Result<Vec<P4FileInfo>, String> {
+pub async fn p4_opened(server: Option<String>, user: Option<String>, client: Option<String>) -> Result<Vec<P4FileInfo>, String> {
     // Execute: p4 -ztag opened
-    let output = Command::new("p4")
-        .args(&["-ztag", "opened"])
+    let mut cmd = Command::new("p4");
+    if let Some(s) = &server { cmd.args(["-p", s]); }
+    if let Some(u) = &user { cmd.args(["-u", u]); }
+    if let Some(c) = &client { cmd.args(["-c", c]); }
+    cmd.args(["-ztag", "opened"]);
+
+    let output = cmd
         .output()
         .map_err(|e| format!("Failed to execute p4 opened: {}", e))?;
 
@@ -248,24 +272,29 @@ pub async fn p4_opened() -> Result<Vec<P4FileInfo>, String> {
 
 /// Get changelists for current user
 #[tauri::command]
-pub async fn p4_changes(status: Option<String>) -> Result<Vec<P4Changelist>, String> {
+pub async fn p4_changes(status: Option<String>, server: Option<String>, user: Option<String>, client: Option<String>) -> Result<Vec<P4Changelist>, String> {
     // Build command: p4 -ztag changes -s <status> -u <user> -c <client>
-    let mut args = vec!["-ztag".to_string(), "changes".to_string()];
+    let mut cmd = Command::new("p4");
+    if let Some(s) = &server { cmd.args(["-p", s]); }
+    if let Some(u) = &user { cmd.args(["-u", u]); }
+    if let Some(c) = &client { cmd.args(["-c", c]); }
+
+    cmd.arg("-ztag");
+    cmd.arg("changes");
 
     // Add status filter (default to pending)
     let status_filter = status.unwrap_or_else(|| "pending".to_string());
-    args.push("-s".to_string());
-    args.push(status_filter);
+    cmd.arg("-s");
+    cmd.arg(status_filter);
 
     // Filter by current user and client
-    args.push("-u".to_string());
-    args.push("$P4USER".to_string());  // p4 will expand this
-    args.push("-c".to_string());
-    args.push("$P4CLIENT".to_string());  // p4 will expand this
+    cmd.arg("-u");
+    cmd.arg("$P4USER");  // p4 will expand this
+    cmd.arg("-c");
+    cmd.arg("$P4CLIENT");  // p4 will expand this
 
     // Execute command
-    let output = Command::new("p4")
-        .args(&args)
+    let output = cmd
         .output()
         .map_err(|e| format!("Failed to execute p4 changes: {}", e))?;
 
@@ -344,6 +373,9 @@ fn build_changelist(fields: &HashMap<String, String>) -> Option<P4Changelist> {
 pub async fn p4_edit(
     paths: Vec<String>,
     changelist: Option<i32>,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
     app: AppHandle,
 ) -> Result<Vec<P4FileInfo>, String> {
     if paths.is_empty() {
@@ -351,18 +383,22 @@ pub async fn p4_edit(
     }
 
     // Build command: p4 edit -c <changelist> <paths>
-    let mut args = vec!["edit".to_string()];
+    let mut cmd = Command::new("p4");
+    if let Some(s) = &server { cmd.args(["-p", s]); }
+    if let Some(u) = &user { cmd.args(["-u", u]); }
+    if let Some(c) = &client { cmd.args(["-c", c]); }
+
+    cmd.arg("edit");
 
     if let Some(cl) = changelist {
-        args.push("-c".to_string());
-        args.push(cl.to_string());
+        cmd.arg("-c");
+        cmd.arg(cl.to_string());
     }
 
-    args.extend(paths.clone());
+    cmd.args(&paths);
 
     // Execute command
-    let output = Command::new("p4")
-        .args(&args)
+    let output = cmd
         .output()
         .map_err(|e| format!("Failed to execute p4 edit: {}", e))?;
 
@@ -386,7 +422,7 @@ pub async fn p4_edit(
     // Get updated file info for opened files
     // Use None for client_root since we're querying specific depot paths
     let file_info = if !opened_files.is_empty() {
-        p4_fstat(opened_files.clone(), None).await?
+        p4_fstat(opened_files.clone(), None, server, user, client).await?
     } else {
         Vec::new()
     };
@@ -408,6 +444,9 @@ pub async fn p4_edit(
 #[tauri::command]
 pub async fn p4_revert(
     paths: Vec<String>,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
     app: AppHandle,
 ) -> Result<Vec<String>, String> {
     if paths.is_empty() {
@@ -415,11 +454,15 @@ pub async fn p4_revert(
     }
 
     // Execute: p4 revert <paths>
-    let mut args = vec!["revert".to_string()];
-    args.extend(paths);
+    let mut cmd = Command::new("p4");
+    if let Some(s) = &server { cmd.args(["-p", s]); }
+    if let Some(u) = &user { cmd.args(["-u", u]); }
+    if let Some(c) = &client { cmd.args(["-c", c]); }
 
-    let output = Command::new("p4")
-        .args(&args)
+    cmd.arg("revert");
+    cmd.args(&paths);
+
+    let output = cmd
         .output()
         .map_err(|e| format!("Failed to execute p4 revert: {}", e))?;
 
@@ -463,23 +506,32 @@ pub async fn p4_revert(
 pub async fn p4_submit(
     changelist: i32,
     description: Option<String>,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
     app: AppHandle,
 ) -> Result<i32, String> {
     let output = if changelist == 0 {
         // Default changelist: must use -d flag with description
         let desc = description.unwrap_or_else(|| "Submitted from P4Now".to_string());
-        Command::new("p4")
-            .args(&["submit", "-d", &desc])
-            .output()
+        let mut cmd = Command::new("p4");
+        if let Some(s) = &server { cmd.args(["-p", s]); }
+        if let Some(u) = &user { cmd.args(["-u", u]); }
+        if let Some(c) = &client { cmd.args(["-c", c]); }
+        cmd.args(["submit", "-d", &desc]);
+        cmd.output()
             .map_err(|e| format!("Failed to execute p4 submit: {}", e))?
     } else {
         // Named changelist: update description if provided, then submit with -c
         if let Some(ref desc) = description {
-            update_changelist_description(changelist, desc)?;
+            update_changelist_description(changelist, desc, server.clone(), user.clone(), client.clone())?;
         }
-        Command::new("p4")
-            .args(&["submit", "-c", &changelist.to_string()])
-            .output()
+        let mut cmd = Command::new("p4");
+        if let Some(s) = &server { cmd.args(["-p", s]); }
+        if let Some(u) = &user { cmd.args(["-u", u]); }
+        if let Some(c) = &client { cmd.args(["-c", c]); }
+        cmd.args(["submit", "-c", &changelist.to_string()]);
+        cmd.output()
             .map_err(|e| format!("Failed to execute p4 submit: {}", e))?
     };
 
@@ -512,10 +564,15 @@ pub async fn p4_submit(
 }
 
 /// Update changelist description
-fn update_changelist_description(changelist: i32, description: &str) -> Result<(), String> {
+fn update_changelist_description(changelist: i32, description: &str, server: Option<String>, user: Option<String>, client: Option<String>) -> Result<(), String> {
     // Get current changelist form
-    let output = Command::new("p4")
-        .args(&["change", "-o", &changelist.to_string()])
+    let mut cmd = Command::new("p4");
+    if let Some(s) = &server { cmd.args(["-p", s]); }
+    if let Some(u) = &user { cmd.args(["-u", u]); }
+    if let Some(c) = &client { cmd.args(["-c", c]); }
+    cmd.args(["change", "-o", &changelist.to_string()]);
+
+    let output = cmd
         .output()
         .map_err(|e| format!("Failed to get changelist: {}", e))?;
 
@@ -549,11 +606,16 @@ fn update_changelist_description(changelist: i32, description: &str) -> Result<(
     }
 
     // Submit updated form
-    let mut child = Command::new("p4")
-        .args(&["change", "-i"])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+    let mut cmd = Command::new("p4");
+    if let Some(s) = &server { cmd.args(["-p", s]); }
+    if let Some(u) = &user { cmd.args(["-u", u]); }
+    if let Some(c) = &client { cmd.args(["-c", c]); }
+    cmd.args(["change", "-i"]);
+    cmd.stdin(Stdio::piped());
+    cmd.stdout(Stdio::piped());
+    cmd.stderr(Stdio::piped());
+
+    let mut child = cmd
         .spawn()
         .map_err(|e| format!("Failed to spawn p4 change: {}", e))?;
 
@@ -592,28 +654,34 @@ pub struct SyncProgress {
 pub async fn p4_sync(
     paths: Vec<String>,
     depot_path: Option<String>,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
     on_progress: Channel<SyncProgress>,
     state: State<'_, ProcessManager>,
-    app: AppHandle,
+    _app: AppHandle,
 ) -> Result<String, String> {
     // Build command: p4 sync <paths>
-    let mut args: Vec<String> = Vec::new();
+    let mut cmd = Command::new("p4");
+    if let Some(s) = &server { cmd.args(["-p", s]); }
+    if let Some(u) = &user { cmd.args(["-u", u]); }
+    if let Some(c) = &client { cmd.args(["-c", c]); }
 
-    args.push("sync".to_string());
+    cmd.arg("sync");
 
     if paths.is_empty() {
         // Use depot_path if provided (e.g., "//stream/main/..."), otherwise fall back to "//..."
         let query_path = depot_path.unwrap_or_else(|| "//...".to_string());
-        args.push(query_path);
+        cmd.arg(query_path);
     } else {
-        args.extend(paths);
+        cmd.args(&paths);
     }
 
+    cmd.stdout(Stdio::piped());
+    cmd.stderr(Stdio::piped());
+
     // Spawn process
-    let mut child = Command::new("p4")
-        .args(&args)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+    let mut child = cmd
         .spawn()
         .map_err(|e| format!("Failed to spawn p4 sync: {}", e))?;
 
@@ -708,4 +776,88 @@ fn parse_sync_line(line: &str) -> Option<SyncProgress> {
     }
 
     None
+}
+
+/// List available workspaces for a given server and user
+#[tauri::command]
+pub async fn p4_list_workspaces(server: String, user: String) -> Result<Vec<P4Workspace>, String> {
+    let output = Command::new("p4")
+        .args(["-p", &server, "-u", &user, "-ztag", "clients", "-u", &user])
+        .output()
+        .map_err(|e| format!("Failed to execute p4 clients: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("p4 clients failed: {}", stderr));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    parse_ztag_clients(&stdout)
+}
+
+/// Parse p4 -ztag clients output into P4Workspace structs
+fn parse_ztag_clients(output: &str) -> Result<Vec<P4Workspace>, String> {
+    let mut workspaces = Vec::new();
+    let mut current: HashMap<String, String> = HashMap::new();
+
+    for line in output.lines() {
+        let line = line.trim();
+
+        if line.is_empty() {
+            if !current.is_empty() {
+                if let Some(ws) = build_workspace(&current) {
+                    workspaces.push(ws);
+                }
+                current.clear();
+            }
+            continue;
+        }
+
+        if let Some(stripped) = line.strip_prefix("... ") {
+            if let Some((key, value)) = stripped.split_once(' ') {
+                current.insert(key.to_string(), value.to_string());
+            }
+        }
+    }
+
+    // Handle last record if no trailing empty line
+    if !current.is_empty() {
+        if let Some(ws) = build_workspace(&current) {
+            workspaces.push(ws);
+        }
+    }
+
+    Ok(workspaces)
+}
+
+/// Build P4Workspace from parsed ztag fields
+fn build_workspace(fields: &HashMap<String, String>) -> Option<P4Workspace> {
+    let name = fields.get("client")?.clone();
+    let root = fields.get("Root")?.clone();
+    let stream = fields.get("Stream").cloned();
+    let description = fields.get("Description").cloned().unwrap_or_else(|| "".to_string());
+
+    Some(P4Workspace {
+        name,
+        root,
+        stream,
+        description,
+    })
+}
+
+/// Test connection to P4 server with given credentials
+#[tauri::command]
+pub async fn p4_test_connection(server: String, user: String, client: String) -> Result<P4ClientInfo, String> {
+    let output = Command::new("p4")
+        .args(["-p", &server, "-u", &user, "-c", &client, "-ztag", "info"])
+        .output()
+        .map_err(|e| format!("Failed to execute p4 info: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Connection test failed: {}", stderr));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    parse_ztag_info(&stdout)
 }
