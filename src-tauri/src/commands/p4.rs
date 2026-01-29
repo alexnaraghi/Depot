@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, ipc::Channel, State};
@@ -632,7 +632,6 @@ fn update_changelist_description(changelist: i32, description: &str, server: Opt
         .spawn()
         .map_err(|e| format!("Failed to spawn p4 change: {}", e))?;
 
-    use std::io::Write;
     if let Some(mut stdin) = child.stdin.take() {
         stdin.write_all(new_form.as_bytes())
             .map_err(|e| format!("Failed to write changelist form: {}", e))?;
@@ -648,6 +647,163 @@ fn update_changelist_description(changelist: i32, description: &str, server: Opt
     }
 
     Ok(())
+}
+
+/// Create a new changelist
+#[tauri::command]
+pub async fn p4_create_change(description: String, server: Option<String>, user: Option<String>, client: Option<String>) -> Result<i32, String> {
+    // Get template: p4 change -o
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+    cmd.args(["change", "-o"]);
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to get changelist template: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.to_string());
+    }
+
+    let form = String::from_utf8_lossy(&output.stdout);
+
+    // Update description and remove Files section
+    let mut new_form = String::new();
+    let mut in_description = false;
+    let mut in_files = false;
+
+    for line in form.lines() {
+        if line.starts_with("Description:") {
+            new_form.push_str("Description:\n");
+            new_form.push_str(&format!("\t{}\n", description));
+            in_description = true;
+        } else if in_description && line.starts_with('\t') {
+            // Skip old description lines
+            continue;
+        } else if line.starts_with("Files:") {
+            // Remove Files section for new changelist
+            in_files = true;
+            continue;
+        } else if in_files && line.starts_with('\t') {
+            // Skip file lines
+            continue;
+        } else if in_files && !line.starts_with('\t') {
+            in_files = false;
+        } else if in_description && !line.starts_with('\t') {
+            in_description = false;
+            new_form.push_str(line);
+            new_form.push('\n');
+        } else if !in_files {
+            new_form.push_str(line);
+            new_form.push('\n');
+        }
+    }
+
+    // Submit form: p4 change -i
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+    cmd.args(["change", "-i"]);
+    cmd.stdin(Stdio::piped());
+    cmd.stdout(Stdio::piped());
+    cmd.stderr(Stdio::piped());
+
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("Failed to spawn p4 change: {}", e))?;
+
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin.write_all(new_form.as_bytes())
+            .map_err(|e| format!("Failed to write changelist form: {}", e))?;
+    }
+
+    let result = child
+        .wait_with_output()
+        .map_err(|e| format!("Failed to create changelist: {}", e))?;
+
+    if !result.status.success() {
+        let stderr = String::from_utf8_lossy(&result.stderr);
+        return Err(stderr.to_string());
+    }
+
+    // Parse output: "Change NNNNN created."
+    let stdout = String::from_utf8_lossy(&result.stdout);
+    let changelist_id = stdout
+        .lines()
+        .find(|line| line.contains("Change") && line.contains("created"))
+        .and_then(|line| {
+            line.split_whitespace()
+                .nth(1)
+                .and_then(|s| s.parse::<i32>().ok())
+        })
+        .ok_or_else(|| format!("Failed to parse changelist ID from: {}", stdout))?;
+
+    Ok(changelist_id)
+}
+
+/// Delete a changelist
+#[tauri::command]
+pub async fn p4_delete_change(changelist: i32, server: Option<String>, user: Option<String>, client: Option<String>) -> Result<(), String> {
+    // Execute: p4 change -d <changelist>
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+    cmd.args(["change", "-d", &changelist.to_string()]);
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 change -d: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.to_string());
+    }
+
+    Ok(())
+}
+
+/// Reopen files to a different changelist
+#[tauri::command]
+pub async fn p4_reopen(paths: Vec<String>, changelist: i32, server: Option<String>, user: Option<String>, client: Option<String>) -> Result<Vec<String>, String> {
+    if paths.is_empty() {
+        return Err("No paths provided".to_string());
+    }
+
+    // Execute: p4 reopen -c <changelist> <paths>
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+    cmd.args(["reopen", "-c", &changelist.to_string()]);
+    cmd.args(&paths);
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 reopen: {}", e))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    // Parse output: "//depot/path#rev - reopened; change NNN"
+    let mut reopened_paths = Vec::new();
+
+    for line in stdout.lines() {
+        if line.contains(" - reopened") {
+            if let Some(depot_path) = line.split('#').next() {
+                reopened_paths.push(depot_path.to_string());
+            }
+        }
+    }
+
+    // Check for errors
+    if !output.status.success() || (!stderr.is_empty() && reopened_paths.is_empty()) {
+        return Err(stderr.to_string());
+    }
+
+    Ok(reopened_paths)
+}
+
+/// Edit changelist description
+#[tauri::command]
+pub async fn p4_edit_change_description(changelist: i32, description: String, server: Option<String>, user: Option<String>, client: Option<String>) -> Result<(), String> {
+    update_changelist_description(changelist, &description, server, user, client)
 }
 
 /// Progress information for sync operation

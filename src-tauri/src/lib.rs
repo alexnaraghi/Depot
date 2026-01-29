@@ -26,6 +26,10 @@ pub fn run() {
             commands::p4_sync,
             commands::p4_list_workspaces,
             commands::p4_test_connection,
+            commands::p4_create_change,
+            commands::p4_delete_change,
+            commands::p4_reopen,
+            commands::p4_edit_change_description,
         ])
         .setup(|app| {
             // Get process manager for cleanup
