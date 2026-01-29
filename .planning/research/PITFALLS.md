@@ -1,423 +1,296 @@
-# Pitfalls Research
+# Domain Pitfalls: P4Now v2.0 Features
 
-**Domain:** Desktop GUI Wrapper for CLI Tools (Perforce p4.exe)
-**Researched:** 2026-01-27
-**Confidence:** HIGH
+**Domain:** Perforce GUI (Tauri 2.0 + React 19, CLI wrapper)
+**Researched:** 2026-01-28
+**Confidence:** HIGH (based on P4 CLI behavior, Tauri/WebView constraints, and codebase analysis)
+
+---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Blocking UI Thread During CLI Operations
+Mistakes that cause data loss, rewrites, or broken UX.
 
-**What goes wrong:**
-The main UI thread blocks while waiting for CLI process responses, causing the entire application to freeze during network operations. This is the exact problem P4V users experience - modal dialogs that can't be dismissed during network issues, making the app completely unresponsive.
+### Pitfall 1: Shelve/Unshelve Silently Overwrites Local Changes
 
-**Why it happens:**
-Developers use synchronous process spawning (e.g., `execSync()` in Node.js) or fail to properly separate CLI execution from UI rendering. Without explicit async patterns, child process operations block the main thread until completion.
+**What goes wrong:** `p4 unshelve` replaces the workspace file with the shelved version. If the user has local edits that differ from the shelved version, those edits are destroyed without warning. The CLI does not prompt -- it just overwrites.
 
-**How to avoid:**
-- Always use asynchronous process spawning (`spawn()` or `exec()` with callbacks/promises, never `execSync()`)
-- Execute ALL CLI operations on background threads/processes
-- Use Node.js child_process with async/await or Rust async for Tauri
-- Implement proper IPC between UI and CLI execution layer
-- Never wait for CLI responses on the main/renderer thread
+**Why it happens:** Developers assume unshelve is a "merge" operation. It is not -- it is a replace. The `-f` flag forces unshelve even when files are already open, compounding the risk.
 
-**Warning signs:**
-- UI becomes unresponsive during any p4 operation
-- User can't interact with other parts of the app while one operation runs
-- Spinner/loading indicators freeze instead of animating
-- App appears "hung" during network delays
-- DevTools shows main thread blocking for >16ms
+**Consequences:** User loses local work silently. No undo available.
 
-**Phase to address:**
-Phase 1 (Core Architecture) - Must establish async-first architecture from the beginning. Retrofitting async patterns later requires complete rewrites.
+**Prevention:**
+- Before unshelve, run `p4 diff` on any locally-opened files that overlap with the shelf. Warn the user if local changes exist.
+- After unshelve, show a diff summary of what changed.
+- Never pass `-f` without explicit user confirmation.
+
+**Warning signs:** Users reporting "my changes disappeared after unshelve."
+
+**Phase:** Shelve/unshelve feature must include pre-unshelve conflict detection from day one.
 
 ---
 
-### Pitfall 2: No Cancellation Mechanism for Long-Running Operations
+### Pitfall 2: Reconcile on Large Workspaces Freezes the App
 
-**What goes wrong:**
-Users can start operations but have no way to cancel them if they take too long, provide wrong input, or network conditions deteriorate. Operations run to completion or timeout even when the user wants to abort. This is a critical P4V pain point - operations get stuck with no cancel option.
+**What goes wrong:** `p4 reconcile` scans the entire workspace filesystem, comparing every file against the depot. On workspaces with 50K+ files, this takes minutes. Since the current architecture uses `Command::new("p4")` with `.output()` (waits for full completion), the Rust backend blocks until reconcile finishes. Even the streaming `spawn` approach produces thousands of lines of output that overwhelm the UI.
 
-**Why it happens:**
-Child processes are spawned but developers don't maintain references to the process handles, or don't implement cancellation signals. UX doesn't expose cancel buttons, or buttons are non-functional because backend doesn't support cancellation.
+**Why it happens:** Reconcile is inherently expensive -- it stats every file on disk. The app's "never block the user" principle conflicts with reconcile's blocking nature.
 
-**How to avoid:**
-- Store process handles/PIDs when spawning CLI commands
-- Implement kill/abort functionality using `process.kill()` (Node.js) or equivalent
-- Add visible "Cancel" button to ALL long-running operation UIs
-- Use AbortController pattern for promise-based operations
-- Implement timeout thresholds with automatic cancellation options
-- Send SIGTERM first, escalate to SIGKILL if process doesn't respond within grace period
-- Track operation state so UI knows what can be cancelled
+**Consequences:** App appears frozen. Users kill it, leaving partial state. Or the UI floods with thousands of file entries.
 
-**Warning signs:**
-- No "Cancel" buttons on progress dialogs
-- Cancel buttons exist but don't work
-- Only way to stop operation is killing the entire app
-- Process remains running after user attempts cancellation
-- User complaints about "stuck" operations
+**Prevention:**
+- Always use the streaming `spawn_p4_command` path with progress reporting.
+- Scope reconcile to subdirectories (`p4 reconcile //depot/path/subdir/...`) instead of whole workspace.
+- Add a cancel button (already have `kill_process` infrastructure).
+- Batch UI updates -- do not render each file as it arrives. Accumulate for 100ms, then render batch.
+- Show estimated progress: parse "N files examined" from reconcile output.
 
-**Phase to address:**
-Phase 1 (Core Architecture) - Cancellation must be designed into the process management layer from day one. Also Phase 2 (Basic Operations) to ensure all UI operations expose cancellation.
+**Warning signs:** QA reports "app hangs when I click Reconcile."
+
+**Phase:** Reconcile feature. Must use streaming + scoped paths from initial implementation.
 
 ---
 
-### Pitfall 3: Zombie and Orphaned Child Processes
+### Pitfall 3: Moving Files Between Changelists Is Not Atomic
 
-**What goes wrong:**
-Spawned p4.exe processes persist after the parent application closes, or processes enter zombie state consuming system resources. Task Manager shows multiple p4.exe instances that can't be killed. On application crash, child processes continue running indefinitely.
+**What goes wrong:** `p4 reopen -c <target_CL> <file>` moves one file at a time. If you drag 20 files to a new changelist and the operation fails on file 11 (e.g., file is locked by another user), you end up with files split across two changelists. The Zustand store shows one state, the server has another.
 
-**Why it happens:**
-No cleanup handlers for application exit, missing `wait()` calls to reap terminated children, or failure to track and kill child processes on shutdown. Electron/Tauri processes can remain alive after main app closes if not explicitly managed.
+**Why it happens:** P4 has no batch-move-to-changelist command. Each `p4 reopen` is independent. The current `p4_edit` command already handles reopening but processes files individually via CLI output parsing.
 
-**How to avoid:**
-- Register process cleanup handlers on application exit (`beforeunload`, `window.on('close')`)
-- Track all spawned child process PIDs in a registry/set
-- Implement cleanup function that kills all tracked processes
-- Use `wait()` or `waitpid()` to properly reap terminated child processes
-- For Electron: Use `app.on('before-quit')` and `app.on('window-all-closed')` hooks
-- For Tauri: Use `Command::new_sidecar` which auto-cleans on exit (but verify it works)
-- Consider process pools instead of ad-hoc spawning
-- Use `detached: false` in Node.js spawn options to ensure children die with parent
-- Send SIGTERM to all children before exit, wait briefly, then SIGKILL stragglers
+**Consequences:** UI shows files in wrong changelist. User confusion. Potential accidental submit of partial work.
 
-**Warning signs:**
-- Task Manager shows multiple p4.exe processes after app closes
-- System resource usage increases over time
-- Processes in zombie state (defunct) appear in process list
-- Need to manually kill processes via Task Manager
-- Background p4.exe processes after crash
+**Prevention:**
+- Run all `p4 reopen` commands, collect successes and failures separately.
+- On partial failure, show a clear error: "Moved 10/20 files. 10 files could not be moved: [reasons]."
+- Re-fetch changelist state from server after any reopen operation (`p4 opened` to get ground truth).
+- Implement undo: track the source changelist so failed files can be described accurately.
+- In the Zustand store, use optimistic updates but roll back on failure per-file.
 
-**Phase to address:**
-Phase 1 (Core Architecture) - Process lifecycle management must be implemented from the start, with proper cleanup hooks.
+**Warning signs:** Store state diverging from server state after drag-drop operations.
+
+**Phase:** Multiple changelists + drag-drop. Must handle partial failure from v1 of this feature.
 
 ---
 
-### Pitfall 4: Poor Error Handling - Missing stdout/stderr Separation
+### Pitfall 4: Default Changelist Edge Cases Break Multi-Changelist UX
 
-**What goes wrong:**
-Application treats all stderr output as fatal errors, or worse, ignores stderr entirely. Users see generic "Command failed" messages without actual error details. Perforce writes diagnostics to stderr but command succeeds, causing false error states. Conversely, silent failures occur when real errors on stderr are ignored.
+**What goes wrong:** P4's default changelist (id=0) behaves differently from numbered changelists:
+- You cannot shelve the default changelist directly (must specify files or use `-c default`).
+- `p4 reopen -c default` uses the literal string "default", not 0.
+- Files opened without `-c` go to default, not the last-used changelist.
+- The default changelist cannot be deleted.
+- `p4 submit` with no `-c` flag submits ALL files in the default changelist.
 
-**Why it happens:**
-Developers assume stderr = error and stdout = success, but CLI tools (including p4) write warnings, progress updates, and diagnostics to stderr even for successful operations. Starting in .NET 10, many CLI tools moved non-core output to stderr for cleaner parsing, breaking assumptions.
+The current code already hardcodes `changelist == 0` for default (see `p4_submit`). But every new feature (shelve, reopen, drag-drop) must handle this special case.
 
-**How to avoid:**
-- Capture both stdout AND stderr separately
-- Check process exit code as the primary success indicator (exit code 0 = success)
-- Parse stderr for actual error patterns specific to p4 (e.g., "error:", "Perforce client error:")
-- Display stderr warnings non-intrusively (bottom status bar, expandable details)
-- Only treat stderr as error when exit code != 0
-- Log full stdout/stderr to debug log for troubleshooting
-- Create p4-specific error parser that understands Perforce error formats
+**Consequences:** Commands fail silently or act on wrong files. Submitting default CL accidentally submits everything.
 
-**Warning signs:**
-- App shows errors when commands succeed
-- No error details shown when commands actually fail
-- User confusion about what went wrong
-- "Command failed" without explanation
-- Success for operations that actually failed silently
+**Prevention:**
+- Create a P4 command builder abstraction that translates `0` to `"default"` for commands that need the string form.
+- For submit from default CL, always show a confirmation dialog listing ALL files that will be submitted.
+- Consider auto-creating numbered changelists and discouraging use of default (like P4V does).
+- Unit test every command path with both `changelist=0` and `changelist=N`.
 
-**Phase to address:**
-Phase 2 (Basic Operations) - Implement during initial p4 command execution, as this affects every operation.
+**Phase:** Affects multiple changelists, shelve, and drag-drop. Address in the changelist management phase before shelving.
 
 ---
 
-### Pitfall 5: Memory Leaks from Event Listener Accumulation
+## Moderate Pitfalls
 
-**What goes wrong:**
-Application memory usage grows continuously over time, eventually consuming gigabytes and slowing down or crashing. Each operation adds event listeners for process events but never removes them, even after processes complete.
+Mistakes that cause poor UX, rework, or technical debt.
 
-**Why it happens:**
-In Electron/Tauri apps, developers attach event listeners to child processes, IPC channels, or UI components but forget to clean them up. BrowserWindow instances aren't destroyed when closed. Each p4 operation registers 'stdout', 'stderr', 'exit', 'error' listeners that persist after completion.
+### Pitfall 5: File History Performance Cliff
 
-**How to avoid:**
-- Always remove event listeners when done using `removeListener()` or `removeAllListeners()`
-- Destroy BrowserWindow instances explicitly with `window.destroy()`
-- Implement component unmount/cleanup lifecycle hooks
-- Use `once()` instead of `on()` for one-time events
-- Clear intervals/timeouts with `clearInterval()`, `clearTimeout()`
-- Close file handles, network connections, database connections
-- For child processes: Remove all listeners after 'exit' event
-- Monitor memory usage in development using Chrome DevTools heap snapshots
-- Track RSS (Resident Set Size) not just JavaScript heap (native memory matters in Electron)
+**What goes wrong:** `p4 filelog` returns the entire history of a file. For files with 500+ revisions (common in long-lived repos), parsing and rendering all revisions is slow. Worse, `p4 filelog -l` (long descriptions) multiplies the data volume. Integration history (branches/merges) adds `... ... ` lines that explode the output size.
 
-**Warning signs:**
-- Application memory usage grows steadily over hours
-- Memory doesn't decrease after closing windows/operations
-- Chrome DevTools shows accumulating event listeners
-- Heap snapshots show retained objects
-- Application becomes sluggish after extended use
-- Memory usage >500MB for simple GUI app
+**Prevention:**
+- Use `p4 filelog -m 50` to limit initial fetch. Add "Load more" pagination.
+- Use `-s` (short, no integration history) for initial display. Offer "Show integrations" toggle.
+- Parse incrementally with the streaming approach, not `.output()`.
+- Cache results -- file history is immutable for past revisions.
 
-**Phase to address:**
-Phase 1 (Core Architecture) - Establish memory management patterns early. Phase 3 (Continuous Operations) - Critical when implementing long-running apps with repeated operations.
+**Phase:** File history viewer.
 
 ---
 
-### Pitfall 6: Inadequate Progress Feedback and Timeouts
+### Pitfall 6: External Diff Tool Launch Blocks the Event Loop
 
-**What goes wrong:**
-Long-running operations (large syncs, submits) show no progress indication, making users think the app is frozen. Operations time out prematurely on slow networks, or worse, run indefinitely with no timeout. Users can't distinguish between "operation in progress" and "application hung."
+**What goes wrong:** Launching `p4 diff` or a custom diff tool (Beyond Compare, WinMerge, etc.) with `Command::new()` and calling `.output()` or `.wait()` blocks the Rust async runtime. The diff tool window stays open indefinitely (user is reading diffs), and the app hangs.
 
-**Why it happens:**
-Developers don't implement progress streaming from CLI output, don't set appropriate timeouts, or use global timeout values that don't account for operation variability. Progress information exists in p4 output but isn't parsed and displayed.
+**Why it happens:** The current codebase uses both `.output()` (blocking) and `spawn` (non-blocking) patterns. It is easy to accidentally use the blocking path for diff.
 
-**How to avoid:**
-- Display progress indicators for all operations >1 second
-- Show percent-done indicators for operations >10 seconds (Jakob Nielsen's guideline)
-- Parse p4 output for progress information (file counts, transfer rates)
-- Implement operation-specific timeouts (sync: 30min, status: 30sec, submit: 10min)
-- Use `net.maxwait` parameter per p4 command: `p4 -vnet.maxwait=60 sync`
-- Combine with `-rN` retry option for automatic reconnection
-- Show animated spinners so users know app is responsive
-- Display current action ("Syncing file 342 of 1250...")
-- Provide time estimates when possible
-- After timeout, offer "Retry" and "Cancel" options, not just failure
+**Consequences:** App freezes until user closes the diff tool.
 
-**Warning signs:**
-- Users report "app seems frozen"
-- No visual feedback during operations
-- All operations use same timeout regardless of expected duration
-- Operations fail on slow networks but succeed on fast networks
-- No way to tell if operation is progressing or stuck
+**Prevention:**
+- Always use `.spawn()` for external tools. Never `.output()` or `.wait()`.
+- Track spawned diff processes in `ProcessManager` for cleanup on app exit.
+- Use `p4 set P4DIFF` to detect configured diff tool. Fall back to system default.
+- For temp files (needed when diffing depot revisions): create in a temp directory, clean up when the diff process exits (monitor with a background thread).
+- Handle "tool not found" gracefully: try the command, catch the spawn error, show a settings dialog to configure the diff tool path.
 
-**Phase to address:**
-Phase 2 (Basic Operations) - Implement basic progress for all operations. Phase 3 (Continuous Operations) - Refine with accurate progress parsing and time estimates.
+**Phase:** External diff tool integration.
 
 ---
 
-### Pitfall 7: Ignoring Platform-Specific Process Behavior
+### Pitfall 7: Keyboard Shortcuts Conflict with WebView/OS
 
-**What goes wrong:**
-Application works perfectly on developer's Windows machine but fails on other configurations. Process spawning behaves differently on Windows vs Linux/Mac. Path separators, environment variables, or shell interpretation causes subtle bugs.
+**What goes wrong:** Tauri uses a WebView (WebView2 on Windows). The WebView captures many keyboard shortcuts:
+- `Ctrl+A` -- selects all text in the WebView, not "select all files"
+- `Ctrl+F` -- opens WebView's built-in find bar, not app search
+- `Ctrl+P` -- triggers print dialog
+- `F5` -- refreshes the WebView (reloads the entire app!)
+- `Ctrl+R` -- also refreshes
+- `Ctrl+L` -- focuses the URL bar (if visible)
+- `Backspace` -- navigates back in WebView history
 
-**Why it happens:**
-Developers test only on one platform. Windows uses backslashes (`\`) and different shell syntax than Unix. Environment variable syntax differs (`%VAR%` vs `$VAR`). Process spawning on Windows doesn't use shell by default in Node.js.
+**Consequences:** Shortcuts either do the wrong thing or are silently swallowed by the WebView.
 
-**How to avoid:**
-- Use `path.join()` and `path.resolve()` for all filesystem paths (handles separators)
-- For p4.exe specifically: Always provide full absolute path to executable
-- Set `shell: true` in Node.js spawn options if using shell features, or avoid shell features entirely
-- Normalize path separators when passing paths to p4 commands
-- Test on Windows, Mac, and Linux (or at minimum target platform + one other)
-- Use environment variable libraries that abstract platform differences
-- Be explicit about working directory for spawned processes
-- Handle case sensitivity differences in file paths
+**Prevention:**
+- In Tauri 2.0, disable default WebView shortcuts via the window configuration or by intercepting key events at the Rust level.
+- Use `document.addEventListener('keydown')` with `preventDefault()` for app shortcuts at the React level.
+- Avoid `Ctrl+R`, `F5`, `Ctrl+P`, `Ctrl+L` as app shortcuts entirely -- too confusing when they sometimes leak through.
+- Test every shortcut with focus in different UI areas (tree, panel, dialog).
+- Provide a keyboard shortcut settings page so users can remap conflicts.
 
-**Warning signs:**
-- Works on dev machine but not CI or other users' machines
-- Path-related errors on different OS
-- "Command not found" despite executable existing
-- Different behavior with same commands on different platforms
-
-**Phase to address:**
-Phase 1 (Core Architecture) - Platform abstraction must be designed in from the start, before accumulating platform-specific code.
+**Phase:** Keyboard shortcuts. Research Tauri 2.0's exact WebView key interception API before implementation.
 
 ---
 
-### Pitfall 8: State Synchronization Without Optimistic Updates or Rollback
+### Pitfall 8: Connection Status Polling Creates Server Load and Zombie Processes
 
-**What goes wrong:**
-User makes changes in the GUI, but UI doesn't update until server confirms, creating laggy feel. Or worse, UI updates optimistically but has no rollback mechanism when operation fails, leaving UI state inconsistent with actual server state.
+**What goes wrong:** Naively polling `p4 info` every N seconds to check connection status:
+- Spawns a new `p4.exe` process each time (process creation overhead on Windows is ~10ms).
+- Each call authenticates with the server.
+- At 5-second intervals, this is 12 p4.exe processes per minute doing nothing useful.
+- If the server is slow/down, pending `p4 info` calls queue up, spawning zombie processes.
 
-**Why it happens:**
-Developers either wait for CLI operation completion before updating UI (pessimistic), or update UI immediately without handling failures (naive optimistic). No mechanism to reconcile UI state when background operation fails.
+**Prevention:**
+- Use exponential backoff: 5s when connected, 30s after first failure, 60s after sustained failure.
+- Piggyback on real commands: if the user runs `p4 sync`, that confirms connection. Reset the timer.
+- Use a single `p4 info` call, not `p4 ping` (info gives useful data, ping is deprecated in some server versions).
+- Set a timeout on the connection check process (kill after 5 seconds = assume disconnected).
+- Track in-flight connection checks to prevent stacking.
 
-**How to avoid:**
-- Implement optimistic updates: Update UI immediately on user action
-- Show operation as "pending" with visual indicator (opacity, icon)
-- If operation succeeds: Commit UI state
-- If operation fails: Roll back UI to previous state AND show error
-- Take snapshot of state before optimistic update for rollback
-- Use state management libraries with built-in optimistic mutation support (TanStack Query, Zustand)
-- Consider two-phase display: Instant local update + eventual server confirmation
-- For critical operations (submit), consider pessimistic updates with good progress feedback
-- Queue operations and handle retry/rollback for each
-
-**Warning signs:**
-- UI feels sluggish/laggy compared to modern web apps
-- UI shows changes that never actually happened
-- Inconsistent state after network failures
-- No visual distinction between "pending" and "confirmed" changes
-- User confusion about whether action succeeded
-
-**Phase to address:**
-Phase 2 (Basic Operations) - Implement state management pattern from first interactive features. Phase 4 (Advanced Features) - Refine with queue management and conflict resolution.
+**Phase:** Connection status indicator.
 
 ---
 
-## Technical Debt Patterns
+### Pitfall 9: Settings Persistence Corruption and Migration
 
-Shortcuts that seem reasonable but create long-term problems.
+**What goes wrong:** If settings are stored in a JSON file, concurrent reads/writes from the Rust backend and the React frontend can corrupt the file. Schema changes between app versions break deserialization.
 
-| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
-|----------|-------------------|----------------|-----------------|
-| Using `execSync()` for "quick" operations | Simple synchronous code, easier to reason about | Blocks UI thread, creates perception of sluggishness, prevents scaling to async | Never - even 50ms blocks create janky UX |
-| Global timeout for all p4 commands | Easy to configure, one setting | Small operations timeout on slow networks, large operations timeout prematurely | Never - operations have vastly different durations |
-| Ignoring process cleanup on crash | Reduces code complexity | Zombie processes accumulate, system resources leak | Never - proper cleanup is essential |
-| Parsing stderr as plain text instead of structured errors | Quick to implement | Can't distinguish error types, poor error messages, breaks with CLI updates | Only for MVP prototype, must refactor before beta |
-| Spawning new process per command | Simplest architecture | Process creation overhead, potential resource exhaustion | Acceptable for infrequent operations (<1/minute), use process pooling for frequent ops |
-| Bundling p4.exe with app | Ensures version consistency | Large bundle size, can't use system p4, version update requires app update | Acceptable as fallback option if system p4 not found |
-| Not implementing operation queueing | Simpler concurrent execution | Race conditions, overwhelming server, conflicting operations | Only for single-user, single-workspace scenarios |
-| Using Electron instead of Tauri | Faster development, more examples | 200MB bundle size vs 10MB, higher memory usage | Acceptable if team knows JS better than Rust, or needs Node.js ecosystem |
+**Prevention:**
+- Use `tauri-plugin-store` which handles file locking.
+- Define a settings schema with version number. On load, migrate old schemas to current.
+- Validate all settings on load -- replace invalid values with defaults rather than crashing.
+- For P4 connection settings specifically: validate by running `p4 -p <port> -u <user> -c <client> info` before saving.
+- Store settings in `%APPDATA%/p4now/` (Tauri's standard app data path).
 
-## Integration Gotchas
-
-Common mistakes when connecting to Perforce CLI.
-
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| p4 client configuration | Assuming P4CLIENT environment variable is set | Check for P4CLIENT, fall back to -c flag, allow user to select client |
-| File sync operations | Not using -f flag when files should be overwritten | Detect when sync fails due to writable files, offer -f option |
-| Multi-factor authentication | Assuming `p4 login` works | Detect MFA, use `p4 login2` or redirect to P4V for auth |
-| Large file operations | Treating all operations equally | Implement streaming for large files, chunked progress updates |
-| Changelist operations | Not handling pending changelists | Query and display pending changelists, don't assume clean state |
-| Connection failures | Showing generic "connection failed" | Parse p4 connection errors, suggest fixes (firewall, VPN, server down) |
-| Workspace path mapping | Hardcoding path separators | Use p4 where command to map depot paths to local paths |
-| Edit detection | Assuming files are read-only until checked out | Check file attributes, handle manual edits outside p4 |
-
-## Performance Traps
-
-Patterns that work at small scale but fail as usage grows.
-
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Spawning new p4 process per file status check | Works fine for 10 files | Use batch operations: `p4 fstat file1 file2 file3...` | >50 files, or >5 ops/second |
-| Loading entire file list into memory | Fast for small repos | Use streaming/pagination, virtual scrolling in UI | >10,000 files in workspace |
-| No request debouncing/throttling | Responsive to every user action | Debounce rapid user actions, throttle API calls | User rapidly clicks through files |
-| Synchronous file tree scanning | Simple recursive directory read | Use async iterators, background workers | >1,000 directories |
-| Not caching p4 info/client info | Always fresh data | Cache with TTL (5 minutes), invalidate on known changes | Called >10 times/minute |
-| Rendering all operations in one list | Simple UI component | Virtual scrolling, pagination, or infinite scroll | >500 history items |
-| Full workspace refresh after every operation | Ensures consistency | Incremental updates, only refresh affected paths | Workspace with >5,000 files |
-
-## Security Mistakes
-
-Domain-specific security issues beyond general web security.
-
-| Mistake | Risk | Prevention |
-|---------|------|------------|
-| Exposing p4 credentials in logs | Credentials leaked in debug logs or crash reports | Sanitize all logs, never log P4PASSWD or login tokens |
-| Storing p4 password in plain text | Password theft from config files | Use OS credential storage (keytar for Electron), or rely on p4 tickets |
-| Not validating p4 command injection | Malicious workspace names or file paths inject commands | Sanitize all user input before passing to p4, use parameterized commands |
-| Running p4 with elevated privileges | Unnecessarily broad permissions | Run p4 commands with minimum necessary permissions |
-| Not verifying SSL certificates | Man-in-the-middle attacks on p4 SSL connections | Enable SSL verification, don't allow self-signed certs in production |
-| Leaking workspace paths | Privacy issue, reveals system username/structure | Sanitize paths in error messages, allow user to hide full paths |
-| Executing arbitrary commands via shell | Remote code execution if input not sanitized | Use spawn with array arguments, never string concatenation |
-
-## UX Pitfalls
-
-Common user experience mistakes in this domain.
-
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| Modal dialogs that can't be dismissed | User stuck waiting, can't cancel or do other work | Non-modal panels, background operations with notification on completion |
-| No indication of what's blocking | User doesn't know why app is unresponsive | Always show current operation: "Syncing 342/1250 files..." |
-| Requiring user to check output log for errors | Cognitive load, error messages buried | Parse errors, show user-friendly summary with "Details" expando |
-| No way to recover from errors | User must restart app or manually fix | Offer "Retry", "Skip", "Cancel" options on all errors |
-| Hiding network status | User doesn't know if slow network or hung operation | Show network activity indicator, ping time, or connection status |
-| File operations without preview | User doesn't know what will be affected | Show list of affected files before destructive operations |
-| No undo for destructive operations | Accidental deletes/reverts can't be recovered | Implement operation history with undo/redo, or confirmation dialogs |
-| Overusing confirmation dialogs | Dialog fatigue, users click "OK" without reading | Only confirm destructive operations, remember "Don't ask again" preferences |
-
-## "Looks Done But Isn't" Checklist
-
-Things that appear complete but are missing critical pieces.
-
-- [ ] **Process spawning:** Often missing cleanup on abnormal exit — verify exit handlers actually kill child processes
-- [ ] **Error handling:** Often missing stderr parsing — verify errors show actionable messages, not just "Command failed"
-- [ ] **Cancellation:** Often missing SIGKILL fallback — verify SIGTERM + grace period + SIGKILL escalation
-- [ ] **Progress indicators:** Often missing actual progress parsing — verify percentage is based on real data, not just spinner
-- [ ] **Memory management:** Often missing event listener cleanup — verify all listeners removed after operation completion
-- [ ] **Timeout handling:** Often missing retry mechanism — verify timeout leads to user choice (retry/cancel), not just failure
-- [ ] **State synchronization:** Often missing rollback on failure — verify failed optimistic updates revert UI to previous state
-- [ ] **Multi-platform support:** Often missing Windows path handling — verify works with both forward slashes and backslashes
-- [ ] **Authentication:** Often missing MFA support — verify `p4 login2` is used when MFA detected
-- [ ] **Large operations:** Often missing streaming/chunking — verify memory doesn't grow linearly with operation size
-
-## Recovery Strategies
-
-When pitfalls occur despite prevention, how to recover.
-
-| Pitfall | Recovery Cost | Recovery Steps |
-|---------|---------------|----------------|
-| Blocking UI thread | HIGH | Requires architectural refactor to async execution model; expect 2-4 weeks for complete retrofit |
-| No cancellation mechanism | MEDIUM | Add process tracking registry and kill functionality; refactor UI to expose cancel buttons; 1-2 weeks |
-| Zombie processes | LOW | Add exit handlers and cleanup functions; test thoroughly; 2-3 days |
-| Poor error handling | LOW-MEDIUM | Implement error parser and improve error display; can be done incrementally; 3-5 days |
-| Memory leaks | MEDIUM | Profile with DevTools, identify leaks, add cleanup; iterative process; 1-2 weeks |
-| No progress feedback | LOW | Parse CLI output for progress, add UI indicators; 3-5 days per operation type |
-| Platform-specific bugs | MEDIUM | Abstract platform differences, add cross-platform testing; 1-2 weeks |
-| State synchronization issues | MEDIUM-HIGH | Implement state management library with optimistic updates; 1-3 weeks depending on scope |
-
-## Pitfall-to-Phase Mapping
-
-How roadmap phases should address these pitfalls.
-
-| Pitfall | Prevention Phase | Verification |
-|---------|------------------|--------------|
-| Blocking UI thread | Phase 1 (Core Architecture) | Spawn p4 command, verify UI remains responsive during execution |
-| No cancellation mechanism | Phase 1 (Core Architecture) + Phase 2 (Basic Operations) | Start long operation, click cancel, verify process terminates immediately |
-| Zombie processes | Phase 1 (Core Architecture) | Close app during operation, check Task Manager for orphaned p4.exe |
-| Poor error handling | Phase 2 (Basic Operations) | Force various p4 errors, verify all show clear messages |
-| Memory leaks | Phase 1 (Core Architecture) + Phase 3 (Continuous Operations) | Run 1000 operations, verify memory returns to baseline |
-| No progress feedback | Phase 2 (Basic Operations) + Phase 3 (Continuous Operations) | Start large sync, verify continuous progress updates |
-| Platform-specific bugs | Phase 1 (Core Architecture) | Run test suite on Windows, Mac, Linux (minimum Windows + one other) |
-| State synchronization issues | Phase 2 (Basic Operations) + Phase 4 (Advanced Features) | Disconnect network mid-operation, verify UI handles gracefully |
-
-## Sources
-
-**GUI Wrapper Patterns:**
-- [Command Line Interface Guidelines](https://clig.dev/)
-- [Why not GUI wrapper for command line tools?](https://hashnode.com/post/why-not-gui-wrapper-for-command-line-tools-cjng0k9hg00abrts2bcd2j79b)
-- [Desktop GUIs for Web Developers](https://www.fullstackstanley.com/articles/desktop-guis-for-webdevelopers/)
-
-**Electron Best Practices:**
-- [Simple Electron GUI Wrapper for a Command-Line Utility](https://manu.ninja/simple-electron-gui-wrapper-for-a-command-line-utility/)
-- [Electron Desktop App Development Guide for Business in 2026](https://www.forasoft.com/blog/article/electron-desktop-app-development-guide-for-business)
-- [Electron Performance Documentation](https://www.electronjs.org/docs/latest/tutorial/performance)
-
-**Child Process Management:**
-- [Everything You Wanted To Know About Electron Child Processes](https://www.matthewslipper.com/2019/09/22/everything-you-wanted-electron-child-process.html)
-- [Electron utilityProcess API](https://www.electronjs.org/docs/latest/api/utility-process)
-- [Node.js child_process Documentation](https://nodejs.org/api/child_process.html)
-- [Zombie processes with Electron Issue](https://github.com/nklayman/vue-cli-plugin-electron-builder/issues/108)
-
-**Async Patterns & UI Responsiveness:**
-- [Keep the UI thread responsive - Microsoft](https://learn.microsoft.com/en-us/windows/uwp/debug-test-perf/keep-the-ui-thread-responsive)
-- [Deep Dive: scheduler.yield() and Non-Blocking UI Updates (Jan 2026)](https://medium.com/@tharunbalaji110/deep-dive-scheduler-yield-and-the-art-of-non-blocking-ui-updates-18b01241106a)
-- [Managing Non-blocking Calls on the UI Thread](https://www.codeguru.com/dotnet/managing-non-blocking-calls-on-the-ui-thread-with-async-await/)
-
-**UX Patterns for Long Operations:**
-- [Designing for Long Waits and Interruptions - Nielsen Norman Group](https://www.nngroup.com/articles/designing-for-waits-and-interruptions/)
-- [Response Time Limits - Jakob Nielsen](https://www.nngroup.com/articles/response-times-3-important-limits/)
-- [How Optimistic Updates Make Apps Feel Faster](https://blog.openreplay.com/optimistic-updates-make-apps-faster/)
-- [Asynchronous (Mobile) UX Patterns](https://medium.com/snapp-mobile/asynchronous-mobile-ux-patterns-785ea69c4391)
-
-**Memory Management:**
-- [Diagnosing and Fixing Memory Leaks in Electron Applications](https://www.mindfulchase.com/explore/troubleshooting-tips/frameworks-and-libraries/diagnosing-and-fixing-memory-leaks-in-electron-applications.html)
-- [Top Strategies to Prevent Memory Leaks in Electron Apps](https://infinitejs.com/posts/top-strategies-prevent-memory-leaks-electron-apps/)
-- [Debugging Electron Memory Usage](https://seenaburns.com/debugging-electron-memory-usage/)
-
-**Error Handling:**
-- [Breaking change - dotnet CLI stderr output](https://learn.microsoft.com/en-us/dotnet/core/compatibility/sdk/10.0/dotnet-cli-stderr-output)
-- [console output sent to stderr when it should be stdout - GitHub Issue](https://github.com/cli/cli/issues/2984)
-
-**Perforce-Specific:**
-- [Troubleshoot Common Perforce Issues](https://articles.assembla.com/en/articles/748140-troubleshoot-common-perforce-issues)
-- [Work over unreliable networks - Perforce](https://www.perforce.com/manuals/p4sag/Content/P4SAG/performance.diagnosing.network.html)
-- [Perforce Network Troubleshooting Guide](https://www.devopsschool.com/blog/perforce-network-troubleshooting-hints/)
-- [p4 sync and other commands stalls thread](https://perforce-user.perforce.narkive.com/zGmCGveZ/p4-sync-and-other-commands-stalls-and-never-completes)
-
-**Tauri vs Electron:**
-- [Tauri vs. Electron: The Ultimate Desktop Framework Comparison](https://peerlist.io/jagss/articles/tauri-vs-electron-a-deep-technical-comparison)
-- [Tauri vs. Electron: performance, bundle size, and trade-offs](https://www.gethopp.app/blog/tauri-vs-electron)
-- [Electron vs. Tauri - DoltHub Blog](https://www.dolthub.com/blog/2025-11-13-electron-vs-tauri/)
-
-**Process Cleanup:**
-- [Kill process on exit - Tauri Discussion](https://github.com/tauri-apps/tauri/discussions/3273)
-- [Zombie Processes and their Prevention - GeeksforGeeks](https://www.geeksforgeeks.org/operating-systems/zombie-processes-prevention/)
-- [Understanding Zombie Process - Jan 2026 Update](https://digitalgadgetwave.com/understanding-zombie-process-and-its-implications/)
+**Phase:** Connection settings UI. Establish the settings infrastructure before other features depend on it.
 
 ---
-*Pitfalls research for: P4Now - Desktop GUI wrapper for Perforce CLI*
-*Researched: 2026-01-27*
+
+### Pitfall 10: Drag-and-Drop Accidental File Moves with No Undo
+
+**What goes wrong:** User accidentally drops files on the wrong changelist. Since `p4 reopen` executes immediately, the move is committed to the server. There is no client-side undo.
+
+**Prevention:**
+- Show a confirmation dialog for multi-file drops: "Move N files to changelist X?"
+- Implement client-side undo: store the previous changelist for each moved file. "Undo" runs `p4 reopen -c <original_CL>` to move files back.
+- Add visual feedback during drag: highlight valid drop targets, show file count badge on cursor.
+- Reject drops on invalid targets (e.g., submitted changelists).
+- Debounce rapid successive drops to prevent double-processing.
+
+**Phase:** Drag-drop in multiple changelists feature.
+
+---
+
+### Pitfall 11: Search Submitted Changelists Hammers the Server
+
+**What goes wrong:** `p4 changes -s submitted` returns ALL submitted changelists. On an active server, this can be millions of records. Even with `-m 100` limit, searching by description requires `p4 changes -l` which fetches full descriptions server-side before filtering.
+
+**Prevention:**
+- Always use `-m <limit>` (start with 100, allow "load more").
+- Filter by date range: `p4 changes -s submitted @2026/01/01,@now`.
+- Filter by path when possible: `p4 changes -s submitted //depot/path/...`.
+- For description search, use `p4 changes -l -m 500` and filter client-side. Do NOT fetch unlimited results.
+- Cache results: submitted changelists are immutable. Cache by CL number.
+- Debounce search input (300ms) to avoid firing queries on every keystroke.
+
+**Phase:** Search submitted changelists feature.
+
+---
+
+## Minor Pitfalls
+
+Annoyances that are fixable but worth avoiding.
+
+### Pitfall 12: Shelve of Binary Files Creates Huge Shelf Storage
+
+**What goes wrong:** Users shelve large binary files (textures, builds) without realizing each shelve creates a full copy on the server. Repeated shelve/unshelve cycles consume significant server storage.
+
+**Prevention:** Show file sizes in the shelve dialog. Warn when shelving files over a configurable threshold (e.g., 50MB). Show total shelf size.
+
+---
+
+### Pitfall 13: Stream/Repository Display Assumes Single Stream
+
+**What goes wrong:** The current `P4ClientInfo.client_stream` is `Option<String>` -- handles classic and stream depots. But some workflows involve switching streams (`p4 switch`), and the cached stream name becomes stale.
+
+**Prevention:** Re-fetch `p4 info` when the user returns to the app (window focus event) or after any stream-related operation. Display the stream name prominently so staleness is visible.
+
+---
+
+### Pitfall 14: Context Menu Items Enabled for Invalid States
+
+**What goes wrong:** Right-click context menu shows "Shelve" for files that cannot be shelved (e.g., files opened for add in default changelist with certain server configurations), or "Diff" for deleted files, or "Revert" for files not opened.
+
+**Prevention:** Query file state before building context menu items. Disable (gray out with tooltip) rather than hide invalid actions -- users need to discover features exist even when not applicable.
+
+---
+
+### Pitfall 15: Reconcile False Positives from Line Ending Differences
+
+**What goes wrong:** Files modified only by line-ending changes (CRLF vs LF) show up as "needs edit" in reconcile. On Windows workspaces this is common when Git tools or editors change line endings.
+
+**Prevention:** Use `p4 reconcile -n` (preview mode) first. Filter results: if the only difference is line endings, flag separately. Consider using `p4 diff -dl` (ignore line endings) to verify.
+
+---
+
+## Phase-Specific Warnings
+
+| Phase Topic | Likely Pitfall | Mitigation |
+|---|---|---|
+| Connection settings UI | Saving invalid P4PORT crashes subsequent commands | Validate with `p4 -p <port> info` before persisting |
+| File history | Rendering 1000+ revisions kills React performance | Virtualized list + paginated fetch (`-m 50`) |
+| External diff | Temp files left behind after app crash | Use OS temp dir + cleanup on app start |
+| Keyboard shortcuts | F5 reloads WebView, losing all state | Intercept at document level before WebView handles it |
+| Connection status | Polling spawns zombie p4.exe on network timeout | Set process kill timeout, track in ProcessManager |
+| Reconcile | User runs reconcile on 100K-file workspace | Scope to subdirectory, stream results, allow cancel |
+| Multiple changelists | Default CL (id=0) uses "default" string in some commands | Abstract CL ID translation in command builder |
+| Shelve/unshelve | Unshelve overwrites local edits silently | Pre-check with `p4 diff`, warn on conflicts |
+| Drag-drop | No undo after accidental move | Track source CL, offer undo via `p4 reopen` |
+| Search | Unbounded `p4 changes` query | Always use `-m` limit + date range filter |
+| Stream display | Cached stream stale after `p4 switch` | Re-fetch on window focus |
+| Context menus | Menu items enabled for invalid file states | Check file state before building menu |
+
+---
+
+## Integration Pitfalls with Existing Architecture
+
+### Current: All Commands Use `std::process::Command`
+
+Every new feature adds more `p4.exe` process spawns. On Windows, process creation is expensive (~10ms each). With connection polling + reconcile + history + normal operations, the app could easily spawn 10+ processes per second.
+
+**Mitigation:** Consider a persistent `p4 -x - -ztag` session (reads commands from stdin) for rapid-fire operations. Or batch related queries. At minimum, queue commands and limit concurrency to 3-4 simultaneous p4.exe processes.
+
+### Current: Zustand Stores Are File-Centric
+
+The `changelistStore` and `fileTreeStore` track files and changelists. Adding shelves, history, and search results needs new stores or significant store expansion. If shelved files, opened files, and history all reference the same depot path with different data shapes, normalization becomes important.
+
+**Mitigation:** Design a normalized data layer: files keyed by depot path, with relationships to changelists, shelves, and history. Avoid duplicating file data across stores.
+
+### Current: Events Are Fire-and-Forget
+
+The `app.emit("file-status-changed", ...)` pattern works for simple updates but does not guarantee the frontend received or processed the event. With more features emitting events (shelve-complete, reconcile-progress, connection-changed), event ordering and deduplication matter.
+
+**Mitigation:** Add sequence numbers or timestamps to events. In stores, ignore events older than current state. Consider a single event bus with typed events rather than ad-hoc emit calls.
