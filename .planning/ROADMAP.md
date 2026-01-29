@@ -92,11 +92,12 @@ Plans:
   2. User can unshelve files to a target changelist, with a warning when local changes would be overwritten
   3. User can delete a shelf from a changelist
   4. User can run reconcile, see a preview of detected offline edits/adds/deletes, select/deselect individual files, and choose a target changelist before applying
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 06-01: TBD
-- [ ] 06-02: TBD
+- [ ] 06-01-PLAN.md — Rust backend commands (shelve, unshelve, delete shelf, describe shelved, reconcile preview/apply) + TypeScript bindings
+- [ ] 06-02-PLAN.md — Shelved files UI (ShelvedFilesSection, useShelvedFiles hook, context menu shelve action)
+- [ ] 06-03-PLAN.md — Reconcile UI (ReconcilePreviewDialog, useReconcile hook, toolbar button)
 
 ### Phase 07: Context Menus & Keyboard Shortcuts
 **Goal**: User can access all operations via right-click menus, keyboard shortcuts, and a command palette
@@ -140,7 +141,7 @@ Phases execute in numeric order: 03 -> 04 -> 05 -> 06 -> 07 -> 08
 | 03. Settings & Infrastructure | v2.0 | 2/2 | Complete | 2026-01-29 |
 | 04. Changelist Management | v2.0 | 3/3 | Complete | 2026-01-29 |
 | 05. History, Diff & Search | v2.0 | 3/3 | Complete | 2026-01-29 |
-| 06. Shelve & Reconcile | v2.0 | 0/TBD | Not started | - |
+| 06. Shelve & Reconcile | v2.0 | 0/3 | Planned | - |
 | 07. Context Menus & Keyboard Shortcuts | v2.0 | 0/TBD | Not started | - |
 | 08. Visual Polish | v2.0 | 0/TBD | Not started | - |
 
