@@ -35,13 +35,13 @@ export function useSync() {
   } = useOperationStore();
 
   const { updateFile } = useFileTreeStore();
-  const { status, server, user, workspace } = useConnectionStore();
+  const { status, p4port, p4user, p4client } = useConnectionStore();
   const isConnected = status === 'connected';
 
   // Get client info for depot path (only when connected)
   const { data: clientInfo } = useQuery({
-    queryKey: ['p4Info', server, user, workspace],
-    queryFn: () => invokeP4Info(server ?? undefined, user ?? undefined, workspace ?? undefined),
+    queryKey: ['p4Info', p4port, p4user, p4client],
+    queryFn: () => invokeP4Info(p4port ?? undefined, p4user ?? undefined, p4client ?? undefined),
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     enabled: isConnected,
@@ -86,9 +86,9 @@ export function useSync() {
       const processId = await invokeP4Sync(
         syncArgs,
         depotPath,
-        server ?? undefined,
-        user ?? undefined,
-        workspace ?? undefined,
+        p4port ?? undefined,
+        p4user ?? undefined,
+        p4client ?? undefined,
         (progress: SyncProgress) => {
           // Handle conflict detection
           if (progress.is_conflict) {

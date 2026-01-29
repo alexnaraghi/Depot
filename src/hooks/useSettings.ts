@@ -25,6 +25,9 @@ export function useSettings() {
         stream: info.client_stream || undefined,
         server: info.server_address,
         user: info.user_name,
+        p4port: s.p4port,
+        p4user: s.p4user,
+        p4client: s.p4client,
       });
     } catch (error) {
       setError(error instanceof Error ? error.message : String(error));

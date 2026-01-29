@@ -60,14 +60,14 @@ function mapP4FileInfo(info: P4FileInfo): P4File {
  */
 export function useFileTree() {
   const { rootPath, setFiles, setLoading, setRootPath } = useFileTreeStore();
-  const { status, server, user, workspace } = useConnectionStore();
+  const { status, p4port, p4user, p4client } = useConnectionStore();
   const isConnected = status === 'connected';
 
   // First, query for P4 client info to get the workspace root and stream
   // Only runs when connected (settings configured and connection verified)
   const { data: clientInfo, isLoading: clientInfoLoading, error: clientInfoError } = useQuery({
-    queryKey: ['p4Info', server, user, workspace],
-    queryFn: () => invokeP4Info(server ?? undefined, user ?? undefined, workspace ?? undefined),
+    queryKey: ['p4Info', p4port, p4user, p4client],
+    queryFn: () => invokeP4Info(p4port ?? undefined, p4user ?? undefined, p4client ?? undefined),
     staleTime: Infinity, // Client info doesn't change during session
     refetchOnWindowFocus: false,
     enabled: isConnected,
@@ -92,7 +92,7 @@ export function useFileTree() {
       setLoading(true);
       try {
         // Pass depot path to query files (avoids -d flag issues with DVCS)
-        const fileInfos = await invokeP4Fstat([], depotPath, server ?? undefined, user ?? undefined, workspace ?? undefined);
+        const fileInfos = await invokeP4Fstat([], depotPath, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined);
         const mappedFiles = fileInfos.map(mapP4FileInfo);
         setFiles(mappedFiles);
         return mappedFiles;

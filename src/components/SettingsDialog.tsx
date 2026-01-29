@@ -108,6 +108,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         stream: info.client_stream || undefined,
         server: info.server_address,
         user: info.user_name,
+        p4port: data.p4port,
+        p4user: data.p4user,
+        p4client: data.p4client,
       });
 
       toast.success('Settings saved - connection successful');

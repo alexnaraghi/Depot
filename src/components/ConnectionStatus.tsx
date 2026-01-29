@@ -36,6 +36,8 @@ export function ConnectionStatus() {
     switch (status) {
       case 'connected':
         return 'bg-green-600 hover:bg-green-700 text-white';
+      case 'disconnected':
+        return 'border-slate-500 text-slate-400';
       case 'connecting':
         return 'animate-pulse';
       default:
