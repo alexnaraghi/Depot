@@ -12,13 +12,14 @@ interface ChangelistNodeProps extends NodeRendererProps<ChangelistTreeNode> {
   onEdit?: () => void;
   onDelete?: () => void;
   onContextMenu?: (e: React.MouseEvent, file: P4File) => void;
+  onHeaderContextMenu?: (e: React.MouseEvent, changelist: P4Changelist) => void;
 }
 
 /**
  * Tree node renderer for changelist display in react-arborist
  * Handles both changelist headers and file entries
  */
-export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDelete, onContextMenu }: ChangelistNodeProps) {
+export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDelete, onContextMenu, onHeaderContextMenu }: ChangelistNodeProps) {
   const isSelected = node.isSelected;
   const nodeData = node.data;
 
@@ -69,6 +70,10 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
           isSelected && 'bg-blue-900/50'
         )}
         onClick={() => node.isInternal && node.toggle()}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          onHeaderContextMenu?.(e, changelist);
+        }}
       >
         {/* List icon */}
         <List className="w-4 h-4 text-slate-400 flex-shrink-0" />
