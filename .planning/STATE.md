@@ -10,19 +10,19 @@ See: .planning/PROJECT.md (updated 2026-01-28)
 ## Current Position
 
 Milestone: v2.0 Feature Complete
-Phase: 06 of 08 (Shelve & Reconcile) — IN PROGRESS
-Plan: 01 of 03 complete
-Status: In progress
-Last activity: 2026-01-29 — Completed 06-01-PLAN.md
+Phase: 06 of 08 (Shelve & Reconcile) — COMPLETE
+Plan: 03 of 03 complete
+Status: Phase complete
+Last activity: 2026-01-29 — Completed 06-03-PLAN.md
 
-Progress: [#######################.....] 88% (23/~26 plans estimated)
+Progress: [#########################...] 96% (25/~26 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 23 (14 v1.0 + 9 v2.0)
+- Total plans completed: 25 (14 v1.0 + 11 v2.0)
 - Average duration: 7 min
-- Total execution time: ~161 min (104 v1.0 + ~57 v2.0)
+- Total execution time: ~175 min (104 v1.0 + ~71 v2.0)
 
 ## Accumulated Context
 
@@ -59,6 +59,9 @@ All v1.0 decisions documented in PROJECT.md Key Decisions table.
 | D-05-03-02 | 05-03 | Client-side filtering for instant results | All filtering in useMemo on cached data, auto-detects search type (number/user/description) |
 | D-05-03-03 | 05-03 | GitKraken-style expandable search bar | Icon button expands to input with dropdown results, 300ms debounce |
 | D-05-03-04 | 05-03 | Added time field to P4Changelist | Users need to know when changelists were submitted for search context |
+| D-06-03-01 | 06-03 | ReconcilePreviewDialog uses mutation not query for preview scan | User triggers reconcile manually, mutation provides explicit loading/error states |
+| D-06-03-02 | 06-03 | Select all files by default after scan | Most common workflow is reconcile all detected changes, user can deselect unwanted files |
+| D-06-03-03 | 06-03 | Group files by action type with color-coded badges | Visual clarity for add (green), edit (yellow), delete (red) operations |
 
 ### Pending Todos
 
@@ -73,8 +76,8 @@ None active.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed 06-01-PLAN.md
+Stopped at: Completed 06-03-PLAN.md
 Resume file: None
 
 ---
-**v2.0 In Progress:** Phases 03-05 complete (8/8 plans), Phase 06 in progress (1/3 plans)
+**v2.0 In Progress:** Phases 03-06 complete (11/11 plans), Phase 07-08 remaining (~1-2 plans)
