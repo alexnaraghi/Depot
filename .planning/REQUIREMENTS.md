@@ -26,11 +26,11 @@
 
 ### Shelve/Unshelve
 
-- [ ] **SHELV-01**: User can shelve files in a changelist
-- [ ] **SHELV-02**: User can view shelved files in a changelist (distinct from pending files)
-- [ ] **SHELV-03**: User can unshelve files to a target changelist
-- [ ] **SHELV-04**: User can delete a shelf
-- [ ] **SHELV-05**: User sees warning when unshelving would overwrite local changes
+- [x] **SHELV-01**: User can shelve files in a changelist
+- [x] **SHELV-02**: User can view shelved files in a changelist (distinct from pending files)
+- [x] **SHELV-03**: User can unshelve files to a target changelist
+- [x] **SHELV-04**: User can delete a shelf
+- [x] **SHELV-05**: User sees warning when unshelving would overwrite local changes
 
 ### Context Menus
 
@@ -52,10 +52,10 @@
 
 ### Reconcile
 
-- [ ] **RECON-01**: User can run reconcile to detect offline edits, adds, and deletes
-- [ ] **RECON-02**: Reconcile shows preview of detected changes before applying
-- [ ] **RECON-03**: User can select/deselect individual files from reconcile preview
-- [ ] **RECON-04**: User can choose target changelist for reconciled files
+- [x] **RECON-01**: User can run reconcile to detect offline edits, adds, and deletes
+- [x] **RECON-02**: Reconcile shows preview of detected changes before applying
+- [x] **RECON-03**: User can select/deselect individual files from reconcile preview
+- [x] **RECON-04**: User can choose target changelist for reconciled files
 
 ### Keyboard Shortcuts
 
@@ -129,15 +129,15 @@
 | SRCH-02 | Phase 05 | Complete |
 | SRCH-03 | Phase 05 | Complete |
 | SRCH-04 | Phase 05 | Complete |
-| SHELV-01 | Phase 06 | Pending |
-| SHELV-02 | Phase 06 | Pending |
-| SHELV-03 | Phase 06 | Pending |
-| SHELV-04 | Phase 06 | Pending |
-| SHELV-05 | Phase 06 | Pending |
-| RECON-01 | Phase 06 | Pending |
-| RECON-02 | Phase 06 | Pending |
-| RECON-03 | Phase 06 | Pending |
-| RECON-04 | Phase 06 | Pending |
+| SHELV-01 | Phase 06 | Complete |
+| SHELV-02 | Phase 06 | Complete |
+| SHELV-03 | Phase 06 | Complete |
+| SHELV-04 | Phase 06 | Complete |
+| SHELV-05 | Phase 06 | Complete |
+| RECON-01 | Phase 06 | Complete |
+| RECON-02 | Phase 06 | Complete |
+| RECON-03 | Phase 06 | Complete |
+| RECON-04 | Phase 06 | Complete |
 | CTX-01 | Phase 07 | Pending |
 | CTX-02 | Phase 07 | Pending |
 | CTX-03 | Phase 07 | Pending |
@@ -155,4 +155,4 @@
 
 ---
 *Requirements defined: 2026-01-28*
-*Last updated: 2026-01-29 after Phase 05 completion*
+*Last updated: 2026-01-29 after Phase 06 completion*
