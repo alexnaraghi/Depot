@@ -5,13 +5,15 @@
 See: .planning/PROJECT.md (updated 2026-01-28)
 
 **Core value:** The user is never blocked — operations are always cancellable, errors are non-blocking, and the app remains responsive.
-**Current focus:** None - between milestones
+**Current focus:** v2.0 Feature Complete — defining requirements
 
 ## Current Position
 
-Milestone: v1.0 MVP (Complete)
-Status: Milestone archived
-Last activity: 2026-01-28 — Completed milestone archival
+Milestone: v2.0 Feature Complete
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-01-28 — Milestone v2.0 started
 
 ## Performance Metrics (v1.0)
 
@@ -19,13 +21,6 @@ Last activity: 2026-01-28 — Completed milestone archival
 - Total plans completed: 14
 - Average duration: 7 min
 - Total execution time: 104 min
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 01-non-blocking-foundation | 5 | 26 min | 5 min |
-| 02-core-workflows | 9 | 78 min | 9 min |
 
 ## Accumulated Context
 
@@ -39,17 +34,13 @@ None.
 
 ### Blockers/Concerns
 
-None active. v1.0 concerns addressed during verification:
-- DVCS support: Fixed by using depot paths
-- Query invalidation: Fixed with correct query keys
-- Default changelist: Fixed with special submit handling
+None active.
 
 ## Session Continuity
 
-Last session: 2026-01-28 (milestone completion)
-Stopped at: v1.0 MVP archived, ready for v2.0 planning
+Last session: 2026-01-28 (milestone v2.0 started)
+Stopped at: Defining requirements
 Resume file: None
 
 ---
-**v1.0 Complete:** Milestone archived to `.planning/milestones/`
-**Next:** Run `/gsd:new-milestone` to start v2.0
+**v2.0 In Progress:** Defining requirements → roadmap

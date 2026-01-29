@@ -21,22 +21,26 @@ The user is never blocked — operations are always cancellable, errors are non-
 - [x] Graceful error handling — non-blocking, cancellable, recoverable
 - [x] All operations async (never freeze UI)
 
-### Active
+### Active (v2.0)
 
-- [ ] Configure P4 connection (server, user, client workspace) in app settings
+- [ ] Full P4 connection settings UI (server, user, client workspace, charset)
 - [ ] Open file diff in external diff tool
 - [ ] View file history
 - [ ] Clean, modern visual design
 - [ ] Keyboard shortcuts for common operations
+- [ ] Connection status indicator
+- [ ] Reconcile offline differences (manual button + explore auto-detection)
+- [ ] Right-click context menu in pending changes and workspace views
+- [ ] Multiple changelists — view, create, manage, drag-drop files between them
+- [ ] Display current repository and stream
+- [ ] Shelve/unshelve files in changelists, view shelved files
+- [ ] Search submitted changelists by number, description, or author
 
 ### Out of Scope
 
-- Admin tools — not needed for daily workflow, defer to later
-- Depot browser / recent submits view — focus on local work first
+- Admin tools — not needed for daily workflow
 - Built-in diff viewer — external tools (P4Merge, VS Code, etc.) handle this
 - Multi-workspace support — single workspace keeps it simple
-- Shelve/unshelve — defer to post-POC
-- Reconcile offline work — defer to post-POC
 
 ## Context
 
@@ -77,13 +81,28 @@ The user is never blocked — operations are always cancellable, errors are non-
 | Query invalidation pattern | UI updates via query invalidation, not store updates | Validated |
 | Depot path for P4 commands | DVCS support (avoid -d flag that breaks RSH) | Validated |
 
+## Current Milestone: v2.0 Feature Complete
+
+**Goal:** Transform P4Now from MVP into a full daily-driver Perforce client with settings, history, diff, changelists, shelving, reconcile, and polish.
+
+**Target features:**
+- Full P4 connection settings UI
+- File history viewer and external diff integration
+- Multiple changelist management with drag-drop
+- Shelve/unshelve workflow
+- Reconcile offline differences
+- Context menus, keyboard shortcuts, visual polish
+- Repository/stream display and connection status
+- Search submitted changelists
+
 ## Milestones
 
 | Version | Status | Date |
 |---------|--------|------|
 | v1.0 MVP | Complete | 2026-01-28 |
+| v2.0 Feature Complete | Active | — |
 
 See `.planning/milestones/` for archived roadmaps and requirements.
 
 ---
-*Last updated: 2026-01-28 after v1.0 MVP completion*
+*Last updated: 2026-01-28 after v2.0 milestone started*
