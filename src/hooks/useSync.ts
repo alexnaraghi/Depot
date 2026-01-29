@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { invokeP4Sync, invokeKillProcess, invokeP4Info, SyncProgress } from '@/lib/tauri';
 import { useOperationStore } from '@/store/operation';
 import { useFileTreeStore } from '@/stores/fileTreeStore';
+import { useConnectionStore } from '@/stores/connectionStore';
 
 export interface SyncConflict {
   depotPath: string;
@@ -34,13 +35,16 @@ export function useSync() {
   } = useOperationStore();
 
   const { updateFile } = useFileTreeStore();
+  const { status, server, user, workspace } = useConnectionStore();
+  const isConnected = status === 'connected';
 
-  // Get client info for depot path
+  // Get client info for depot path (only when connected)
   const { data: clientInfo } = useQuery({
-    queryKey: ['p4Info'],
-    queryFn: () => invokeP4Info(),
+    queryKey: ['p4Info', server, user, workspace],
+    queryFn: () => invokeP4Info(server ?? undefined, user ?? undefined, workspace ?? undefined),
     staleTime: Infinity,
     refetchOnWindowFocus: false,
+    enabled: isConnected,
   });
 
   // Build depot path for syncing (e.g., "//stream/main/...")
@@ -82,9 +86,9 @@ export function useSync() {
       const processId = await invokeP4Sync(
         syncArgs,
         depotPath,
-        undefined,
-        undefined,
-        undefined,
+        server ?? undefined,
+        user ?? undefined,
+        workspace ?? undefined,
         (progress: SyncProgress) => {
           // Handle conflict detection
           if (progress.is_conflict) {

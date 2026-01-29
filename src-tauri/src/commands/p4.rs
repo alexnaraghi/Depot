@@ -6,6 +6,30 @@ use tauri::{AppHandle, Emitter, ipc::Channel, State};
 
 use crate::state::ProcessManager;
 
+/// Apply optional connection args to a p4 Command.
+/// When explicit args are provided, also clears P4CONFIG to prevent
+/// DVCS or local config files from overriding the connection settings.
+fn apply_connection_args(cmd: &mut Command, server: &Option<String>, user: &Option<String>, client: &Option<String>) {
+    let has_explicit = server.as_ref().is_some_and(|s| !s.is_empty())
+        || user.as_ref().is_some_and(|s| !s.is_empty())
+        || client.as_ref().is_some_and(|s| !s.is_empty());
+
+    if has_explicit {
+        // Clear P4CONFIG to prevent local config files (e.g., DVCS .p4config) from interfering
+        cmd.env("P4CONFIG", "");
+    }
+
+    if let Some(s) = server.as_ref().filter(|s| !s.is_empty()) {
+        cmd.args(["-p", s]);
+    }
+    if let Some(u) = user.as_ref().filter(|s| !s.is_empty()) {
+        cmd.args(["-u", u]);
+    }
+    if let Some(c) = client.as_ref().filter(|s| !s.is_empty()) {
+        cmd.args(["-c", c]);
+    }
+}
+
 /// File information from p4 fstat
 #[derive(Debug, Clone, Serialize)]
 pub struct P4FileInfo {
@@ -89,9 +113,7 @@ fn parse_ztag_info(output: &str) -> Result<P4ClientInfo, String> {
 #[tauri::command]
 pub async fn p4_info(server: Option<String>, user: Option<String>, client: Option<String>) -> Result<P4ClientInfo, String> {
     let mut cmd = Command::new("p4");
-    if let Some(s) = &server { cmd.args(["-p", s]); }
-    if let Some(u) = &user { cmd.args(["-u", u]); }
-    if let Some(c) = &client { cmd.args(["-c", c]); }
+    apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args(["-ztag", "info"]);
 
     let output = cmd
@@ -115,9 +137,7 @@ pub async fn p4_info(server: Option<String>, user: Option<String>, client: Optio
 pub async fn p4_fstat(paths: Vec<String>, depot_path: Option<String>, server: Option<String>, user: Option<String>, client: Option<String>) -> Result<Vec<P4FileInfo>, String> {
     // Build command: p4 -ztag fstat <paths>
     let mut cmd = Command::new("p4");
-    if let Some(s) = &server { cmd.args(["-p", s]); }
-    if let Some(u) = &user { cmd.args(["-u", u]); }
-    if let Some(c) = &client { cmd.args(["-c", c]); }
+    apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.arg("-ztag");
     cmd.arg("fstat");
@@ -248,9 +268,7 @@ fn derive_file_status(action: &Option<String>, have_rev: i32, head_rev: i32) -> 
 pub async fn p4_opened(server: Option<String>, user: Option<String>, client: Option<String>) -> Result<Vec<P4FileInfo>, String> {
     // Execute: p4 -ztag opened
     let mut cmd = Command::new("p4");
-    if let Some(s) = &server { cmd.args(["-p", s]); }
-    if let Some(u) = &user { cmd.args(["-u", u]); }
-    if let Some(c) = &client { cmd.args(["-c", c]); }
+    apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args(["-ztag", "opened"]);
 
     let output = cmd
@@ -275,9 +293,7 @@ pub async fn p4_opened(server: Option<String>, user: Option<String>, client: Opt
 pub async fn p4_changes(status: Option<String>, server: Option<String>, user: Option<String>, client: Option<String>) -> Result<Vec<P4Changelist>, String> {
     // Build command: p4 -ztag changes -s <status> -u <user> -c <client>
     let mut cmd = Command::new("p4");
-    if let Some(s) = &server { cmd.args(["-p", s]); }
-    if let Some(u) = &user { cmd.args(["-u", u]); }
-    if let Some(c) = &client { cmd.args(["-c", c]); }
+    apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.arg("-ztag");
     cmd.arg("changes");
@@ -384,9 +400,7 @@ pub async fn p4_edit(
 
     // Build command: p4 edit -c <changelist> <paths>
     let mut cmd = Command::new("p4");
-    if let Some(s) = &server { cmd.args(["-p", s]); }
-    if let Some(u) = &user { cmd.args(["-u", u]); }
-    if let Some(c) = &client { cmd.args(["-c", c]); }
+    apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.arg("edit");
 
@@ -455,9 +469,7 @@ pub async fn p4_revert(
 
     // Execute: p4 revert <paths>
     let mut cmd = Command::new("p4");
-    if let Some(s) = &server { cmd.args(["-p", s]); }
-    if let Some(u) = &user { cmd.args(["-u", u]); }
-    if let Some(c) = &client { cmd.args(["-c", c]); }
+    apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.arg("revert");
     cmd.args(&paths);
@@ -567,9 +579,7 @@ pub async fn p4_submit(
 fn update_changelist_description(changelist: i32, description: &str, server: Option<String>, user: Option<String>, client: Option<String>) -> Result<(), String> {
     // Get current changelist form
     let mut cmd = Command::new("p4");
-    if let Some(s) = &server { cmd.args(["-p", s]); }
-    if let Some(u) = &user { cmd.args(["-u", u]); }
-    if let Some(c) = &client { cmd.args(["-c", c]); }
+    apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args(["change", "-o", &changelist.to_string()]);
 
     let output = cmd
@@ -607,9 +617,7 @@ fn update_changelist_description(changelist: i32, description: &str, server: Opt
 
     // Submit updated form
     let mut cmd = Command::new("p4");
-    if let Some(s) = &server { cmd.args(["-p", s]); }
-    if let Some(u) = &user { cmd.args(["-u", u]); }
-    if let Some(c) = &client { cmd.args(["-c", c]); }
+    apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args(["change", "-i"]);
     cmd.stdin(Stdio::piped());
     cmd.stdout(Stdio::piped());
@@ -663,9 +671,7 @@ pub async fn p4_sync(
 ) -> Result<String, String> {
     // Build command: p4 sync <paths>
     let mut cmd = Command::new("p4");
-    if let Some(s) = &server { cmd.args(["-p", s]); }
-    if let Some(u) = &user { cmd.args(["-u", u]); }
-    if let Some(c) = &client { cmd.args(["-c", c]); }
+    apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.arg("sync");
 
@@ -781,8 +787,11 @@ fn parse_sync_line(line: &str) -> Option<SyncProgress> {
 /// List available workspaces for a given server and user
 #[tauri::command]
 pub async fn p4_list_workspaces(server: String, user: String) -> Result<Vec<P4Workspace>, String> {
-    let output = Command::new("p4")
-        .args(["-p", &server, "-u", &user, "-ztag", "clients", "-u", &user])
+    let mut cmd = Command::new("p4");
+    // Clear P4CONFIG to prevent DVCS/local config from interfering
+    cmd.env("P4CONFIG", "");
+    cmd.args(["-p", &server, "-u", &user, "-ztag", "clients", "-u", &user]);
+    let output = cmd
         .output()
         .map_err(|e| format!("Failed to execute p4 clients: {}", e))?;
 
@@ -848,8 +857,11 @@ fn build_workspace(fields: &HashMap<String, String>) -> Option<P4Workspace> {
 /// Test connection to P4 server with given credentials
 #[tauri::command]
 pub async fn p4_test_connection(server: String, user: String, client: String) -> Result<P4ClientInfo, String> {
-    let output = Command::new("p4")
-        .args(["-p", &server, "-u", &user, "-c", &client, "-ztag", "info"])
+    let mut cmd = Command::new("p4");
+    // Clear P4CONFIG to prevent DVCS/local config from interfering
+    cmd.env("P4CONFIG", "");
+    cmd.args(["-p", &server, "-u", &user, "-c", &client, "-ztag", "info"]);
+    let output = cmd
         .output()
         .map_err(|e| format!("Failed to execute p4 info: {}", e))?;
 
