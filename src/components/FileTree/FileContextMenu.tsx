@@ -1,9 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Edit3, Undo2, Copy, History, GitCompare } from 'lucide-react';
-import { P4File, FileStatus } from '@/types/p4';
-import { useFileOperations } from '@/hooks/useFileOperations';
-import toast from 'react-hot-toast';
-import { cn } from '@/lib/utils';
+import { P4File } from '@/types/p4';
+import { FileContextMenuItems } from '@/components/shared/FileContextMenuItems';
 
 interface FileContextMenuProps {
   file: P4File;
@@ -28,7 +25,6 @@ interface FileContextMenuProps {
  */
 export function FileContextMenu({ file, x, y, onClose, onShowHistory, onDiffAgainstHave }: FileContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
-  const { checkout, revert } = useFileOperations();
 
   // Handle click outside to close
   useEffect(() => {
@@ -53,121 +49,18 @@ export function FileContextMenu({ file, x, y, onClose, onShowHistory, onDiffAgai
     };
   }, [onClose]);
 
-  // Determine available actions based on file status
-  const canCheckout = file.status === FileStatus.Synced || file.status === FileStatus.OutOfDate;
-  const canRevert = file.status === FileStatus.CheckedOut ||
-                    file.status === FileStatus.Added ||
-                    file.status === FileStatus.Deleted;
-
-  async function handleCheckout() {
-    try {
-      await checkout([file.depotPath]);
-      onClose();
-    } catch (error) {
-      // Error already handled by useFileOperations with toast
-    }
-  }
-
-  async function handleRevert() {
-    try {
-      await revert([file.depotPath]);
-      onClose();
-    } catch (error) {
-      // Error already handled by useFileOperations with toast
-    }
-  }
-
-  function handleCopyPath() {
-    navigator.clipboard.writeText(file.localPath);
-    toast.success('Local path copied to clipboard');
-    onClose();
-  }
-
-  function handleShowHistory() {
-    if (onShowHistory) {
-      onShowHistory(file.depotPath, file.localPath);
-    }
-    onClose();
-  }
-
-  function handleDiffAgainstHave() {
-    if (onDiffAgainstHave) {
-      onDiffAgainstHave(file.depotPath, file.localPath);
-    }
-    onClose();
-  }
-
   return (
     <div
       ref={menuRef}
       className="fixed z-50 min-w-48 bg-slate-900 border border-slate-700 rounded-md shadow-xl py-1"
       style={{ left: x, top: y }}
     >
-      {canCheckout && (
-        <button
-          onClick={handleCheckout}
-          className={cn(
-            'w-full px-4 py-2 text-left text-sm text-slate-200',
-            'hover:bg-slate-800 transition-colors',
-            'flex items-center gap-2'
-          )}
-        >
-          <Edit3 className="w-4 h-4" />
-          Checkout for Edit
-        </button>
-      )}
-
-      {canRevert && (
-        <button
-          onClick={handleRevert}
-          className={cn(
-            'w-full px-4 py-2 text-left text-sm text-slate-200',
-            'hover:bg-slate-800 transition-colors',
-            'flex items-center gap-2'
-          )}
-        >
-          <Undo2 className="w-4 h-4" />
-          Revert Changes
-        </button>
-      )}
-
-      <button
-        onClick={handleShowHistory}
-        className={cn(
-          'w-full px-4 py-2 text-left text-sm text-slate-200',
-          'hover:bg-slate-800 transition-colors',
-          'flex items-center gap-2'
-        )}
-      >
-        <History className="w-4 h-4" />
-        File History
-      </button>
-
-      {canRevert && (
-        <button
-          onClick={handleDiffAgainstHave}
-          className={cn(
-            'w-full px-4 py-2 text-left text-sm text-slate-200',
-            'hover:bg-slate-800 transition-colors',
-            'flex items-center gap-2'
-          )}
-        >
-          <GitCompare className="w-4 h-4" />
-          Diff against Have
-        </button>
-      )}
-
-      <button
-        onClick={handleCopyPath}
-        className={cn(
-          'w-full px-4 py-2 text-left text-sm text-slate-200',
-          'hover:bg-slate-800 transition-colors',
-          'flex items-center gap-2'
-        )}
-      >
-        <Copy className="w-4 h-4" />
-        Copy Local Path
-      </button>
+      <FileContextMenuItems
+        file={file}
+        onClose={onClose}
+        onShowHistory={onShowHistory}
+        onDiffAgainstHave={onDiffAgainstHave}
+      />
     </div>
   );
 }
