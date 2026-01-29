@@ -11,18 +11,18 @@ See: .planning/PROJECT.md (updated 2026-01-28)
 
 Milestone: v2.0 Feature Complete
 Phase: 05 of 08 (History, Diff & Search) — IN PROGRESS
-Plan: 01 of 04 complete
+Plan: 02 of 04 complete
 Status: In progress
-Last activity: 2026-01-29 — Completed 05-01-PLAN.md
+Last activity: 2026-01-29 — Completed 05-02-PLAN.md
 
-Progress: [#####################.......] 77% (20/~26 plans estimated)
+Progress: [#####################.......] 81% (21/~26 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20 (14 v1.0 + 6 v2.0)
+- Total plans completed: 21 (14 v1.0 + 7 v2.0)
 - Average duration: 7 min
-- Total execution time: ~146 min (104 v1.0 + ~42 v2.0)
+- Total execution time: ~151 min (104 v1.0 + ~47 v2.0)
 
 ## Accumulated Context
 
@@ -51,6 +51,10 @@ All v1.0 decisions documented in PROJECT.md Key Decisions table.
 | D-05-01-01 | 05-01 | Parse filelog indexed fields in single record | p4 filelog -ztag produces indexed fields (rev0, change0, etc.) in one record |
 | D-05-01-02 | 05-01 | Use tempfile::Builder with .keep() for persistent temp files | Enables syntax highlighting in diff tools, prevents premature deletion |
 | D-05-01-03 | 05-01 | Support placeholder and append-style diff tool arguments | Supports both modern and traditional diff tool argument patterns |
+| D-05-02-01 | 05-02 | useFileHistory uses incremental maxRevisions for pagination | Starts with 50 revisions, Load More increments by 50, simple without complex cursor management |
+| D-05-02-02 | 05-02 | Diff against Have uses file.revision (have revision) | Matches P4V behavior, shows uncommitted local changes |
+| D-05-02-03 | 05-02 | File History always available, Diff against Have when checked out | History useful for all files, diff only makes sense for modified files |
+| D-05-02-04 | 05-02 | Diff tool settings in SettingsDialog with optional arguments | Flexible configuration supporting various diff tools with different argument patterns |
 
 ### Pending Todos
 
@@ -65,8 +69,8 @@ None active.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed 05-01-PLAN.md
+Stopped at: Completed 05-02-PLAN.md
 Resume file: None
 
 ---
-**v2.0 In Progress:** Phases 03-04 complete (5/5 plans), Phase 05 in progress (1/4 plans)
+**v2.0 In Progress:** Phases 03-04 complete (5/5 plans), Phase 05 in progress (2/4 plans)
