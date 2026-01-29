@@ -189,3 +189,31 @@ export async function invokeListWorkspaces(server: string, user: string): Promis
 export async function invokeTestConnection(server: string, user: string, client: string): Promise<P4ClientInfo> {
   return invoke<P4ClientInfo>('p4_test_connection', { server, user, client });
 }
+
+/**
+ * Create a new changelist with the given description.
+ */
+export async function invokeP4CreateChange(description: string, server?: string, user?: string, client?: string): Promise<number> {
+  return invoke<number>('p4_create_change', { description, server, user, client });
+}
+
+/**
+ * Delete a changelist.
+ */
+export async function invokeP4DeleteChange(changelist: number, server?: string, user?: string, client?: string): Promise<void> {
+  return invoke<void>('p4_delete_change', { changelist, server, user, client });
+}
+
+/**
+ * Reopen files to a different changelist.
+ */
+export async function invokeP4Reopen(paths: string[], changelist: number, server?: string, user?: string, client?: string): Promise<string[]> {
+  return invoke<string[]>('p4_reopen', { paths, changelist, server, user, client });
+}
+
+/**
+ * Edit changelist description.
+ */
+export async function invokeP4EditChangeDescription(changelist: number, description: string, server?: string, user?: string, client?: string): Promise<void> {
+  return invoke<void>('p4_edit_change_description', { changelist, description, server, user, client });
+}
