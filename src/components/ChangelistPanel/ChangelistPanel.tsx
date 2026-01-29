@@ -201,11 +201,11 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
           openByDefault
           disableDrag={(node) => {
             const nodeType = (node.data as unknown as ChangelistTreeNode).type;
-            return nodeType === 'changelist' || nodeType === 'shelved-section';
+            return nodeType === 'changelist' || nodeType === 'shelved-section' || nodeType === 'shelved-file';
           }}
           disableDrop={({ parentNode }) => {
             const nodeType = parentNode.data.type;
-            return nodeType === 'file' || nodeType === 'shelved-section';
+            return nodeType === 'file' || nodeType === 'shelved-section' || nodeType === 'shelved-file';
           }}
           onMove={handleMove}
           dndManager={dndManager}

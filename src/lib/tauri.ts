@@ -337,11 +337,12 @@ export async function invokeP4DescribeShelved(
  */
 export async function invokeP4Unshelve(
   changelistId: number,
+  filePaths?: string[],
   server?: string,
   user?: string,
   client?: string
 ): Promise<string> {
-  return invoke<string>('p4_unshelve', { changelistId, server, user, client });
+  return invoke<string>('p4_unshelve', { changelistId, filePaths, server, user, client });
 }
 
 /**

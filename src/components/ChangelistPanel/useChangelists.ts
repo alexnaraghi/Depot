@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueries } from '@tanstack/react-query';
 import { useChangelistStore } from '@/stores/changelistStore';
 import { useConnectionStore } from '@/stores/connectionStore';
-import { invokeP4Changes, invokeP4Opened } from '@/lib/tauri';
+import { invokeP4Changes, invokeP4Opened, invokeP4DescribeShelved, type P4ShelvedFile } from '@/lib/tauri';
 import { buildChangelistTree, ChangelistTreeNode } from '@/utils/treeBuilder';
 import { P4Changelist, P4File, FileStatus } from '@/types/p4';
 
@@ -95,6 +95,41 @@ export function useChangelists(): {
     setChangelists(Array.from(clMap.values()));
   }, [clData, openedData, setChangelists]);
 
+  // Get numbered changelist IDs for shelved file queries
+  const numberedClIds = useMemo(() => {
+    return Array.from(changelists.values())
+      .filter(cl => cl.id > 0)
+      .map(cl => cl.id);
+  }, [changelists]);
+
+  // Query shelved files for each numbered changelist
+  const shelvedQueries = useQueries({
+    queries: numberedClIds.map(clId => ({
+      queryKey: ['p4', 'shelved', clId],
+      queryFn: () => invokeP4DescribeShelved(
+        clId,
+        p4port ?? undefined,
+        p4user ?? undefined,
+        p4client ?? undefined
+      ),
+      enabled: isConnected,
+      staleTime: 30000,
+      refetchOnWindowFocus: false,
+    })),
+  });
+
+  // Build shelved files map from query results
+  const shelvedFilesMap = useMemo(() => {
+    const map = new Map<number, P4ShelvedFile[]>();
+    numberedClIds.forEach((clId, index) => {
+      const query = shelvedQueries[index];
+      if (query?.data && query.data.length > 0) {
+        map.set(clId, query.data);
+      }
+    });
+    return map;
+  }, [numberedClIds, shelvedQueries]);
+
   // Build tree from store
   const treeData = useMemo(() => {
     const clArray = Array.from(changelists.values());
@@ -106,8 +141,8 @@ export function useChangelists(): {
       if (b.id === 0) return 1;
       return a.id - b.id;
     });
-    return buildChangelistTree(sorted);
-  }, [changelists]);
+    return buildChangelistTree(sorted, shelvedFilesMap);
+  }, [changelists, shelvedFilesMap]);
 
   const isLoading = clLoading || openedLoading;
 

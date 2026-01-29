@@ -1,4 +1,5 @@
 import { P4File, P4Changelist } from '@/types/p4';
+import { P4ShelvedFile } from '@/lib/tauri';
 
 /**
  * File tree node for react-arborist
@@ -14,13 +15,13 @@ export interface FileTreeNode {
 
 /**
  * Changelist tree node for react-arborist
- * Represents a changelist, file, or shelved files section within a changelist
+ * Represents a changelist, file, shelved files section, or individual shelved file
  */
 export interface ChangelistTreeNode {
   id: string;
   name: string;
-  type: 'changelist' | 'file' | 'shelved-section';
-  data: P4Changelist | P4File | { changelistId: number };
+  type: 'changelist' | 'file' | 'shelved-section' | 'shelved-file';
+  data: P4Changelist | P4File | { changelistId: number } | P4ShelvedFile;
   children?: ChangelistTreeNode[];
 }
 
@@ -116,9 +117,13 @@ export function buildFileTree(files: P4File[], rootPath: string): FileTreeNode[]
  * Each changelist becomes a parent node, files are children, followed by shelved-section
  *
  * @param changelists - List of changelists with files
+ * @param shelvedFilesMap - Map of changelist ID to shelved files (optional)
  * @returns Array of changelist tree nodes
  */
-export function buildChangelistTree(changelists: P4Changelist[]): ChangelistTreeNode[] {
+export function buildChangelistTree(
+  changelists: P4Changelist[],
+  shelvedFilesMap?: Map<number, P4ShelvedFile[]>
+): ChangelistTreeNode[] {
   return changelists.map(changelist => {
     const children: ChangelistTreeNode[] = [];
 
@@ -131,14 +136,26 @@ export function buildChangelistTree(changelists: P4Changelist[]): ChangelistTree
     }));
     children.push(...fileChildren);
 
-    // Add shelved files section for numbered changelists
+    // Add shelved files section for numbered changelists that have shelved files
     if (changelist.id > 0) {
-      children.push({
-        id: `${changelist.id}-shelved-section`,
-        name: 'Shelved Files',
-        type: 'shelved-section',
-        data: { changelistId: changelist.id },
-      });
+      const shelvedFiles = shelvedFilesMap?.get(changelist.id);
+      if (shelvedFiles && shelvedFiles.length > 0) {
+        // Build shelved file children nodes
+        const shelvedChildren: ChangelistTreeNode[] = shelvedFiles.map(file => ({
+          id: `${changelist.id}-shelved-${file.depotPath}`,
+          name: getFileName(file.depotPath),
+          type: 'shelved-file' as const,
+          data: file,
+        }));
+
+        children.push({
+          id: `${changelist.id}-shelved-section`,
+          name: `Shelved Files (${shelvedFiles.length})`,
+          type: 'shelved-section',
+          data: { changelistId: changelist.id },
+          children: shelvedChildren,
+        });
+      }
     }
 
     return {

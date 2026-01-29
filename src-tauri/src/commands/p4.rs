@@ -1422,6 +1422,7 @@ fn parse_ztag_describe_shelved(output: &str) -> Result<Vec<P4ShelvedFile>, Strin
 #[tauri::command]
 pub async fn p4_unshelve(
     changelist_id: i32,
+    file_paths: Option<Vec<String>>,
     server: Option<String>,
     user: Option<String>,
     client: Option<String>,
@@ -1432,6 +1433,13 @@ pub async fn p4_unshelve(
     cmd.arg("unshelve");
     cmd.arg("-s");
     cmd.arg(changelist_id.to_string());
+
+    // Add file paths if specified (for per-file unshelving)
+    if let Some(paths) = file_paths {
+        for path in paths {
+            cmd.arg(path);
+        }
+    }
 
     let output = cmd
         .output()

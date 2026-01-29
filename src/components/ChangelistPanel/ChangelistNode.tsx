@@ -1,9 +1,10 @@
 import { NodeRendererProps } from 'react-arborist';
-import { List, Send, Pencil, Trash2 } from 'lucide-react';
+import { List, Send, Pencil, Trash2, ChevronRight, Archive, ArrowDownToLine } from 'lucide-react';
 import { P4Changelist, P4File } from '@/types/p4';
+import { P4ShelvedFile } from '@/lib/tauri';
 import { FileStatusIcon } from '@/components/FileTree/FileStatusIcon';
 import { ChangelistTreeNode } from '@/utils/treeBuilder';
-import { ShelvedFilesSection } from './ShelvedFilesSection';
+import { useUnshelve, useDeleteShelf } from '@/hooks/useShelvedFiles';
 import { cn } from '@/lib/utils';
 
 interface ChangelistNodeProps extends NodeRendererProps<ChangelistTreeNode> {
@@ -21,13 +22,35 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
   const isSelected = node.isSelected;
   const nodeData = node.data;
 
-  // Render shelved files section
+  // Render shelved files section header (toggle expands children via react-arborist)
   if (nodeData.type === 'shelved-section') {
     const sectionData = nodeData.data as { changelistId: number };
     return (
-      <div style={style}>
-        <ShelvedFilesSection changelistId={sectionData.changelistId} />
-      </div>
+      <ShelvedSectionHeader
+        style={style}
+        changelistId={sectionData.changelistId}
+        name={nodeData.name}
+        isOpen={node.isOpen}
+        onToggle={() => node.toggle()}
+      />
+    );
+  }
+
+  // Render individual shelved file row
+  if (nodeData.type === 'shelved-file') {
+    const shelvedFile = nodeData.data as P4ShelvedFile;
+    const fileName = shelvedFile.depotPath.split('/').pop() || shelvedFile.depotPath;
+
+    // Extract changelist ID from node ID (format: "{changelistId}-shelved-{depotPath}")
+    const changelistId = parseInt(node.id.split('-')[0], 10);
+
+    return (
+      <ShelvedFileRow
+        style={style}
+        shelvedFile={shelvedFile}
+        fileName={fileName}
+        changelistId={changelistId}
+      />
     );
   }
 
@@ -154,6 +177,138 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
 
       {/* File name */}
       <span className="flex-1 truncate text-slate-200">{fileName}</span>
+    </div>
+  );
+}
+
+/**
+ * Individual shelved file row with unshelve button on hover.
+ */
+function ShelvedFileRow({
+  style,
+  shelvedFile,
+  fileName,
+  changelistId,
+}: {
+  style: React.CSSProperties;
+  shelvedFile: P4ShelvedFile;
+  fileName: string;
+  changelistId: number;
+}) {
+  const unshelve = useUnshelve();
+
+  const handleUnshelve = async () => {
+    try {
+      await unshelve.mutateAsync({
+        changelistId,
+        filePaths: [shelvedFile.depotPath],
+      });
+    } catch {
+      // Error handling in mutation hook
+    }
+  };
+
+  return (
+    <div
+      style={style}
+      className={cn(
+        'group flex items-center gap-2 px-2 py-1 pl-8 text-sm',
+        'hover:bg-slate-800/30 transition-colors'
+      )}
+    >
+      <Archive className="w-4 h-4 text-violet-400 flex-shrink-0" />
+      <span className="flex-1 truncate text-violet-200">{fileName}</span>
+      <span className="px-2 py-0.5 text-xs bg-violet-900/30 text-violet-300 rounded">
+        {shelvedFile.action}
+      </span>
+
+      <button
+        onClick={(e) => { e.stopPropagation(); handleUnshelve(); }}
+        disabled={unshelve.isPending}
+        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-600 rounded transition-opacity disabled:opacity-50"
+        title="Unshelve this file"
+      >
+        <ArrowDownToLine className="w-4 h-4 text-violet-300" />
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Header row for the shelved files section within a changelist.
+ * Clicking toggles react-arborist's native expand/collapse for child nodes.
+ * Provides unshelve and delete shelf action buttons on hover.
+ */
+function ShelvedSectionHeader({
+  style,
+  changelistId,
+  name,
+  isOpen,
+  onToggle,
+}: {
+  style: React.CSSProperties;
+  changelistId: number;
+  name: string;
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
+  const unshelve = useUnshelve();
+  const deleteShelf = useDeleteShelf();
+
+  const handleUnshelve = async () => {
+    try {
+      await unshelve.mutateAsync({ changelistId });
+    } catch {
+      // Error handling in mutation hook
+    }
+  };
+
+  const handleDeleteShelf = async () => {
+    const confirmed = window.confirm(
+      `Delete all shelved files from CL ${changelistId}? This cannot be undone.`
+    );
+    if (!confirmed) return;
+    try {
+      await deleteShelf.mutateAsync({ changelistId });
+    } catch {
+      // Error handling in mutation hook
+    }
+  };
+
+  return (
+    <div
+      style={style}
+      className={cn(
+        'group flex items-center gap-2 px-2 py-1 cursor-pointer text-sm',
+        'hover:bg-slate-800/50 transition-colors'
+      )}
+      onClick={onToggle}
+    >
+      <ChevronRight
+        className={cn(
+          'w-4 h-4 text-violet-400 flex-shrink-0 transition-transform',
+          isOpen && 'rotate-90'
+        )}
+      />
+      <span className="flex-1 text-violet-400 font-medium">{name}</span>
+
+      <button
+        onClick={(e) => { e.stopPropagation(); handleUnshelve(); }}
+        disabled={unshelve.isPending}
+        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-600 rounded transition-opacity disabled:opacity-50"
+        title="Unshelve all files"
+      >
+        <ArrowDownToLine className="w-4 h-4 text-violet-300" />
+      </button>
+
+      <button
+        onClick={(e) => { e.stopPropagation(); handleDeleteShelf(); }}
+        disabled={deleteShelf.isPending}
+        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-600 rounded transition-opacity disabled:opacity-50"
+        title="Delete shelf"
+      >
+        <Trash2 className="w-4 h-4 text-violet-300" />
+      </button>
     </div>
   );
 }

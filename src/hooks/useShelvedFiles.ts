@@ -74,13 +74,22 @@ export function useShelve() {
  * Checks for conflicts with currently opened files before unshelving.
  * Shows confirmation dialog if conflicts detected.
  * Invalidates shelved, opened, and changes queries on success.
+ *
+ * @param filePaths - Optional array of depot file paths to unshelve specific files.
+ *                    If omitted, unshelves all files from the changelist.
  */
 export function useUnshelve() {
   const { p4port, p4user, p4client } = useConnectionStore();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ changelistId }: { changelistId: number }) => {
+    mutationFn: async ({
+      changelistId,
+      filePaths,
+    }: {
+      changelistId: number;
+      filePaths?: string[];
+    }) => {
       // Get shelved files to check for conflicts
       const shelvedFiles = await invokeP4DescribeShelved(
         changelistId,
@@ -88,6 +97,11 @@ export function useUnshelve() {
         p4user ?? undefined,
         p4client ?? undefined
       );
+
+      // Filter to only the files we're unshelving (if specific files requested)
+      const filesToUnshelve = filePaths
+        ? shelvedFiles.filter(f => filePaths.includes(f.depotPath))
+        : shelvedFiles;
 
       // Get currently opened files
       const openedFiles = await invokeP4Opened(
@@ -98,7 +112,7 @@ export function useUnshelve() {
 
       // Check for overlaps
       const openedPaths = new Set(openedFiles.map((f) => f.depot_path));
-      const conflicts = shelvedFiles.filter((f) => openedPaths.has(f.depotPath));
+      const conflicts = filesToUnshelve.filter((f) => openedPaths.has(f.depotPath));
 
       if (conflicts.length > 0) {
         const confirmed = window.confirm(
@@ -112,13 +126,17 @@ export function useUnshelve() {
       // Proceed with unshelve
       return invokeP4Unshelve(
         changelistId,
+        filePaths,
         p4port ?? undefined,
         p4user ?? undefined,
         p4client ?? undefined
       );
     },
-    onSuccess: () => {
-      toast.success('Unshelved files successfully');
+    onSuccess: (_data, variables) => {
+      const message = variables.filePaths
+        ? `Unshelved ${variables.filePaths.length} file(s) successfully`
+        : 'Unshelved files successfully';
+      toast.success(message);
       queryClient.invalidateQueries({ queryKey: ['p4', 'shelved'] });
       queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
       queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
