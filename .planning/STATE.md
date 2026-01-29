@@ -11,18 +11,18 @@ See: .planning/PROJECT.md (updated 2026-01-28)
 
 Milestone: v2.0 Feature Complete
 Phase: 05 of 08 (History, Diff & Search) — IN PROGRESS
-Plan: 02 of 04 complete
+Plan: 03 of 04 complete
 Status: In progress
-Last activity: 2026-01-29 — Completed 05-02-PLAN.md
+Last activity: 2026-01-29 — Completed 05-03-PLAN.md
 
-Progress: [#####################.......] 81% (21/~26 plans estimated)
+Progress: [######################......] 85% (22/~26 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 21 (14 v1.0 + 7 v2.0)
+- Total plans completed: 22 (14 v1.0 + 8 v2.0)
 - Average duration: 7 min
-- Total execution time: ~151 min (104 v1.0 + ~47 v2.0)
+- Total execution time: ~157 min (104 v1.0 + ~53 v2.0)
 
 ## Accumulated Context
 
@@ -55,6 +55,10 @@ All v1.0 decisions documented in PROJECT.md Key Decisions table.
 | D-05-02-02 | 05-02 | Diff against Have uses file.revision (have revision) | Matches P4V behavior, shows uncommitted local changes |
 | D-05-02-03 | 05-02 | File History always available, Diff against Have when checked out | History useful for all files, diff only makes sense for modified files |
 | D-05-02-04 | 05-02 | Diff tool settings in SettingsDialog with optional arguments | Flexible configuration supporting various diff tools with different argument patterns |
+| D-05-03-01 | 05-03 | Prefetch changelists with always-enabled query | Makes search feel instant, 5-minute cache prevents excessive backend calls |
+| D-05-03-02 | 05-03 | Client-side filtering for instant results | All filtering in useMemo on cached data, auto-detects search type (number/user/description) |
+| D-05-03-03 | 05-03 | GitKraken-style expandable search bar | Icon button expands to input with dropdown results, 300ms debounce |
+| D-05-03-04 | 05-03 | Added time field to P4Changelist | Users need to know when changelists were submitted for search context |
 
 ### Pending Todos
 
@@ -69,8 +73,8 @@ None active.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed 05-02-PLAN.md
+Stopped at: Completed 05-03-PLAN.md
 Resume file: None
 
 ---
-**v2.0 In Progress:** Phases 03-04 complete (5/5 plans), Phase 05 in progress (2/4 plans)
+**v2.0 In Progress:** Phases 03-04 complete (5/5 plans), Phase 05 in progress (3/4 plans)
