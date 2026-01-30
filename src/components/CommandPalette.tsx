@@ -8,6 +8,8 @@ import {
   CommandShortcut,
 } from '@/components/ui/command';
 import { SHORTCUTS } from '@/lib/shortcuts';
+import { useFileTreeStore } from '@/stores/fileTreeStore';
+import { useChangelistStore } from '@/stores/changelistStore';
 import {
   RefreshCw,
   Download,
@@ -36,6 +38,13 @@ interface CommandPaletteProps {
  * - Custom event dispatch for cross-component communication
  */
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
+  const selectedFile = useFileTreeStore(s => s.selectedFile);
+  const hasFileSelected = selectedFile !== null;
+  const changelists = useChangelistStore(s => s.changelists);
+  const hasSubmittableChangelist = Array.from(changelists.values()).some(
+    cl => cl.id !== 0 && cl.files.length > 0
+  );
+
   function executeCommand(action: () => void) {
     action();
     onOpenChange(false);
@@ -103,6 +112,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           </CommandItem>
 
           <CommandItem
+            disabled={!hasSubmittableChangelist}
             onSelect={() =>
               executeCommand(() => {
                 window.dispatchEvent(new CustomEvent('p4now:submit'));
@@ -111,6 +121,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           >
             <Upload className="w-4 h-4" />
             <span>Submit</span>
+            {!hasSubmittableChangelist && <span className="ml-1 text-xs text-muted-foreground">(no files to submit)</span>}
             <CommandShortcut>{SHORTCUTS.SUBMIT.label}</CommandShortcut>
           </CommandItem>
         </CommandGroup>
@@ -118,6 +129,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         {/* File Commands (context-sensitive) */}
         <CommandGroup heading="File">
           <CommandItem
+            disabled={!hasFileSelected}
             onSelect={() =>
               executeCommand(() => {
                 window.dispatchEvent(new CustomEvent('p4now:checkout-selected'));
@@ -126,9 +138,11 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           >
             <Edit3 className="w-4 h-4" />
             <span>Checkout</span>
+            {!hasFileSelected && <span className="ml-1 text-xs text-muted-foreground">(select a file)</span>}
           </CommandItem>
 
           <CommandItem
+            disabled={!hasFileSelected}
             onSelect={() =>
               executeCommand(() => {
                 window.dispatchEvent(new CustomEvent('p4now:diff-selected'));
@@ -137,10 +151,12 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           >
             <GitCompare className="w-4 h-4" />
             <span>Diff</span>
+            {!hasFileSelected && <span className="ml-1 text-xs text-muted-foreground">(select a file)</span>}
             <CommandShortcut>{SHORTCUTS.DIFF.label}</CommandShortcut>
           </CommandItem>
 
           <CommandItem
+            disabled={!hasFileSelected}
             onSelect={() =>
               executeCommand(() => {
                 window.dispatchEvent(new CustomEvent('p4now:revert-selected'));
@@ -149,10 +165,12 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           >
             <Undo2 className="w-4 h-4" />
             <span>Revert</span>
+            {!hasFileSelected && <span className="ml-1 text-xs text-muted-foreground">(select a file)</span>}
             <CommandShortcut>{SHORTCUTS.REVERT.label}</CommandShortcut>
           </CommandItem>
 
           <CommandItem
+            disabled={!hasFileSelected}
             onSelect={() =>
               executeCommand(() => {
                 window.dispatchEvent(new CustomEvent('p4now:history-selected'));
@@ -161,6 +179,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           >
             <History className="w-4 h-4" />
             <span>File History</span>
+            {!hasFileSelected && <span className="ml-1 text-xs text-muted-foreground">(select a file)</span>}
             <CommandShortcut>{SHORTCUTS.HISTORY.label}</CommandShortcut>
           </CommandItem>
         </CommandGroup>
