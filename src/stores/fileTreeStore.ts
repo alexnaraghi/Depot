@@ -6,12 +6,14 @@ interface FileTreeState {
   files: Map<string, P4File>;
   rootPath: string | null;
   isLoading: boolean;
+  selectedFile: P4File | null;
 
   // Actions
   setFiles: (files: P4File[]) => void;
   updateFile: (depotPath: string, updates: Partial<P4File>) => void;
   setRootPath: (path: string) => void;
   setLoading: (loading: boolean) => void;
+  setSelectedFile: (file: P4File | null) => void;
   getFileByPath: (depotPath: string) => P4File | undefined;
   getFilesInFolder: (folderPath: string) => P4File[];
 }
@@ -20,6 +22,7 @@ export const useFileTreeStore = create<FileTreeState>((set, get) => ({
   files: new Map(),
   rootPath: null,
   isLoading: false,
+  selectedFile: null,
 
   setFiles: (files) => {
     const fileMap = new Map<string, P4File>();
@@ -47,6 +50,10 @@ export const useFileTreeStore = create<FileTreeState>((set, get) => ({
 
   setLoading: (loading) => {
     set({ isLoading: loading });
+  },
+
+  setSelectedFile: (file) => {
+    set({ selectedFile: file });
   },
 
   getFileByPath: (depotPath) => {

@@ -6,6 +6,7 @@ import { FileContextMenu } from './FileContextMenu';
 import { FileHistoryDialog } from '@/components/dialogs/FileHistoryDialog';
 import { useDiff } from '@/hooks/useDiff';
 import { useFileOperations } from '@/hooks/useFileOperations';
+import { useFileTreeStore } from '@/stores/fileTreeStore';
 import { P4File } from '@/types/p4';
 import { Loader2, FolderOpen, AlertCircle } from 'lucide-react';
 import { useDndManager } from '@/contexts/DndContext';
@@ -31,7 +32,8 @@ export function FileTree() {
     depotPath: string;
     localPath: string;
   } | null>(null);
-  const [selectedFile, setSelectedFile] = useState<P4File | null>(null);
+  const selectedFile = useFileTreeStore(s => s.selectedFile);
+  const setSelectedFile = useFileTreeStore(s => s.setSelectedFile);
   const { diffAgainstWorkspace } = useDiff();
   const { checkout, revert } = useFileOperations();
   const containerRef = useRef<HTMLDivElement>(null);
