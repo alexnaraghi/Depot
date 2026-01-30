@@ -11,28 +11,28 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 Milestone: v3.0 Daily Driver
 Phase: 09 of 15 (E2E Testing Foundation)
-Plan: 2 of 2 in current phase
+Plan: 3 of 3 in current phase
 Status: Phase complete
-Last activity: 2026-01-30 — Completed 09-02-PLAN.md
+Last activity: 2026-01-30 — Completed 09-03-PLAN.md
 
-Progress: [█░░░░░░░░░] 5.0% (2 of ~40 estimated plans for v3.0)
+Progress: [█░░░░░░░░░] 7.5% (3 of ~40 estimated plans for v3.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 33 (14 v1.0 + 17 v2.0 + 2 v3.0)
-- Quick tasks completed: 4
-- Average duration: 7 min
-- Total execution time: ~230 min (104 v1.0 + ~112 v2.0 + 14 v3.0)
+- Total plans completed: 34 (14 v1.0 + 17 v2.0 + 3 v3.0)
+- Quick tasks completed: 5
+- Average duration: 5 min
+- Total execution time: ~232 min (104 v1.0 + ~112 v2.0 + 16 v3.0)
 
 **By Phase (v3.0):**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 09 | 2 | 14 min | 7 min |
+| 09 | 3 | 16 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 9 min (09-01), 5 min (09-02)
+- Last 5 plans: 9 min (09-01), 5 min (09-02), 2 min (09-03)
 - Trend: Phase 09 complete, E2E testing foundation established
 
 *Updated after each plan completion*
@@ -53,6 +53,8 @@ Recent decisions affecting v3.0 work:
 - Data-testid selector pattern (v3.0/09-01) — Sanitize special chars with hyphens for stable test selectors
 - Await .length pattern (v3.0/09-02) — WebdriverIO v9 ChainablePromiseArray requires awaiting .length property
 - Generous E2E timeouts (v3.0/09-02) — 30s for P4 operations, 10s for UI interactions to handle slow servers
+- Pre-seed settings via filesystem (v3.0/09-03) — Direct plugin-store manipulation before app launch, not UI automation
+- P4E2E_ env var prefix (v3.0/09-03) — Test-specific P4 connection configuration separate from user's P4CONFIG
 
 ### Pending Todos
 
@@ -71,6 +73,8 @@ Recent decisions affecting v3.0 work:
 - macOS does NOT support E2E testing (no WKWebView driver) — Windows/Linux only
 - Users must manually build app with `npm run tauri build` before running tests (no auto-build in wdio config)
 - All core workflows covered: sync, checkout, revert, submit (09-02)
+- Settings auto-seeding enables P4 auto-connect (09-03)
+- E2E tests require P4E2E_PORT, P4E2E_USER, P4E2E_CLIENT env vars
 
 **Phase 11 (Auto-Refresh):**
 - Query invalidation race conditions (disable auto-refresh during active operations)
@@ -90,7 +94,7 @@ Recent decisions affecting v3.0 work:
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 09-02-PLAN.md
+Stopped at: Completed 09-03-PLAN.md
 Resume file: None
 
 ---
