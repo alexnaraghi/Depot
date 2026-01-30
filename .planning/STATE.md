@@ -87,6 +87,7 @@ All v1.0 decisions documented in PROJECT.md Key Decisions table.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 001 | Unify file right-click context menus | 2026-01-29 | d68c0b8 | [001-unify-file-right-click-context-menus](./quick/001-unify-file-right-click-context-menus/) |
+| 002 | Disable context-sensitive command palette | 2026-01-29 | d3f9257 | [002-disable-context-sensitive-command-palette](./quick/002-disable-context-sensitive-command-palette/) |
 
 ### Blockers/Concerns
 
@@ -95,7 +96,7 @@ None active.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed 07-02-PLAN.md (Command Palette & Context-Sensitive Shortcuts)
+Stopped at: Completed quick task 002 (Disable Context-Sensitive Command Palette)
 Resume file: None
 
 ---
