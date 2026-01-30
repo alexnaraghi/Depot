@@ -13,7 +13,7 @@ Milestone: v2.0 Feature Complete
 Phase: 08 of 08 (Visual Polish) — complete
 Plan: 05 of 05 complete (gap closure plans complete)
 Status: Phase complete, verified (13/15 must-haves, accepted)
-Last activity: 2026-01-30 — Gap closure plans 08-04, 08-05 executed and verified
+Last activity: 2026-01-29 — Completed quick task 003: Add Open menu item and fix Open in Explorer
 
 Progress: [############################] 100% (31/31 plans)
 
