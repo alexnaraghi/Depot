@@ -29,7 +29,7 @@ Key accomplishments:
 - [x] **Phase 04: Changelist Management** - Multiple changelists with create, edit, delete, and drag-drop file moves
 - [x] **Phase 05: History, Diff & Search** - File history viewer, external diff integration, and submitted changelist search
 - [x] **Phase 06: Shelve & Reconcile** - Shelve/unshelve workflows and offline reconcile with preview
-- [ ] **Phase 07: Context Menus & Keyboard Shortcuts** - Right-click menus, keyboard shortcuts, and command palette
+- [x] **Phase 07: Context Menus & Keyboard Shortcuts** - Right-click menus, keyboard shortcuts, and command palette
 - [ ] **Phase 08: Visual Polish** - Consistent design, loading states, and professional appearance
 
 ## Phase Details
@@ -112,8 +112,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — Shortcut registry, changelist header menu, global keyboard shortcuts, shortcut hints in menus/tooltips
-- [ ] 07-02-PLAN.md — Command palette with fuzzy search, workspace menu additions, context-sensitive shortcuts
+- [x] 07-01-PLAN.md — Shortcut registry, changelist header menu, global keyboard shortcuts, shortcut hints in menus/tooltips
+- [x] 07-02-PLAN.md — Command palette with fuzzy search, workspace menu additions, context-sensitive shortcuts
 
 ### Phase 08: Visual Polish
 **Goal**: The app looks professional and feels polished with consistent design and proper loading states
@@ -142,8 +142,8 @@ Phases execute in numeric order: 03 -> 04 -> 05 -> 06 -> 07 -> 08
 | 04. Changelist Management | v2.0 | 3/3 | Complete | 2026-01-29 |
 | 05. History, Diff & Search | v2.0 | 3/3 | Complete | 2026-01-29 |
 | 06. Shelve & Reconcile | v2.0 | 3/3 | Complete | 2026-01-29 |
-| 07. Context Menus & Keyboard Shortcuts | v2.0 | 0/TBD | Not started | - |
+| 07. Context Menus & Keyboard Shortcuts | v2.0 | 2/2 | Complete | 2026-01-29 |
 | 08. Visual Polish | v2.0 | 0/TBD | Not started | - |
 
 ---
-*Last updated: 2026-01-29 after Phase 06 completion*
+*Last updated: 2026-01-29 after Phase 07 completion*

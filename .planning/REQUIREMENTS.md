@@ -34,9 +34,9 @@
 
 ### Context Menus
 
-- [ ] **CTX-01**: Right-click file in pending changes shows: Diff, Revert, Move to Changelist, Shelve, File History
-- [ ] **CTX-02**: Right-click changelist header shows: Submit, Shelve, New Changelist, Edit Description, Delete
-- [ ] **CTX-03**: Right-click file in workspace view shows: Checkout, Add, Diff, File History, Get Revision
+- [x] **CTX-01**: Right-click file in pending changes shows: Diff, Revert, Move to Changelist, Shelve, File History
+- [x] **CTX-02**: Right-click changelist header shows: Submit, Shelve, New Changelist, Edit Description, Delete
+- [x] **CTX-03**: Right-click file in workspace view shows: Checkout, Add, Diff, File History, Get Revision
 
 ### File History
 
@@ -59,9 +59,9 @@
 
 ### Keyboard Shortcuts
 
-- [ ] **KEY-01**: Keyboard shortcuts for core operations (Refresh, Sync, Submit, Revert, Diff, History)
-- [ ] **KEY-02**: Keyboard shortcuts displayed in context menus and tooltips
-- [ ] **KEY-03**: Command palette (Ctrl+K or Ctrl+Shift+P) with fuzzy search for all operations
+- [x] **KEY-01**: Keyboard shortcuts for core operations (Refresh, Sync, Submit, Revert, Diff, History)
+- [x] **KEY-02**: Keyboard shortcuts displayed in context menus and tooltips
+- [x] **KEY-03**: Command palette (Ctrl+K or Ctrl+Shift+P) with fuzzy search for all operations
 
 ### Search
 
@@ -138,12 +138,12 @@
 | RECON-02 | Phase 06 | Complete |
 | RECON-03 | Phase 06 | Complete |
 | RECON-04 | Phase 06 | Complete |
-| CTX-01 | Phase 07 | Pending |
-| CTX-02 | Phase 07 | Pending |
-| CTX-03 | Phase 07 | Pending |
-| KEY-01 | Phase 07 | Pending |
-| KEY-02 | Phase 07 | Pending |
-| KEY-03 | Phase 07 | Pending |
+| CTX-01 | Phase 07 | Complete |
+| CTX-02 | Phase 07 | Complete |
+| CTX-03 | Phase 07 | Complete |
+| KEY-01 | Phase 07 | Complete |
+| KEY-02 | Phase 07 | Complete |
+| KEY-03 | Phase 07 | Complete |
 | VIS-01 | Phase 08 | Pending |
 | VIS-02 | Phase 08 | Pending |
 | VIS-03 | Phase 08 | Pending |
