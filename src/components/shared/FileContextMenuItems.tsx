@@ -1,7 +1,7 @@
-import { Edit3, Undo2, Copy, History, GitCompare, FolderOpen } from 'lucide-react';
+import { Edit3, Undo2, Copy, History, GitCompare, FolderOpen, ExternalLink } from 'lucide-react';
 import { P4File, FileStatus } from '@/types/p4';
 import { useFileOperations } from '@/hooks/useFileOperations';
-import { revealItemInDir } from '@tauri-apps/plugin-opener';
+import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 import { SHORTCUTS } from '@/lib/shortcuts';
@@ -78,9 +78,25 @@ export function FileContextMenuItems({
     onClose();
   }
 
-  async function handleOpenInExplorer() {
+  async function handleOpen() {
+    if (!file.localPath) {
+      toast.error('No local path available');
+      return;
+    }
     try {
-      // Reveal the file in its directory (opens explorer and selects the file)
+      await openPath(file.localPath);
+      onClose();
+    } catch (error) {
+      toast.error(`Failed to open file: ${error}`);
+    }
+  }
+
+  async function handleOpenInExplorer() {
+    if (!file.localPath) {
+      toast.error('No local path available');
+      return;
+    }
+    try {
       await revealItemInDir(file.localPath);
       onClose();
     } catch (error) {
@@ -162,6 +178,20 @@ export function FileContextMenuItems({
       )}
 
       <div className="h-px bg-border my-1" />
+
+      <button
+        onClick={handleOpen}
+        className={cn(
+          'w-full px-4 py-2 text-left text-sm text-foreground',
+          'hover:bg-accent',
+          'flex items-center justify-between gap-6'
+        )}
+      >
+        <span className="flex items-center gap-2">
+          <ExternalLink className="w-4 h-4" />
+          Open
+        </span>
+      </button>
 
       <button
         onClick={handleCopyPath}
