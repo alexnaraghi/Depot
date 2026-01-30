@@ -11,18 +11,18 @@ See: .planning/PROJECT.md (updated 2026-01-28)
 
 Milestone: v2.0 Feature Complete
 Phase: 07 of 08 (Context Menus & Keyboard Shortcuts)
-Plan: 01 of 02 complete
-Status: In progress
-Last activity: 2026-01-29 — Completed 07-01-PLAN.md
+Plan: 02 of 02 complete
+Status: Phase complete
+Last activity: 2026-01-29 — Completed 07-02-PLAN.md
 
-Progress: [##########################..] 96% (26/~27 plans estimated)
+Progress: [###########################.] 100% (27/~27 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 26 (14 v1.0 + 12 v2.0)
+- Total plans completed: 27 (14 v1.0 + 13 v2.0)
 - Average duration: 7 min
-- Total execution time: ~183 min (104 v1.0 + ~79 v2.0)
+- Total execution time: ~189 min (104 v1.0 + ~85 v2.0)
 
 ## Accumulated Context
 
@@ -71,6 +71,9 @@ All v1.0 decisions documented in PROJECT.md Key Decisions table.
 | D-07-01-01 | 07-01 | Custom events for cross-component shortcuts | Use window.dispatchEvent for global shortcuts to avoid prop drilling, cleaner than state lifting for Sync and New Changelist triggers |
 | D-07-01-02 | 07-01 | revealItemInDir for Open in Explorer | Shows file selected in folder, better UX than just opening directory |
 | D-07-01-03 | 07-01 | enableOnFormTags: false for all shortcuts | Prevents shortcuts from firing when typing in input fields, standard pattern for keyboard navigation |
+| D-07-02-01 | 07-02 | Context-sensitive shortcuts via event dispatch | Global shortcuts dispatch events, components with selection context handle them (no-op when no selection) |
+| D-07-02-02 | 07-02 | Selected file tracking via context menu | FileTree tracks selectedFile state on context menu open for keyboard shortcuts |
+| D-07-02-03 | 07-02 | Submit shortcut targets first CL with files | Most common workflow, no multi-select UI needed for MVP |
 
 ### Pending Todos
 
@@ -92,8 +95,8 @@ None active.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed 07-01-PLAN.md (Keyboard Shortcuts & Changelist Header Menu)
+Stopped at: Completed 07-02-PLAN.md (Command Palette & Context-Sensitive Shortcuts)
 Resume file: None
 
 ---
-**v2.0 In Progress:** Phases 03-06 complete (11/11 plans), Phase 07 in progress (1/2 plans), Phase 08 remaining (~1 plan)
+**v2.0 In Progress:** Phases 03-07 complete (13/13 plans), Phase 08 remaining (~1 plan)
