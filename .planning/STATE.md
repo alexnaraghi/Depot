@@ -102,6 +102,7 @@ All v1.0 decisions documented in PROJECT.md Key Decisions table.
 |---|-------------|------|--------|-----------|
 | 001 | Unify file right-click context menus | 2026-01-29 | d68c0b8 | [001-unify-file-right-click-context-menus](./quick/001-unify-file-right-click-context-menus/) |
 | 002 | Disable context-sensitive command palette | 2026-01-29 | d3f9257 | [002-disable-context-sensitive-command-palette](./quick/002-disable-context-sensitive-command-palette/) |
+| 003 | Add Open menu item and fix Open in Explorer | 2026-01-29 | 690d38f | [003-file-open-and-explorer-fix](./quick/003-file-open-and-explorer-fix/) |
 
 ### Blockers/Concerns
 
