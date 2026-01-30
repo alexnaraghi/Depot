@@ -290,14 +290,17 @@ fn derive_file_status(action: &Option<String>, have_rev: i32, head_rev: i32) -> 
 /// Get all files opened by current user
 #[tauri::command]
 pub async fn p4_opened(server: Option<String>, user: Option<String>, client: Option<String>) -> Result<Vec<P4FileInfo>, String> {
-    // Execute: p4 -ztag opened
+    // Execute: p4 -ztag fstat -Ro //...
+    // Uses fstat instead of opened to get the "path" field (local filesystem path).
+    // p4 opened only returns "clientFile" which is the client-spec path (//client/...),
+    // not usable for local file operations like Open or Reveal in Explorer.
     let mut cmd = Command::new("p4");
     apply_connection_args(&mut cmd, &server, &user, &client);
-    cmd.args(["-ztag", "opened"]);
+    cmd.args(["-ztag", "fstat", "-Ro", "//..."]);
 
     let output = cmd
         .output()
-        .map_err(|e| format!("Failed to execute p4 opened: {}", e))?;
+        .map_err(|e| format!("Failed to execute p4 fstat -Ro: {}", e))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
