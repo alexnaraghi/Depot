@@ -41,19 +41,30 @@ The user is never blocked — operations are always cancellable, errors are non-
 
 ### Active
 
-(No active requirements — next milestone not yet defined)
+- [ ] Resolve workflow — detect conflicts, launch external merge tool, mark resolved
+- [ ] Depot tree browser — full depot hierarchy with sync, checkout, history, diff operations
+- [ ] Workspace switching — disconnect/connect to different workspaces
+- [ ] Stream switching — change which stream the workspace is on
+- [ ] View client spec — read-only view of workspace mappings and settings
+- [ ] Actionable search results — interact with files, CLs, and authors from search
+- [ ] Auto-refresh — configurable periodic polling of workspace state and pending CLs
+- [ ] External editor setting — configure preferred editor
+- [ ] Automated E2E testing — regression tests for existing and new functionality
+- [ ] Fix changelist drag-and-drop reliability
+- [ ] Move files when editing default CL description
+- [ ] Unshelve to same changelist (not default)
+- [ ] Resolve dialog after unshelving conflicts
+- [ ] Implement refresh button
 
 ### Out of Scope
 
 - Admin tools — not needed for daily workflow
 - Built-in diff viewer — external tools (P4Merge, VS Code, etc.) handle this
-- Multi-workspace support — single workspace keeps it simple
+- Built-in merge/resolve UI — external merge tool (P4Merge) handles conflict resolution
 - Stream graph visualization — DAG layout extremely complex
 - Time-lapse view — enormous UI effort for niche use
-- Built-in merge/resolve UI — P4Merge is free
 - Branch/integrate operations — complex, not core daily workflow
 - Job/fix tracking — rarely used outside enterprise
-- Auto-background refresh — constant polling hammers server
 - Modal dialogs for workflows — P4V's biggest pain point
 
 ## Context
@@ -94,14 +105,29 @@ Tech stack: Tauri 2.0, React 19, TanStack Query, Zustand, shadcn/ui, Tailwind CS
 | No animations | Instant UI response, removed all transition classes | ✓ Good |
 | Custom events for shortcuts | Cross-component keyboard shortcuts without prop drilling | ✓ Good |
 
+## Current Milestone: v3.0 Daily Driver
+
+**Goal:** Make P4Now reliable enough for real contributors to evaluate with their daily Perforce workflows.
+
+**Target features:**
+- Resolve workflow with external merge tool
+- Depot tree browser with full file operations
+- Workspace and stream switching
+- Actionable search results
+- Auto-refresh with configurable polling interval
+- Settings additions (external editor, auto-refresh interval)
+- Automated E2E testing for regression coverage
+- Bug fixes for drag-and-drop, unshelve, default CL, refresh
+
 ## Milestones
 
 | Version | Status | Date |
 |---------|--------|------|
 | v1.0 MVP | Complete | 2026-01-28 |
 | v2.0 Feature Complete | Complete | 2026-01-30 |
+| v3.0 Daily Driver | In Progress | — |
 
 See `.planning/milestones/` for archived roadmaps and requirements.
 
 ---
-*Last updated: 2026-01-30 after v2.0 milestone*
+*Last updated: 2026-01-29 after v3.0 milestone start*
