@@ -123,10 +123,12 @@ Plans:
   1. All views have consistent spacing, typography, and color usage
   2. Async operations show loading states or skeleton placeholders instead of blank areas
   3. The app looks competitive with modern developer tools (VS Code, Linear, etc.)
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 08-01: TBD
+- [ ] 08-01-PLAN.md — Blue-tinted dark theme CSS variables, font stack, dialog/dropdown dark theme consistency
+- [ ] 08-02-PLAN.md — Unified header toolbar (consolidate two bars, GitKraken-style buttons)
+- [ ] 08-03-PLAN.md — Skeleton loading states, text-only empty states, section headers, spacing consistency
 
 ## Progress
 
