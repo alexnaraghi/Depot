@@ -119,15 +119,15 @@ export function ChangelistContextMenu({
     <>
       <div
         ref={menuRef}
-        className="fixed z-50 min-w-48 bg-slate-900 border border-slate-700 rounded-md shadow-xl py-1"
+        className="fixed z-50 min-w-48 bg-background border border-border rounded-md shadow-xl py-1"
         style={{ left: x, top: y }}
       >
         <button
           onMouseEnter={() => setSubmenuOpen(true)}
           onMouseLeave={() => setSubmenuOpen(false)}
           className={cn(
-            'w-full px-4 py-2 text-left text-sm text-slate-200',
-            'hover:bg-slate-800 transition-colors',
+            'w-full px-4 py-2 text-left text-sm text-foreground',
+            'hover:bg-accent',
             'flex items-center justify-between gap-2'
           )}
         >
@@ -136,7 +136,7 @@ export function ChangelistContextMenu({
         </button>
 
         {/* Separator */}
-        {canShelve && <div className="h-px bg-slate-700 my-1" />}
+        {canShelve && <div className="h-px bg-border my-1" />}
 
         {/* Shelve option - only for numbered changelists */}
         {canShelve && (
@@ -144,8 +144,8 @@ export function ChangelistContextMenu({
             onClick={handleShelve}
             disabled={shelve.isPending}
             className={cn(
-              'w-full px-4 py-2 text-left text-sm text-slate-200',
-              'hover:bg-slate-800 transition-colors',
+              'w-full px-4 py-2 text-left text-sm text-foreground',
+              'hover:bg-accent',
               'flex items-center gap-2',
               'disabled:opacity-50 disabled:cursor-not-allowed'
             )}
@@ -158,7 +158,7 @@ export function ChangelistContextMenu({
         {/* Shared file operations - only for single file selection */}
         {files.length === 1 && (
           <>
-            <div className="h-px bg-slate-700 my-1" />
+            <div className="h-px bg-border my-1" />
             <FileContextMenuItems
               file={files[0]}
               onClose={onClose}
@@ -173,21 +173,21 @@ export function ChangelistContextMenu({
       {submenuOpen && (
         <div
           ref={submenuRef}
-          className="fixed z-50 min-w-64 max-w-80 bg-slate-900 border border-slate-700 rounded-md shadow-xl py-1"
+          className="fixed z-50 min-w-64 max-w-80 bg-background border border-border rounded-md shadow-xl py-1"
           style={{ left: x + 192, top: y }}
           onMouseEnter={() => setSubmenuOpen(true)}
           onMouseLeave={() => setSubmenuOpen(false)}
         >
           {availableChangelists.length === 0 ? (
-            <div className="px-4 py-2 text-sm text-slate-400">No other changelists available</div>
+            <div className="px-4 py-2 text-sm text-muted-foreground">No other changelists available</div>
           ) : (
             availableChangelists.map((cl) => (
               <button
                 key={cl.id}
                 onClick={() => handleMoveToChangelist(cl.id)}
                 className={cn(
-                  'w-full px-4 py-2 text-left text-sm text-slate-200',
-                  'hover:bg-slate-800 transition-colors',
+                  'w-full px-4 py-2 text-left text-sm text-foreground',
+                  'hover:bg-accent',
                   'truncate'
                 )}
                 title={cl.description}

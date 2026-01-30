@@ -256,10 +256,10 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
         <div className="p-3 space-y-4">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="space-y-2">
-              <div className="h-4 bg-slate-700 rounded animate-pulse w-32" />
+              <div className="h-4 bg-border rounded animate-pulse w-32" />
               <div className="space-y-1 pl-4">
-                <div className="h-3.5 bg-slate-700/50 rounded animate-pulse w-3/4" />
-                <div className="h-3.5 bg-slate-700/50 rounded animate-pulse w-1/2" />
+                <div className="h-3.5 bg-border/50 rounded animate-pulse w-3/4" />
+                <div className="h-3.5 bg-border/50 rounded animate-pulse w-1/2" />
               </div>
             </div>
           ))}
@@ -288,10 +288,10 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
         <h2 className="text-lg font-semibold">Pending Changes</h2>
         <button
           onClick={() => setCreateDialogOpen(true)}
-          className="p-1 hover:bg-slate-700 rounded transition-colors"
+          className="p-1 hover:bg-accent rounded"
           title="New Changelist"
         >
-          <Plus className="w-5 h-5 text-slate-300" />
+          <Plus className="w-5 h-5 text-foreground" />
         </button>
       </div>
 
@@ -514,7 +514,7 @@ function ChangelistHeaderMenu({
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 min-w-56 bg-slate-900 border border-slate-700 rounded-md shadow-xl py-1"
+      className="fixed z-50 min-w-56 bg-background border border-border rounded-md shadow-xl py-1"
       style={{ left: x, top: y }}
     >
       {/* Submit */}
@@ -525,8 +525,8 @@ function ChangelistHeaderMenu({
             onClose();
           }}
           className={cn(
-            'w-full px-4 py-2 text-left text-sm text-slate-200',
-            'hover:bg-slate-800 transition-colors',
+            'w-full px-4 py-2 text-left text-sm text-foreground',
+            'hover:bg-accent',
             'flex items-center gap-2'
           )}
         >
@@ -543,8 +543,8 @@ function ChangelistHeaderMenu({
             onClose();
           }}
           className={cn(
-            'w-full px-4 py-2 text-left text-sm text-slate-200',
-            'hover:bg-slate-800 transition-colors',
+            'w-full px-4 py-2 text-left text-sm text-foreground',
+            'hover:bg-accent',
             'flex items-center gap-2'
           )}
         >
@@ -562,8 +562,8 @@ function ChangelistHeaderMenu({
             onClose();
           }}
           className={cn(
-            'w-full px-4 py-2 text-left text-sm text-slate-200',
-            'hover:bg-slate-800 transition-colors',
+            'w-full px-4 py-2 text-left text-sm text-foreground',
+            'hover:bg-accent',
             'flex items-center gap-2'
           )}
         >
@@ -573,7 +573,7 @@ function ChangelistHeaderMenu({
       )}
 
       {/* Separator */}
-      <div className="h-px bg-slate-700 my-1" />
+      <div className="h-px bg-border my-1" />
 
       {/* New Changelist */}
       <button
@@ -582,8 +582,8 @@ function ChangelistHeaderMenu({
           onClose();
         }}
         className={cn(
-          'w-full px-4 py-2 text-left text-sm text-slate-200',
-          'hover:bg-slate-800 transition-colors',
+          'w-full px-4 py-2 text-left text-sm text-foreground',
+          'hover:bg-accent',
           'flex items-center gap-2'
         )}
       >
@@ -598,8 +598,8 @@ function ChangelistHeaderMenu({
           onClose();
         }}
         className={cn(
-          'w-full px-4 py-2 text-left text-sm text-slate-200',
-          'hover:bg-slate-800 transition-colors',
+          'w-full px-4 py-2 text-left text-sm text-foreground',
+          'hover:bg-accent',
           'flex items-center gap-2'
         )}
       >
@@ -608,7 +608,7 @@ function ChangelistHeaderMenu({
       </button>
 
       {/* Separator */}
-      {(isEmpty || hasFiles) && <div className="h-px bg-slate-700 my-1" />}
+      {(isEmpty || hasFiles) && <div className="h-px bg-border my-1" />}
 
       {/* Delete (only for empty numbered CLs) */}
       {isEmpty && !isDefault && (
@@ -618,8 +618,8 @@ function ChangelistHeaderMenu({
             onClose();
           }}
           className={cn(
-            'w-full px-4 py-2 text-left text-sm text-slate-200',
-            'hover:bg-slate-800 transition-colors',
+            'w-full px-4 py-2 text-left text-sm text-foreground',
+            'hover:bg-accent',
             'flex items-center gap-2'
           )}
         >
@@ -636,8 +636,8 @@ function ChangelistHeaderMenu({
             onClose();
           }}
           className={cn(
-            'w-full px-4 py-2 text-left text-sm text-slate-200',
-            'hover:bg-slate-800 transition-colors',
+            'w-full px-4 py-2 text-left text-sm text-foreground',
+            'hover:bg-accent',
             'flex items-center gap-2'
           )}
         >

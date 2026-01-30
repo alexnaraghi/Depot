@@ -66,7 +66,7 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
         style={style}
         className={cn(
           'group flex items-center gap-2 px-2 py-1 cursor-pointer text-sm',
-          'hover:bg-slate-800 transition-colors',
+          'hover:bg-accent',
           isSelected && 'bg-blue-900/50'
         )}
         onClick={() => node.isInternal && node.toggle()}
@@ -76,12 +76,12 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
         }}
       >
         {/* List icon */}
-        <List className="w-4 h-4 text-slate-400 flex-shrink-0" />
+        <List className="w-4 h-4 text-muted-foreground flex-shrink-0" />
 
         {/* Changelist number and description */}
         <span className={cn(
           "flex-1 truncate",
-          isDefault ? "text-slate-400" : "text-slate-200"
+          isDefault ? "text-muted-foreground" : "text-foreground"
         )}>
           {!isDefault && `#${changelist.id} — `}
           {changelist.description || '(no description)'}
@@ -89,13 +89,13 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
 
         {/* Default label */}
         {isDefault && (
-          <span className="px-2 py-0.5 text-xs bg-slate-700 rounded-full text-slate-300 flex-shrink-0">
+          <span className="px-2 py-0.5 text-xs bg-muted rounded-full text-foreground flex-shrink-0">
             default
           </span>
         )}
 
         {/* File count badge */}
-        <span className="px-2 py-0.5 text-xs bg-slate-700 rounded-full text-slate-300 flex-shrink-0">
+        <span className="px-2 py-0.5 text-xs bg-muted rounded-full text-foreground flex-shrink-0">
           {changelist.fileCount}
         </span>
 
@@ -106,10 +106,10 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
               e.stopPropagation();
               onSubmit?.();
             }}
-            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-600 rounded transition-opacity"
+            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-accent rounded "
             title="Submit"
           >
-            <Send className="w-4 h-4 text-slate-300" />
+            <Send className="w-4 h-4 text-foreground" />
           </button>
         )}
 
@@ -119,10 +119,10 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
             e.stopPropagation();
             onEdit?.();
           }}
-          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-600 rounded transition-opacity"
+          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-accent rounded "
           title="Edit"
         >
-          <Pencil className="w-4 h-4 text-slate-300" />
+          <Pencil className="w-4 h-4 text-foreground" />
         </button>
 
         {/* Delete button - appears on hover only for empty, non-default CLs */}
@@ -132,10 +132,10 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
               e.stopPropagation();
               onDelete?.();
             }}
-            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-600 rounded transition-opacity"
+            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-accent rounded "
             title="Delete"
           >
-            <Trash2 className="w-4 h-4 text-slate-300" />
+            <Trash2 className="w-4 h-4 text-foreground" />
           </button>
         )}
       </div>
@@ -163,7 +163,7 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
       style={style}
       className={cn(
         'flex items-center gap-2 px-2 py-1 pl-6 cursor-pointer text-sm',
-        'hover:bg-slate-800 transition-colors',
+        'hover:bg-accent',
         isSelected && 'bg-blue-900/50'
       )}
       onDragStart={(e) => {
@@ -181,7 +181,7 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
       <FileStatusIcon status={file.status} className="flex-shrink-0" />
 
       {/* File name */}
-      <span className="flex-1 truncate text-slate-200">{fileName}</span>
+      <span className="flex-1 truncate text-foreground">{fileName}</span>
     </div>
   );
 }
@@ -218,7 +218,7 @@ function ShelvedFileRow({
       style={style}
       className={cn(
         'group flex items-center gap-2 px-2 py-1 pl-8 text-sm',
-        'hover:bg-slate-800/30 transition-colors'
+        'hover:bg-accent/30'
       )}
     >
       <Archive className="w-4 h-4 text-violet-400 flex-shrink-0" />
@@ -230,7 +230,7 @@ function ShelvedFileRow({
       <button
         onClick={(e) => { e.stopPropagation(); handleUnshelve(); }}
         disabled={unshelve.isPending}
-        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-600 rounded transition-opacity disabled:opacity-50"
+        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-accent rounded  disabled:opacity-50"
         title="Unshelve this file"
       >
         <ArrowDownToLine className="w-4 h-4 text-violet-300" />
@@ -285,7 +285,7 @@ function ShelvedSectionHeader({
       style={style}
       className={cn(
         'group flex items-center gap-2 px-2 py-1 cursor-pointer text-sm',
-        'hover:bg-slate-800/50 transition-colors'
+        'hover:bg-accent/50'
       )}
       onClick={onToggle}
     >
@@ -300,7 +300,7 @@ function ShelvedSectionHeader({
       <button
         onClick={(e) => { e.stopPropagation(); handleUnshelve(); }}
         disabled={unshelve.isPending}
-        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-600 rounded transition-opacity disabled:opacity-50"
+        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-accent rounded  disabled:opacity-50"
         title="Unshelve all files"
       >
         <ArrowDownToLine className="w-4 h-4 text-violet-300" />
@@ -309,7 +309,7 @@ function ShelvedSectionHeader({
       <button
         onClick={(e) => { e.stopPropagation(); handleDeleteShelf(); }}
         disabled={deleteShelf.isPending}
-        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-600 rounded transition-opacity disabled:opacity-50"
+        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-accent rounded  disabled:opacity-50"
         title="Delete shelf"
       >
         <Trash2 className="w-4 h-4 text-violet-300" />

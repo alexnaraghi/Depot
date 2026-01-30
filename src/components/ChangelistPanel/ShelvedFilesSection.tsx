@@ -59,7 +59,7 @@ export function ShelvedFilesSection({ changelistId }: ShelvedFilesSectionProps) 
         <div
           className={cn(
             'group flex items-center gap-2 px-2 py-1 cursor-pointer text-sm',
-            'hover:bg-slate-800/50 transition-colors'
+            'hover:bg-accent/50'
           )}
         >
           {/* Chevron icon */}
@@ -82,7 +82,7 @@ export function ShelvedFilesSection({ changelistId }: ShelvedFilesSectionProps) 
               handleUnshelve();
             }}
             disabled={unshelve.isPending}
-            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-600 rounded transition-opacity disabled:opacity-50"
+            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-accent rounded  disabled:opacity-50"
             title="Unshelve all files"
           >
             <ArrowDownToLine className="w-4 h-4 text-violet-300" />
@@ -94,7 +94,7 @@ export function ShelvedFilesSection({ changelistId }: ShelvedFilesSectionProps) 
               handleDeleteShelf();
             }}
             disabled={deleteShelf.isPending}
-            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-600 rounded transition-opacity disabled:opacity-50"
+            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-accent rounded  disabled:opacity-50"
             title="Delete shelf"
           >
             <Trash2 className="w-4 h-4 text-violet-300" />
@@ -113,7 +113,7 @@ export function ShelvedFilesSection({ changelistId }: ShelvedFilesSectionProps) 
                 key={file.depotPath}
                 className={cn(
                   'flex items-center gap-2 px-2 py-1 text-sm',
-                  'hover:bg-slate-800/30 transition-colors'
+                  'hover:bg-accent/30'
                 )}
               >
                 {/* File icon */}
