@@ -1,390 +1,242 @@
-# Feature Landscape: P4Now v2.0
-
-**Domain:** Perforce GUI client (desktop, Windows)
-**Researched:** 2026-01-28
-**Confidence:** HIGH (based on official Perforce 2025.x documentation)
-
----
-
-## Existing v1.0 Features (Already Built)
-
-- Sync / Get Latest from depot
-- View pending changelist (checked-out and modified files)
-- Submit changes with changelist description
-- Checkout files for editing
-- Revert changes
-- File status indicators
-- Async non-blocking operations with cancellation
-
----
-
-## v2.0 Table Stakes
-
-Features users expect. Missing any of these makes v2.0 feel incomplete.
-
-### 1. Connection Settings UI
-
-**Complexity:** Medium | **Dependencies:** None (foundation for everything)
-
-**Fields required:**
-| Field | Env Var | Format | Notes |
-|-------|---------|--------|-------|
-| Server | P4PORT | `hostname:port` or `ssl:hostname:port` | Default port 1666 |
-| User | P4USER | String | Required |
-| Client/Workspace | P4CLIENT | String | Should offer browse after connection test |
-| Charset | P4CHARSET | `auto`, `utf8`, `none`, etc. | Only for Unicode-mode servers. If set on non-Unicode server, error: "Unicode clients require a unicode enabled server." |
-
-**Expected validation flow:**
-1. User enters server + user
-2. "Test Connection" runs `p4 -p <server> -u <user> info`
-3. If Unicode server detected, prompt for charset (or default `auto`)
-4. List workspaces: `p4 -p <server> -u <user> clients -u <user>`
-5. User selects workspace
-6. Save to app config (not system env vars -- avoid polluting system)
-
-**P4V behavior:** Connection wizard on first launch. Recent connections saved in dropdown. Supports multiple simultaneous connections (tabs). For v2.0, single connection is fine; save recent connections for quick switching.
-
-### 2. Connection Status Indicator
-
-**Complexity:** Low | **Dependencies:** Connection settings
-
-Show connected/disconnected/error state persistently. Poll with `p4 info` on a timer or detect failures from command execution. P4V shows a green/red icon in the status bar.
-
-### 3. Multiple Changelists
-
-**Complexity:** High | **Dependencies:** Existing pending changes view
-
-**Core concepts:**
-- **Default changelist:** Always exists, cannot be deleted. All newly opened files go here unless `-c` specified.
-- **Numbered changelists:** Created explicitly. Have editable descriptions. Can be submitted independently.
-
-**CLI commands:**
-| Operation | Command |
-|-----------|---------|
-| Create | `p4 change -i` (pipe spec to stdin) |
-| List pending | `p4 changes -s pending -u <user> -c <client>` |
-| Move file | `p4 reopen -c <targetCL> <file>` |
-| Move to default | `p4 reopen -c default <file>` |
-| Edit description | `p4 change -o <num>`, modify, `p4 change -i` |
-| Delete empty CL | `p4 change -d <num>` (fails if files remain) |
-
-**P4V UI behavior:**
-- Each changelist is a collapsible tree node showing its files
-- Drag-and-drop files between changelists
-- Right-click changelist > "New Pending Changelist"
-- Right-click file > "Move to Another Changelist" > submenu of CLs
-- Double-click description to edit inline
-- Submit operates on a specific changelist
-- Cannot delete CL that has files; must move/revert files first
-
-### 4. File History Viewer
-
-**Complexity:** Medium | **Dependencies:** None (new view)
-
-**Columns (from `p4 filelog`):**
-| Column | Description |
-|--------|-------------|
-| Revision | #1, #2, ... (newest first) |
-| Action | add, edit, delete, branch, integrate, move/add, move/delete |
-| Changelist | CL number |
-| Date | Submission date/time |
-| User | Who submitted |
-| Description | CL description (first line or full) |
-| File type | text, binary, unicode, etc. |
-
-**Expected interactions:**
-- Right-click revision: diff against previous, diff against workspace, get this revision
-- Current workspace revision highlighted (red box in P4V)
-- Show integration source info (where branched from)
-- Click revision to see full changelist details
-
-### 5. Right-Click Context Menus
-
-**Complexity:** Low | **Dependencies:** Existing views + new features
-
-**Pending changes view - on file:**
-- Diff against depot (have revision)
-- Revert
-- Move to Another Changelist > [list of CLs]
-- Shelve
-- File History
-
-**Pending changes view - on changelist:**
-- Submit
-- Shelve
-- New Pending Changelist
-- Edit Description
-- Delete (if empty)
-
-**Workspace view - on file:**
-- Checkout (Edit)
-- Add (if not in depot)
-- Diff against depot
-- File History
-- Get Revision (sync specific file)
-- Reconcile (if file appears modified)
-
-### 6. Keyboard Shortcuts
-
-**Complexity:** Low | **Dependencies:** All existing commands
-
-**P4V has surprisingly few built-in shortcuts.** Most operations require right-clicking. This is a gap we exploit.
-
-**Recommended shortcuts:**
-| Operation | Shortcut | Rationale |
-|-----------|----------|-----------|
-| Refresh | F5 | Universal standard |
-| Get Latest / Sync | Ctrl+G | Frequent operation |
-| Checkout / Edit | Ctrl+E | Quick file editing |
-| Revert | Ctrl+Shift+R | Needs modifier to prevent accidental use |
-| Submit | Ctrl+Enter | Natural "send" gesture |
-| Diff against depot | Ctrl+D | Quick diff review |
-| File History | Ctrl+H | History mnemonic |
-| New Changelist | Ctrl+N | Standard "new" |
-| Search | Ctrl+F | Universal standard |
-| Reconcile | Ctrl+Shift+E | "Edit offline" mnemonic |
-
-**Differentiator opportunity:** Add a command palette (Ctrl+K or Ctrl+Shift+P) with fuzzy search for all operations. This alone beats P4V for keyboard users.
-
-### 7. Reconcile Offline Work
-
-**Complexity:** Medium | **Dependencies:** Existing pending changes, multiple changelists (for target CL selection)
-
-**What `p4 reconcile` detects:**
-1. **Modified files** not opened for edit -- opens for edit
-2. **New files** not in depot -- opens for add
-3. **Missing files** deleted locally -- opens for delete
-4. **Moved files** -- compares adds+deletes by content similarity, converts to move pairs
-
-**P4V UI presentation:**
-- "Reconcile Offline Work" dialog with preview
-- Grouped by action type (edit/add/delete)
-- Checkboxes for individual file selection
-- Target changelist picker
-- Respects P4IGNORE file by default
-
-**CLI flags:**
-| Flag | Purpose |
-|------|---------|
-| `-n` | Preview only (dry run) -- use this first |
-| `-a` | Only detect adds |
-| `-e` | Only detect edits |
-| `-d` | Only detect deletes |
-| `-m` | Improve performance for large files |
-| `-w` | Ignore whitespace changes |
-| `-I` | Ignore P4IGNORE file |
-
-**Recommended implementation:** Run `p4 reconcile -n` first to show preview. Let user select/deselect files. Then run `p4 reconcile` on selected files with target changelist.
-
-**Auto-detection (explore):** File system watcher for external changes. Must be opt-in. Flag for deeper research -- complexity is high, benefit uncertain.
-
-### 8. Display Current Stream/Repository
-
-**Complexity:** Low | **Dependencies:** Connection settings
-
-**What `p4 info` returns:** Server address, server version, client name, client root, client stream (if applicable), user name.
-
-**What to show in persistent header/statusbar:**
-- Server address (abbreviated: `ssl:perforce:1666` -> `perforce`)
-- Current workspace name
-- Current stream name and type (if streams workspace)
-- If not streams: depot path from workspace mapping
-
-**P4V behavior:** Workspace icon in toolbar indicates current stream. Stream name visible. Can drag workspace icon to switch streams (we should NOT implement this -- too complex).
-
-### 9. Shelve/Unshelve
-
-**Complexity:** Medium | **Dependencies:** Multiple changelists
-
-**Shelve workflow:**
-1. Right-click changelist > Shelve
-2. Dialog: checkboxes for each file, "Revert after shelve" option
-3. Run `p4 shelve -c <CL>` (or `-r` to replace existing shelf)
-4. Shelved files appear as distinct section under the changelist
-
-**Unshelve workflow:**
-1. Right-click shelved changelist > Unshelve
-2. Dialog: file selection, target changelist picker
-3. Options: "Delete shelf after unshelve", "Revert before unshelve"
-4. Run `p4 unshelve -s <sourceCL> -c <targetCL>`
-5. If conflict: file flagged as unresolved, needs `p4 resolve`
-
-**CLI mapping:**
-| Operation | Command |
-|-----------|---------|
-| Shelve | `p4 shelve -c <CL>` |
-| Replace shelf | `p4 shelve -c <CL> -r` |
-| Delete shelf | `p4 shelve -d -c <CL>` |
-| Unshelve | `p4 unshelve -s <CL> -c <targetCL>` |
-| List shelved files | `p4 describe -S -s <CL>` |
-
-**Key behavior:** Shelving does NOT create file history. Unshelving does NOT remove the shelf (explicit delete required). Shelving from default CL creates a new numbered CL.
-
-### 10. Search Submitted Changelists
-
-**Complexity:** Medium | **Dependencies:** None (new view)
-
-**P4V filter capabilities:**
-- By user (with wildcards: `*bert*`, `ava*`, exact match)
-- By workspace
-- By file path
-- By date/changelist range
-- NO native description search (P4V limitation!)
-
-**CLI approach:**
-| Filter | Command |
-|--------|---------|
-| By user | `p4 changes -s submitted -u <user>` |
-| By path | `p4 changes -s submitted //depot/path/...` |
-| By date range | `p4 changes -s submitted @2026/01/01,@2026/01/28` |
-| By CL number | `p4 changes -s submitted @<num>,@<num>` |
-| With descriptions | `p4 changes -s submitted -l` (long output) |
-| Max results | `p4 changes -s submitted -m 100` |
-
-**Description search:** No server-side filter exists. Must fetch changelists with `-l` and filter client-side. This is a known P4V gap -- implementing it is a differentiator.
-
-**Result display columns:** CL number, date, user, workspace, description (truncated).
-
-### 11. External Diff Tool Integration
-
-**Complexity:** Low-Medium | **Dependencies:** File history (for revision comparison)
-
-**Configuration model:**
-- P4V: Edit > Preferences > Diff tab. Browse for executable. Arguments with `%1` / `%2` placeholders.
-- P4 CLI: `P4DIFF` env var for diff tool, `P4MERGE` for merge tool.
-- P4Now should store in app config, not system env vars.
-
-**Settings UI fields:**
-- Diff tool path (file browser)
-- Arguments pattern (default: `%1 %2`)
-- Common presets: P4Merge, Beyond Compare, WinMerge, VS Code
-
-**What gets compared:**
-| Comparison | How |
-|------------|-----|
-| Workspace vs depot head | `p4 print -o <temp> <file>` then launch tool with temp + workspace |
-| Workspace vs specific revision | `p4 print -o <temp> <file>#<rev>` then launch tool |
-| Two revisions | `p4 print` both to temp files, launch tool |
-| Shelved vs depot | `p4 print` shelved + head to temp files |
-
-**Note:** `p4 diff` uses P4DIFF but `p4 diff2` does NOT. Better to always use `p4 print` to temp files and launch tool directly for consistency.
-
-### 12. Improved Visual Design
-
-**Complexity:** Medium | **Dependencies:** All views (cross-cutting)
-
-Not a single feature but a quality pass. Specific to v2.0:
-- Consistent spacing, typography, color palette
-- Dark mode support (Windows 11 native)
-- Proper loading states and skeletons
-- Better file status icons
-- Professional look competitive with modern dev tools
-
----
-
-## v2.0 Differentiators
-
-Features that set P4Now apart from P4V. Not expected, but create competitive advantage.
+# Feature Research: P4Now v3.0
+
+**Domain:** Perforce GUI client for daily development workflows
+**Researched:** 2026-01-29
+**Confidence:** HIGH
+
+## Feature Landscape
+
+### Table Stakes (Users Expect These)
+
+Features users assume exist in a Perforce GUI. Missing these means the product feels incomplete.
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| **Resolve: Conflict detection after sync** | P4V displays question mark badge on files needing resolution; users expect visual indication | LOW | Already have file status system; add "?" badge for needs-resolve state |
+| **Resolve: Launch external merge tool** | P4V uses "Run Merge Tool" option in resolve dialog; external merge is standard workflow | MEDIUM | Similar to existing diff tool integration; use P4MERGE env var or setting |
+| **Resolve: Accept source/target/merged options** | P4V provides Accept Source, Accept Target, Accept Merged in resolve dialog | LOW | CLI commands: `p4 resolve -at/-ay/-am` |
+| **Resolve: Mark resolved and submit** | Can't submit until conflicts resolved; blocking operation | LOW | Run `p4 resolve` then enable submit |
+| **Depot browser: Full depot hierarchy tree** | P4V shows entire depot tree in left pane; users navigate folders like file explorer | MEDIUM | Similar to workspace tree (already exists); use `p4 dirs` recursively |
+| **Depot browser: Sync files/folders** | Right-click depot folder → Get Latest Revision is core workflow | LOW | Run `p4 sync <depot-path>` on selection |
+| **Depot browser: Checkout for edit** | Right-click depot file → Check Out is standard operation | LOW | Run `p4 edit <depot-path>` |
+| **Depot browser: View file history** | Right-click depot file → View History shows revision timeline | LOW | Already have history viewer; pass depot path instead of workspace path |
+| **Depot browser: Diff operations** | Diff workspace vs depot, diff between revisions from depot view | MEDIUM | Already have diff integration; adapt for depot paths |
+| **Workspace switching: Select different workspace** | P4V has workspace dropdown; users switch contexts frequently | MEDIUM | Update P4CLIENT env var, reload workspace state |
+| **Workspace switching: Show available workspaces** | P4V lists all workspaces owned by current user via `p4 clients -u <user>` | LOW | Simple CLI query, display in dropdown |
+| **Stream switching: Change current stream** | P4V provides "Work in this Stream" right-click option; fundamental to stream-based workflows | MEDIUM | Run `p4 switch <stream>` or update workspace then sync |
+| **Stream switching: Auto-shelve default CL files** | P4V (2019.1+) auto-shelves default CL files when switching streams with "Switched branch shelf" description | MEDIUM | Prevents losing work when switching; users expect this |
+| **Stream switching: Reconcile before reuse** | P4V offers "Run reconcile before reusing workspace" preference when switching streams | LOW | Optional workflow; detects offline changes before switch |
+| **Search: Interact with file results** | Users expect to right-click search results and perform operations (diff, history, checkout) | MEDIUM | Search results need context menu integration; not just read-only display |
+| **Search: Jump to changelist/author** | Clicking CL number or author in search should filter/navigate to that view | LOW | Already have changelist search; add navigation from results |
+| **Auto-refresh: Periodic workspace polling** | P4V has "Check server for updates every n minutes" setting; users expect current status | MEDIUM | Poll `p4 changes -m 1` and `p4 opened` on interval; configurable timer |
+| **Auto-refresh: File status updates** | P4V automatically refreshes file badges showing locks, edits by others | MEDIUM | Query periodically; show blue badges for other users' actions |
+| **Auto-refresh: Manual refresh action** | Users expect a Refresh button when auto-update is insufficient | LOW | Already in v3.0 bug fixes; invalidate queries |
+
+### Differentiators (Competitive Advantage)
+
+Features that set P4Now apart from P4V. Not required, but valuable.
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| **Command palette** | Ctrl+K fuzzy search for all operations. P4V has nothing like this. | Medium | Single biggest keyboard UX win. |
-| **Description search** | Search submitted CLs by description text. P4V cannot do this. | Medium | Client-side indexing of fetched CL descriptions. |
-| **Instant reconcile preview** | Show reconcile results progressively as `p4 reconcile -n` streams. P4V blocks. | Medium | Leverages existing async architecture. |
-| **Non-blocking shelve/unshelve** | P4V blocks during shelve. Show progress, allow cancel. | Low | Already have async infrastructure. |
-| **Inline changelist editing** | Edit CL descriptions without modal dialog. P4V uses modals. | Low | Direct contentEditable or input field. |
-| **Connection profiles** | Save multiple server connections, quick-switch dropdown. P4V buries this. | Low | Store in app config. Header dropdown. |
-| **Quick changelist move** | Move files between CLs via inline dropdown, no dialog needed. | Low | Dropdown selector instead of P4V's dialog. |
+| **Non-blocking resolve workflow** | P4V uses modal dialogs; P4Now can show resolve state in main view without blocking | LOW | Align with Core Value: never trap user in modals |
+| **Inline resolve status in file list** | Show resolve state as badge in existing file tree instead of separate dialog | LOW | Cleaner than P4V's separate Resolve window |
+| **Depot browser: Visual sync state indicators** | Show which depot files are synced, out-of-date, or not in workspace with color-coded badges | MEDIUM | P4V shows this with various badges; we can be clearer |
+| **Depot browser: Keyboard-first navigation** | Depot tree navigable with arrow keys, operations via keyboard shortcuts | LOW | P4V has basic keyboard support (Ctrl+9 for depot tree); we can excel here |
+| **Fast depot tree lazy loading** | Load depot children on-demand instead of entire tree upfront | MEDIUM | P4V can be slow with large depots; virtualization helps |
+| **Workspace switch without modal dialog** | Dropdown selector in header instead of P4V's Edit Current Workspace dialog | LOW | Faster workflow; no context switch |
+| **Stream switch: Preview sync size** | Show how many files will change before committing to stream switch | MEDIUM | P4V doesn't show this; reduces surprises |
+| **Stream switch: Shelf work-in-progress automatically** | Auto-shelve numbered CLs too, not just default CL (P4V only auto-shelves default) | MEDIUM | Better safety; prevents lost work |
+| **Search: Unified omnisearch** | Single search box for files, CLs, users, depot paths instead of separate dialogs | MEDIUM | P4V has separate search modes; unified is faster |
+| **Search: Real-time filtering** | Filter-as-you-type from prefetched cache instead of server round-trips | LOW | Already doing this for CL search; extend to files |
+| **Auto-refresh: Smart polling** | Only poll when window is focused; pause when inactive to save server load | LOW | Better server citizenship than P4V |
+| **Auto-refresh: Visual refresh indicator** | Show "Updated 2s ago" instead of silent updates | LOW | User confidence that data is current |
+| **Auto-refresh: Detect other users' locks** | Highlight files locked by teammates before attempting checkout | MEDIUM | Prevents "file locked" errors; proactive UX |
+| **Instant operations** | No loading spinners for local state changes (workspace switch, CL switching) | LOW | P4V shows loading for everything; we can be snappier |
 
----
+### Anti-Features (Commonly Requested, Often Problematic)
 
-## Anti-Features
+Features that seem good but create problems.
 
-Things to deliberately NOT build in v2.0.
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| **Built-in merge UI** | P4V has P4Merge bundled; users may expect inline merging | Complex 3-way merge UI; high maintenance; external tools (P4Merge, VS Code) are better | Launch external merge tool; support configurable merge tool paths |
+| **Interactive resolve wizard** | P4V has step-by-step resolve dialog walking through each file | Modal workflow traps user; breaks Core Value (never blocked) | Show all files needing resolve in main view; resolve independently |
+| **Automatic resolve without preview** | "Just resolve automatically" seems fast | Can silently accept wrong merge; dangerous for conflicts | Require explicit user action; show preview of what will be resolved |
+| **Real-time auto-refresh on every change** | "Always show latest state immediately" | Excessive server load; distracting badge changes during active work | Configurable polling interval (default 5 min); manual refresh button |
+| **Depot browser: Expand entire depot tree** | "Show me everything" seems comprehensive | 100k+ files brings GUI to crawl; P4V has this issue | Lazy load on-demand; bookmarks for common paths |
+| **Stream graph visualization** | P4V has stream graph; users may request it | DAG layout is extremely complex; niche feature for daily workflow | List streams in dropdown; show parent/child relationships textually |
+| **Multi-workspace support** | "Work on multiple streams simultaneously" | State management complexity; sync conflicts; workspace pollution | Single workspace; fast switching with auto-shelve |
+| **Workspace editor** | P4V allows editing workspace view mappings | Advanced operation; easy to break workspace; risks data loss | Read-only view; link to P4V for editing |
+| **Background sync during switch** | "Switch streams instantly while syncing in background" | File system inconsistency; race conditions; cannot work safely | Block on sync; show progress; ensure consistent state |
+| **Auto-unshelve after stream switch** | P4V auto-shelves then auto-unshelves when returning to stream | File conflicts if depot changed; silent errors | Auto-shelve on leave; manual unshelve on return (user choice) |
 
-| Anti-Feature | Why Avoid | What to Do Instead |
-|--------------|-----------|-------------------|
-| **Stream graph visualization** | DAG layout is extremely complex. P4V's took years and is still mediocre. | Show stream name/type as text in statusbar. |
-| **Time-lapse view** | Line-by-line blame slider across all revisions. Enormous UI effort for niche use. | Show file history table. Diff between any two revisions. Defer to v3+. |
-| **Built-in merge/resolve UI** | 3-way merge is a separate product category. P4Merge is free. | Launch P4Merge or configured external merge tool. |
-| **Image diff viewer** | Visual diff for BMP/GIF/JPG/PNG. Very niche. | Launch external diff tool for images. |
-| **Branch/integrate operations** | Complex P4 operations with many edge cases. | Defer entirely. Not core developer workflow. |
-| **Job/fix tracking** | P4 supports linking CLs to jobs. Rarely used outside enterprise. | Show raw description field only. |
-| **Auto-background refresh** | Constant `p4 fstat` polling hammers server, slows UI. P4V does this badly. | Manual refresh with F5. Show staleness timestamp. |
-| **Full workspace/stream switching** | P4V supports drag-to-switch with auto-shelve. Complex state management. | Show current stream info only. Switch via settings. |
-| **Modal dialogs for everything** | P4V's biggest UX pain point. Blocks all work. | Use inline panels, sidebars, dropdowns. Only confirm destructive actions with modals. |
-
----
-
-## Feature Dependencies (v2.0)
+## Feature Dependencies
 
 ```
-Connection Settings ──> Connection Status Indicator
-                   ──> Stream/Repo Display
-                   ──> ALL other features (implicit)
+Resolve Workflow
+    └──requires──> External merge tool setting (v3.0)
+                    └──requires──> Existing diff tool pattern (v2.0)
+    └──requires──> File status badge system (v1.0)
+    └──enhances──> Sync operation (v1.0)
+    └──enhances──> Unshelve operation (v2.0)
 
-Existing Pending Changes ──> Multiple Changelists (extends current view)
-                         ──> Right-click Context Menus (adds to current view)
-                         ──> Shelve/Unshelve (operates on CLs)
+Depot Browser
+    └──requires──> Tree virtualization (v2.0 - react-arborist)
+    └──requires──> File operations (sync, checkout, history, diff) (v1.0-v2.0)
+    └──enhances──> Workspace browser (v2.0)
 
-Multiple Changelists ──> Shelve/Unshelve (shelve targets specific CL)
-                     ──> Reconcile (files opened into chosen CL)
-                     ──> Drag-drop files between CLs
+Workspace Switching
+    └──requires──> Connection settings system (v2.0)
+    └──requires──> Workspace state reload (v1.0)
+    └──conflicts──> Multi-workspace support (anti-feature)
 
-File History ──> External Diff (diff revision vs workspace/previous)
+Stream Switching
+    └──requires──> Workspace switching (v3.0)
+    └──requires──> Shelve/unshelve operations (v2.0)
+    └──enhances──> Auto-shelve workflow (v2.0)
+    └──optional──> Reconcile operation (v2.0)
 
-Keyboard Shortcuts ──> Independent (can wire up to any existing command)
+Actionable Search
+    └──requires──> Existing search (v2.0)
+    └──requires──> Context menus (v2.0)
+    └──requires──> File operations (v1.0-v2.0)
 
-Search Changelists ──> Independent (new view, uses p4 changes)
-
-Visual Design ──> Cross-cutting (applies to all views)
+Auto-refresh
+    └──requires──> Query invalidation pattern (v2.0)
+    └──requires──> File status system (v1.0)
+    └──enhances──> Workspace state (v1.0)
 ```
 
----
+### Dependency Notes
 
-## MVP Phasing Recommendation
+- **Resolve requires External merge tool:** Same pattern as diff tool integration (v2.0); reuse settings UI and process launching
+- **Resolve enhances Sync and Unshelve:** Both operations can create conflicts requiring resolution
+- **Depot browser reuses existing patterns:** Tree component, file operations, status badges all exist
+- **Workspace switching conflicts with Multi-workspace:** Design decision (v1.0) to simplify; fast switching is alternative
+- **Stream switching requires Workspace switching:** Streams are workspace configurations; switching stream = switching workspace config
+- **Stream switching enhances Shelve:** Auto-shelving work when switching is key workflow improvement over P4V
+- **Actionable search extends existing search:** v2.0 has search UI; v3.0 adds interactions (operations on results)
+- **Auto-refresh uses Query invalidation:** TanStack Query pattern (v2.0 decision); periodic invalidation triggers refetch
 
-### Phase 1: Foundation
-1. **Connection settings UI** -- everything else depends on this
-2. **Connection status indicator** -- pairs naturally
-3. **Display current stream/repo** -- pairs naturally, same data source
-4. **Keyboard shortcuts** -- low effort, high impact, improves all testing
+## MVP Definition (v3.0 Scope)
 
-### Phase 2: Core Workflow Extensions
-5. **Multiple changelists** -- fundamental P4 workflow gap in v1.0
-6. **Right-click context menus** -- makes existing + new features accessible
-7. **Shelve/unshelve** -- depends on multiple changelists being solid
+### Launch With (v3.0)
 
-### Phase 3: Investigation & History
-8. **Reconcile offline work** -- medium complexity, needs good preview UI
-9. **File history viewer** -- new view, independent work
-10. **External diff tool** -- pairs with file history for revision comparison
+Essential features for daily contributor evaluation.
 
-### Phase 4: Search & Polish
-11. **Search submitted changelists** -- needs caching strategy for description search
-12. **Improved visual design** -- quality pass across all views
+- [x] **Resolve: Conflict detection** - Show "?" badge for files needing resolution after sync/unshelve
+- [x] **Resolve: Launch merge tool** - Run configured external merge tool on conflicted files
+- [x] **Resolve: Accept options** - Accept source/target/merged via context menu or command palette
+- [x] **Depot browser: Tree view** - Navigate depot hierarchy in left pane (alongside workspace tree)
+- [x] **Depot browser: Basic operations** - Sync, checkout, history, diff from depot paths
+- [x] **Workspace switching: Dropdown selector** - List workspaces, switch via header dropdown (non-modal)
+- [x] **Stream switching: Switch command** - Change workspace stream with auto-shelve of default CL
+- [x] **Search: Context menu integration** - Right-click search results for operations (diff, history, checkout)
+- [x] **Auto-refresh: Configurable polling** - Setting for refresh interval (default 5 min); poll workspace state
+- [x] **Auto-refresh: Manual refresh** - Refresh button (bug fix from v3.0 list)
+- [x] **External editor setting** - Configure editor launch command
 
-**Ordering rationale:**
-- Connection settings first: dependency for all server features
-- Multiple changelists before shelve: shelve operates on specific changelists
-- Keyboard shortcuts early: low cost, high value, accelerates developer testing
-- Search last: description search requires client-side indexing, no server support
-- Visual design last: polish pass after all functional surfaces exist
+### Add After Validation (v3.x)
 
----
+Features to add once core workflows validated by contributors.
+
+- [ ] **Resolve: Batch resolve** - Resolve multiple files with same strategy (accept source all, accept target all)
+- [ ] **Resolve: Conflict preview** - Show conflict hunks inline before launching merge tool
+- [ ] **Depot browser: Bookmarks** - Save common depot paths for quick navigation (P4V has this)
+- [ ] **Depot browser: Folder diff** - Diff two depot folders or depot folder vs workspace folder
+- [ ] **Stream switching: Sync size preview** - Show file count and MB to sync before confirming switch
+- [ ] **Stream switching: Auto-shelve numbered CLs** - Extend auto-shelve to numbered CLs, not just default
+- [ ] **Search: Unified omnisearch** - Single search box for files, CLs, users, depot paths
+- [ ] **Auto-refresh: Smart polling** - Pause when window inactive; resume when focused
+- [ ] **Auto-refresh: Lock detection** - Show blue badges for files locked by other users
+
+### Future Consideration (v4+)
+
+Features to defer until product-market fit established and contributor feedback analyzed.
+
+- [ ] **Stream list view** - Show all streams in dropdown with parent/child relationships
+- [ ] **Workspace spec viewer** - Read-only view of workspace view mappings and settings
+- [ ] **Depot browser: Advanced diff** - Diff any two depot revisions (not just adjacent)
+- [ ] **Multi-file history** - Show combined history for multiple selected files
+- [ ] **Auto-refresh indicator** - "Updated 2s ago" timestamp in UI
+- [ ] **Keyboard-first depot navigation** - Full keyboard shortcuts for depot operations
+
+## Feature Prioritization Matrix
+
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| Resolve: Conflict detection | HIGH | LOW | P1 |
+| Resolve: Launch merge tool | HIGH | MEDIUM | P1 |
+| Resolve: Accept options | HIGH | LOW | P1 |
+| Depot browser: Tree view | HIGH | MEDIUM | P1 |
+| Depot browser: Basic operations | HIGH | LOW | P1 |
+| Workspace switching: Dropdown | HIGH | MEDIUM | P1 |
+| Stream switching: Switch command | HIGH | MEDIUM | P1 |
+| Search: Context menu integration | MEDIUM | MEDIUM | P1 |
+| Auto-refresh: Configurable polling | MEDIUM | MEDIUM | P1 |
+| Auto-refresh: Manual refresh | MEDIUM | LOW | P1 |
+| External editor setting | LOW | LOW | P1 |
+| Resolve: Batch resolve | MEDIUM | MEDIUM | P2 |
+| Depot browser: Bookmarks | MEDIUM | LOW | P2 |
+| Stream switching: Sync preview | MEDIUM | MEDIUM | P2 |
+| Search: Unified omnisearch | MEDIUM | MEDIUM | P2 |
+| Auto-refresh: Smart polling | LOW | LOW | P2 |
+| Stream list view | LOW | LOW | P3 |
+| Workspace spec viewer | LOW | MEDIUM | P3 |
+| Keyboard-first depot navigation | MEDIUM | LOW | P3 |
+
+**Priority key:**
+- P1: Must have for v3.0 launch (daily driver readiness)
+- P2: Should have post-v3.0 (contributor feedback-driven)
+- P3: Nice to have in future (v4+ consideration)
+
+## Competitor Feature Analysis: P4V vs P4Now
+
+| Feature | P4V | P4Now Approach |
+|---------|-----|----------------|
+| **Resolve workflow** | Modal "Resolve" dialog blocking other work; step-through wizard | Non-blocking resolve state in main file list; resolve files independently; no wizard |
+| **Depot browser** | Full depot tree in left pane; slow with large depots; context menu operations | Lazy-loaded tree; virtualization; same operations; keyboard-first |
+| **Workspace switching** | Edit Current Workspace dialog (modal); shows all workspaces via separate search | Header dropdown (non-modal); filter-as-you-type; instant switch |
+| **Stream switching** | Right-click stream → Work in this Stream; auto-shelve default CL only (2019.1+) | Dropdown or command palette; auto-shelve all CLs; preview sync size |
+| **Search** | Separate Find File, Find Changelist, Go To Spec dialogs; results read-only | Unified search with context menu for operations; actionable results |
+| **Auto-refresh** | "Check server every n minutes" setting; silent updates; no pause on inactive | Configurable interval; smart pause when inactive; visual indicator |
+| **File status badges** | Red badges (you), blue badges (others); tooltip for details; multiple badges possible | Same color system; extend with resolve state ("?"); consistent with P4V |
+| **External tool integration** | P4MERGE env var; Preferences → Diff → Applications; complex setup | Settings UI for diff/merge/editor paths; simple configuration |
+| **Performance** | Slow with large depots; high memory; occasional crashes | Rust backend; virtualized trees; async operations; responsive |
+| **UI paradigm** | Modal dialogs; blocking workflows; cluttered interface; many windows | Non-blocking; single window; command palette; keyboard shortcuts |
 
 ## Sources
 
-- [P4V Shelve Files (2025.4)](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/files.shelve.html)
-- [P4VS Unshelve Files (2025.1)](https://help.perforce.com/helix-core/integrations-plugins/p4vs/current/Content/P4VS/managing.shelving.unshelving.html)
-- [p4 shelve CLI reference (2025.2)](https://help.perforce.com/helix-core/server-apps/cmdref/current/Content/CmdRef/p4_shelve.html)
-- [p4 reconcile CLI reference](https://help.perforce.com/helix-core/server-apps/cmdref/current/Content/CmdRef/p4_reconcile.html)
-- [P4V File History](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/files.history.html)
-- [P4V Keyboard Shortcuts](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/using.access-keys.html)
-- [P4V Shortcuts Preferences](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/configuring.preferences.shortcuts.html)
-- [P4V Search and Filter](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/using.filters.html)
-- [P4V Stream Graph](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/streams.graph.html)
-- [P4CHARSET reference (2025.2)](https://help.perforce.com/helix-core/server-apps/cmdref/current/Content/CmdRef/P4CHARSET.html)
-- [P4V Diff Preferences](https://www.perforce.com/manuals/p4v/Content/P4V/configuring.preferences.diff.html)
-- [p4 reopen reference](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_reopen.html)
-- [Move files between changelists](https://www.perforce.com/manuals/p4guide/Content/P4Guide/move-files-between-changelists.html)
+**Official Perforce Documentation (HIGH confidence):**
+- [Resolve files - P4V Documentation](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/branches.resolve.html)
+- [Display revision history - P4V](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/files.history.html)
+- [Reconcile offline work - P4V](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/using.offline.html)
+- [Shelve files - P4V Documentation](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/files.shelve.html)
+- [Shelve streams - P4V Documentation](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/streams.shelved.html)
+- [Search and filter - P4V Documentation](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/using.filters.html)
+- [P4V icons - P4V Documentation](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/using.icons.html)
+- [p4 sync - P4 CLI Documentation (2025.2)](https://help.perforce.com/helix-core/server-apps/cmdref/current/Content/CmdRef/p4_sync.html)
+- [p4 reconcile - P4 CLI Documentation](https://help.perforce.com/helix-core/server-apps/cmdref/current/Content/CmdRef/p4_reconcile.html)
+
+**Official Perforce Manuals (HIGH confidence):**
+- [Create and manage workspaces - P4V](https://www.perforce.com/manuals/p4v/Content/P4V/using.workspaces.html)
+- [Switch between streams - DVCS](https://www.perforce.com/manuals/dvcs/Content/DVCS/streams.switch.html)
+- [Behavior preferences - P4V](https://www.perforce.com/manuals/p4v/Content/P4V/configuring.preferences.behavior.html)
+- [Performance preferences - P4V](https://www.perforce.com/manuals/p4v/Content/P4V/configuring.preferences.server.html)
+- [Streams preferences - P4V](https://www.perforce.com/manuals/p4v/Content/P4V/configuring.preferences.streams.html)
+- [The folder diff utility - P4V](https://www.perforce.com/manuals/p4v/Content/P4V/advanced_files.folder_diff.html)
+- [Diff files and folders - P4V Documentation](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/files.diff.html)
+- [Merge files between codelines - P4V](https://www.perforce.com/manuals/p4v/Content/P4V/branches.merging.html)
+
+**Video Tutorials (MEDIUM confidence):**
+- [Resolving Conflicts in P4V - Perforce](https://www.perforce.com/video-tutorials/vcs/resolving-conflicts-p4v)
+- [Switching Streams and Workspaces - Perforce](https://www.perforce.com/video-tutorials/vcs/switching-streams-workspaces)
+
+**Community Sources (LOW-MEDIUM confidence):**
+- [P4V usability issues - GitHub Gist](https://gist.github.com/gorlak/abbf2ed0b60169afd4189744a7d0c38b)
+- [P4V deficiencies compared to P4Win - DevOpsSchool](https://www.devopsschool.com/blog/p4v-deficiencies-compared-to-p4win/)
+
+---
+*Feature research for: P4Now v3.0 - Perforce GUI for daily development workflows*
+*Researched: 2026-01-29*
+*Confidence: HIGH (official documentation verified via WebFetch and WebSearch)*

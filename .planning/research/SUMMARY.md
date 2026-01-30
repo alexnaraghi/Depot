@@ -1,172 +1,214 @@
 # Project Research Summary
 
-**Project:** P4Now v2.0
-**Domain:** Perforce GUI client (Tauri 2.0 + React 19 desktop app)
-**Researched:** 2026-01-28
+**Project:** P4Now v3.0
+**Domain:** Desktop Perforce GUI (Tauri 2.0 + React 19)
+**Researched:** 2026-01-29
 **Confidence:** HIGH
 
 ## Executive Summary
 
-P4Now v2.0 extends a working Tauri/React Perforce GUI from basic sync/submit/revert into a full changelist management tool with shelving, file history, reconcile, search, and keyboard-driven workflows. The existing architecture (Rust CLI wrapper spawning p4.exe, React frontend with TanStack Query + Zustand) is sound and scales to v2.0 without fundamental changes. The stack additions are minimal: dnd-kit for drag-and-drop, tauri-plugin-store for settings persistence, and two shadcn/ui components (context-menu, command palette). No new Rust crates beyond tauri-plugin-store are needed.
+P4Now v3.0 builds on a validated v2.0 foundation (Tauri 2.0, React 19, TanStack Query, react-arborist) to add five critical workflows that daily Perforce users expect: conflict resolution, depot browsing, workspace/stream switching, auto-refresh, and E2E testing. The research shows these features integrate cleanly with existing architecture, require minimal new dependencies (only WebdriverIO for E2E testing), and primarily leverage patterns already proven in v2.0.
 
-The recommended approach is backend-first: add all new Rust commands (13 total) and split the growing p4.rs into domain modules, then build settings/connection infrastructure, then layer UI features on top. Connection settings must come first because every feature depends on a configured P4 connection. Multiple changelists is the highest-impact feature and must precede shelve/unshelve (which operates on specific changelists).
+The recommended approach prioritizes low-risk, high-value features first: auto-refresh (pure query configuration), actionable search (UI-only enhancement), and workspace switching (proven command infrastructure). These validate integration patterns before tackling complex features like resolve workflow (multi-step state machine with external tool integration) and depot browser (lazy-loading tree with performance constraints). E2E testing infrastructure runs in parallel since it's isolated from feature development.
 
-The top risks are: (1) unshelve silently overwriting local changes -- requires pre-unshelve conflict detection from day one; (2) reconcile freezing the app on large workspaces -- must use streaming with cancel support; (3) non-atomic file moves between changelists causing UI/server state divergence -- requires partial-failure handling and server re-fetch. All three are solvable with patterns already established in v1.0 (streaming via Channel, process cancellation via ProcessManager).
+Key risks center on state management complexity: resolve state synchronization after external merge tools complete, query invalidation race conditions during auto-refresh polling, numbered changelist conflicts during stream switching, and memory exhaustion from eager depot tree loading. All risks have documented mitigation patterns from official Perforce/Tauri sources. The architecture's existing ProcessManager, TanStack Query invalidation, and react-arborist virtualization provide the foundation needed to avoid these pitfalls.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The existing stack (Tauri 2, React 19, TanStack Query, Zustand, shadcn/ui, react-arborist) is retained unchanged. New additions are intentionally minimal.
+The v3.0 stack leverages v2.0's validated foundation with only one new dependency category: WebdriverIO for E2E testing. All features (resolve, depot browser, workspace switching, auto-refresh) work with existing libraries.
 
-**New dependencies:**
-- **@dnd-kit/core + sortable**: Drag files between changelists -- lightweight, accessible, only viable maintained React DnD library
-- **tauri-plugin-store**: Persistent settings as JSON -- official Tauri plugin, replaces need for SQLite or localStorage
-- **shadcn/ui context-menu (Radix)**: Right-click menus -- already in the Radix ecosystem, zero styling conflicts
-- **shadcn/ui command (cmdk)**: Command palette and search UI -- powers Linear/Raycast-style fuzzy search
-- **Custom useHotkey hook**: 15-line hook, no library needed for in-app keyboard shortcuts
+**Core technologies:**
+- **WebdriverIO 9.23.0**: E2E testing orchestration — Official Tauri-recommended solution using W3C WebDriver standard
+- **tauri-driver (latest)**: WebDriver-Tauri bridge — Enables WebDriver protocol to control Tauri app on Windows/Linux
+- **TanStack Query 5.90.20**: Auto-refresh polling — Built-in `refetchInterval` option eliminates need for custom polling library
+- **react-arborist 3.4.3**: Depot tree virtualization — Already used for changelist trees; handles 10,000+ nodes efficiently
+- **tauri-plugin-opener 2**: External tool launching — Already used for diff tool; works for merge tools and editors
 
-**Explicitly rejected:** react-beautiful-dnd (deprecated), react-hotkeys-hook (unnecessary), any Rust P4 client crate (CLI spawning proven in v1), SQLite (overkill for settings).
+**What NOT to add:**
+- Playwright (Tauri APIs don't work in Playwright browser mode; requires CDP workarounds)
+- Custom polling library (TanStack Query `refetchInterval` covers all auto-refresh needs)
+- New tree library (react-arborist already handles large virtualized trees)
+
+**Critical version note:** macOS does NOT support E2E testing (no WKWebView driver available). E2E tests run on Windows/Linux only.
 
 ### Expected Features
 
-**Must have (table stakes) -- 12 features:**
-- Connection settings UI with validation and workspace selection
-- Connection status indicator (green/red dot, stream/repo display)
-- Multiple changelists (create, delete, edit description, move files)
-- Right-click context menus on files and changelists
-- Keyboard shortcuts for all common operations
-- Reconcile offline work with preview
-- File history viewer
-- Shelve/unshelve
-- Search submitted changelists
-- External diff tool integration
-- Display current stream/repository
-- Visual design polish
+Research identified 11 P1 features for v3.0 launch (daily driver readiness) and 9 P2/P3 features for post-launch based on contributor feedback.
 
-**Should have (differentiators over P4V):**
-- Command palette (Ctrl+K) -- P4V has nothing like it
-- Client-side description search -- P4V cannot search CL descriptions
-- Non-blocking shelve/unshelve with progress/cancel -- P4V blocks
-- Inline changelist editing without modal dialogs
-- Connection profiles with quick-switch dropdown
-- Quick changelist move via inline dropdown (no dialog)
+**Must have (table stakes):**
+- Resolve workflow: Conflict detection after sync, launch external merge tool, accept source/target/merged options
+- Depot browser: Full hierarchy tree, sync files/folders, checkout, view history, diff operations
+- Workspace switching: Select different workspace, show available workspaces
+- Stream switching: Change current stream, auto-shelve default CL files
+- Auto-refresh: Periodic workspace polling, file status updates, manual refresh action
+- Search: Interact with file results (diff, history, checkout), jump to changelist/author
 
-**Defer to v3+:**
-- Stream graph visualization, time-lapse view, built-in merge UI, branch/integrate operations, job tracking, auto-background refresh, full workspace/stream switching
+**Should have (competitive advantage):**
+- Non-blocking resolve workflow (vs P4V's modal dialogs)
+- Fast depot tree lazy loading (vs P4V's slow upfront load)
+- Workspace switch without modal dialog (header dropdown vs P4V's dialog)
+- Smart auto-refresh polling (pause when window inactive vs P4V's constant polling)
+- Unified omnisearch (single search box vs P4V's separate dialogs)
+
+**Defer (v2+):**
+- Batch resolve operations
+- Depot folder diff
+- Stream sync size preview before switching
+- Multi-file history view
+- Keyboard-first depot navigation
 
 ### Architecture Approach
 
-The architecture extends naturally: 13 new Rust commands following the existing p4.exe-spawn-and-parse pattern, a tabbed right panel replacing the single changelist sidebar, two new Zustand stores (settings, UI state), and new TanStack Query keys for history/search/connection. The critical refactor is splitting p4.rs (~710 lines growing to ~1500+) into domain modules (info, files, changelists, shelve, history, submit, parser).
+v3.0 integrates seamlessly with v2.0's proven architecture: Rust backend spawning p4.exe processes via ProcessManager, TanStack Query for data fetching, Zustand for state, shadcn/ui for components. No architectural changes needed.
 
 **Major components:**
-1. **Rust command modules** (p4/*.rs) -- all P4 CLI interactions, split by domain
-2. **Settings infrastructure** (tauri-plugin-store + settingsStore) -- connection config, diff tool, UI prefs
-3. **Tabbed right panel** -- changelists (existing), file history (new), search (new)
-4. **DnD layer** (dnd-kit DndContext) -- wraps changelist panel for file moves
-5. **Context menu system** (Radix context-menu) -- shared primitive for file and changelist menus
-6. **Keyboard shortcut system** (custom hook) -- registered in App.tsx, scoped by UI state
+
+1. **Resolve Module** (`src-tauri/src/commands/resolve.rs`) — Runs `p4 resolve -n` for preview, `p4 resolve -am/-at/-ay` for acceptance, launches merge tool with `.wait()` to block until completion, then marks resolved server-side
+
+2. **Depot Browser** (`src/components/DepotBrowser/`) — Clones FileTree pattern with react-arborist, lazy-loads directories on expand via `p4 dirs <path>/*` (single level only), uses existing file operations (sync, checkout, history)
+
+3. **Workspace/Stream Switcher** (`src/hooks/useWorkspaceSwitcher.ts`) — Updates connectionStore, clears P4CLIENT env var explicitly in Rust, invalidates ALL queries via `queryClient.clear()`, verifies success with `p4 info`
+
+4. **Auto-Refresh** (query configuration) — Adds `refetchInterval` to existing TanStack Query hooks, gates polling with `enabled: !isOperationActive` flag from operationStore, uses `refetchIntervalInBackground: false` to pause when minimized
+
+5. **E2E Testing** (`e2e-tests/`) — WebdriverIO with tauri-driver, mocks Tauri dialog APIs for testability, uses `browser.execute()` workaround for `.click()` bugs, runs on Windows/Linux CI runners only
+
+**Integration patterns:**
+- Query invalidation cascade: Workspace/stream switch → `queryClient.clear()` → refetch all data
+- Lazy loading with enabled flag: Depot tree → `enabled: isExpanded` → fetch only when user expands node
+- Conditional auto-refresh: `refetchInterval: autoRefresh && !isOperationActive ? 30000 : false`
+- State-based navigation: Search result click → `changelistStore.setExpandedChangelist(id)` → scroll into view
 
 ### Critical Pitfalls
 
-1. **Unshelve overwrites local changes silently** -- always run `p4 diff` before unshelve to detect conflicts; never pass `-f` without confirmation
-2. **Reconcile freezes on large workspaces** -- must use streaming spawn with cancel; scope to subdirectories; batch UI updates
-3. **Non-atomic file moves between changelists** -- handle partial failures explicitly; re-fetch server state after reopen; implement undo
-4. **Default changelist (id=0) special cases** -- abstract CL id translation ("default" string vs 0); confirm before submitting default CL
-5. **WebView captures keyboard shortcuts** -- F5 reloads app, Ctrl+R refreshes, Ctrl+P prints; must intercept at document level with preventDefault
+Research identified 7 critical pitfalls, all with documented prevention strategies:
+
+1. **Resolve state inconsistency after external merge tool** — External merge tool closes but file remains "needs resolve" in UI. Prevention: Use `child.wait()` to block until tool closes, capture exit code, run `p4 resolve -am` only on success, invalidate file queries immediately.
+
+2. **Query invalidation race conditions during auto-refresh** — Auto-refresh polls every 30s, user starts sync, both spawn p4.exe processes that race to update cache, causing stale data overwrites and process leaks. Prevention: Disable auto-refresh during active operations via `enabled: !isOperationActive` flag, use `staleTime: 30000` to prevent thrashing.
+
+3. **Numbered changelist files block stream switching** — User has files in numbered CL #1234, stream switch fails with "Cannot switch streams. Files opened in numbered changelist." Prevention: Pre-flight validation checks for numbered CLs, shows shelve-and-switch dialog, implements atomic shelve-then-switch workflow.
+
+4. **Depot tree browser loads entire depot into memory** — App runs `p4 dirs //...` to fetch 50,000+ files, UI freezes 30s, memory spikes 800MB, may crash with OOM. Prevention: Lazy load on folder expand (one level at a time), use `p4 dirs <path>/*` not `//...`, virtualize with react-arborist, cache with long staleTime.
+
+5. **Workspace switching doesn't clear P4 environment inheritance** — Settings update but p4.exe inherits P4CLIENT from system env, queries return files from old workspace. Prevention: Always clear `P4CLIENT` env var in Rust before setting new value, verify with `p4 info`, clear ALL query cache after switch.
+
+6. **E2E tests can't interact with native system dialogs** — Test clicks button that opens native file picker, WebDriver can't interact with OS-level dialog, test hangs and times out. Prevention: Define E2E scope (UI only), mock Tauri dialog APIs in test mode, use `browser.execute()` workaround for click bugs, test backend separately with Rust unit tests.
+
+7. **Unshelve to same CL conflicts with stream-switch auto-shelve** — User shelves numbered CL #1234 on Stream A, switches to Stream B, unshelves CL #1234 but it doesn't exist on Stream B, files go to default CL unexpectedly. Prevention: Check if target CL exists before unshelving, show dialog offering to create matching CL or unshelve to default, detect conflicts and trigger resolve workflow.
 
 ## Implications for Roadmap
 
-### Phase 1: Backend Infrastructure + Settings
-**Rationale:** Every frontend feature needs Rust commands. Settings/connection is the dependency root for all server operations.
-**Delivers:** All 13 new Rust commands, p4.rs module split, tauri-plugin-store integration, settings dialog, connection monitoring, enhanced status bar.
-**Addresses:** Connection settings UI, connection status indicator, stream/repo display.
-**Avoids:** Pitfall 9 (settings corruption -- establish proper persistence early), Pitfall 8 (connection polling -- use exponential backoff from start).
+Based on research, suggested 6-phase structure that progresses from low-risk query configuration to complex multi-step workflows:
 
-### Phase 2: Changelist Management
-**Rationale:** Highest-impact UX gap in v1.0. Required before shelve (which targets specific CLs) and drag-drop.
-**Delivers:** Multiple changelist CRUD, drag-and-drop file moves, multi-select support.
-**Uses:** dnd-kit, p4_reopen/p4_change_new/p4_change_delete commands.
-**Avoids:** Pitfall 3 (non-atomic moves -- handle partial failure), Pitfall 4 (default CL edge cases), Pitfall 10 (accidental DnD -- confirmation + undo).
+### Phase 1: Foundation (Auto-Refresh)
+**Rationale:** Lowest risk, validates query patterns, no new components, pure configuration of existing TanStack Query hooks
+**Delivers:** Configurable auto-refresh with user toggle, smart polling that pauses during operations and when window inactive
+**Addresses:** Auto-refresh features from FEATURES.md (periodic polling, file status updates, manual refresh)
+**Avoids:** Pitfall #2 (query invalidation races) by implementing operation gating from day 1
 
-### Phase 3: Context Menus + Keyboard Shortcuts
-**Rationale:** These are interaction layers that span all features. Best added once the core features exist to bind to.
-**Delivers:** Right-click menus on files and changelists, keyboard shortcut system, command palette, shortcut help dialog.
-**Uses:** shadcn/ui context-menu, shadcn/ui command (cmdk), custom useHotkey hook.
-**Avoids:** Pitfall 7 (WebView shortcut conflicts -- intercept at document level, avoid F5/Ctrl+R).
+### Phase 2: Navigation (Actionable Search)
+**Rationale:** Pure frontend enhancement, builds on existing search, validates state-based navigation pattern
+**Delivers:** Clickable search results that expand changelist and scroll into view, context menu for operations
+**Addresses:** Search interactivity features from FEATURES.md (interact with results, jump to changelist/author)
+**Uses:** Existing changelistStore extended with `setExpandedChangelist` method
 
-### Phase 4: History, Search, and Diff
-**Rationale:** Independent panels that add investigation capabilities. Naturally group as the tabbed right panel.
-**Delivers:** File history viewer, submitted changelist search with description filtering, external diff tool launch.
-**Uses:** p4_filelog, p4_changes_search, p4_diff_external commands; tabbed panel layout.
-**Avoids:** Pitfall 5 (history perf cliff -- paginate with `-m 50`), Pitfall 6 (diff tool blocks event loop -- use spawn, not output), Pitfall 11 (search hammers server -- limit + date range + debounce).
+### Phase 3: Workspace Management (Switching)
+**Rationale:** Tests architecture's flexibility for global state changes, establishes env var clearing pattern, enables stream switching
+**Delivers:** Workspace dropdown selector, stream switcher with auto-shelve, query invalidation cascade
+**Addresses:** Workspace/stream switching features from FEATURES.md
+**Avoids:** Pitfall #5 (env inheritance) and #3 (numbered CL blocks) with pre-flight checks and explicit env clearing
+**Implements:** Query invalidation cascade pattern from ARCHITECTURE.md
 
-### Phase 5: Shelve/Unshelve + Reconcile
-**Rationale:** Less frequent workflows that depend on solid changelist management. Shelve has the most dangerous pitfall (data loss).
-**Delivers:** Shelve/unshelve with conflict detection, reconcile with streaming preview and cancel.
-**Avoids:** Pitfall 1 (unshelve overwrites -- pre-check with p4 diff), Pitfall 2 (reconcile freezes -- streaming + scoped paths + cancel).
+### Phase 4: Depot Browser
+**Rationale:** Larger feature but self-contained, reuses FileTree pattern, validates lazy loading architecture
+**Delivers:** Lazy-loaded depot hierarchy tree, basic operations (sync, checkout, history, diff)
+**Addresses:** Depot browser features from FEATURES.md (tree view, operations)
+**Avoids:** Pitfall #4 (memory exhaustion) with lazy loading on folder expand, never querying `//...`
+**Uses:** Existing react-arborist with `enabled: isExpanded` pattern from ARCHITECTURE.md
 
-### Phase 6: Visual Polish
-**Rationale:** Quality pass after all functional surfaces exist. Cannot polish what is not built yet.
-**Delivers:** Consistent spacing/typography, dark mode, loading skeletons, professional appearance.
+### Phase 5: Resolve Workflow
+**Rationale:** Complex multi-step state machine, touches multiple areas, requires careful external tool integration
+**Delivers:** Conflict detection after sync/unshelve, external merge tool launching with proper wait/verify, accept source/target/merged
+**Addresses:** Resolve workflow features from FEATURES.md
+**Avoids:** Pitfall #1 (resolve state inconsistency) with `child.wait()`, exit code validation, server-side marking, query invalidation
+**Implements:** Similar pattern to existing ReconcilePreviewDialog, reuses tauri-plugin-opener
+
+### Phase 6: E2E Testing (Parallel Track)
+**Rationale:** Independent of feature development, can start anytime, validates completed features incrementally
+**Delivers:** WebdriverIO infrastructure, initial test specs for connection/changelist/file operations, CI integration
+**Addresses:** E2E testing requirement from STACK.md
+**Avoids:** Pitfall #6 (dialog interaction) by defining clear scope (UI only), mocking Tauri APIs in test mode
+**Uses:** WebdriverIO 9.23.0 + tauri-driver from STACK.md, Windows/Linux CI runners only
 
 ### Phase Ordering Rationale
 
-- Backend before frontend: all UI features need commands to exist first
-- Settings before everything: connection config is the dependency root
-- Changelists before shelve: shelve operates on specific changelists
-- Context menus after core features: menus bind to existing actions
-- Search and history are independent of changelist work -- could parallelize with Phase 2
-- Polish last: apply once all surfaces exist
+- **Phases 1-2 validate patterns:** Auto-refresh tests query coordination, search tests state-based navigation. Both low-risk, build confidence.
+- **Phase 3 establishes global state management:** Workspace switching requires invalidating everything, clearing env vars, verifying success. Must work before stream switching depends on it.
+- **Phase 4 tests lazy loading architecture:** Depot browser is largest feature but self-contained. Success proves lazy loading pattern for future features.
+- **Phase 5 deferred to end:** Resolve workflow most complex (external tool + state machine + server-side marking). Build expertise with simpler features first.
+- **Phase 6 runs parallel:** E2E testing infrastructure independent of features. Can start during Phase 1 and incrementally add tests as features complete.
 
 ### Research Flags
 
 Phases likely needing deeper research during planning:
-- **Phase 1 (Settings):** Research Tauri 2.0 WebView key interception API for disabling default shortcuts. Research `p4 set` behavior across Windows environments.
-- **Phase 2 (Changelists):** Research dnd-kit multi-drag patterns. Research p4 reopen behavior with locked files.
-- **Phase 5 (Shelve/Reconcile):** Research p4 unshelve conflict resolution flow. Research reconcile streaming output format for progress parsing.
+- **Phase 5 (Resolve):** External merge tool integration has edge cases (exit codes, timeout handling, P4MERGE vs other tools). May need `/gsd:research-phase` for tool-specific patterns.
+- **Phase 3 (Stream Switching):** Auto-shelve workflow interaction with numbered CLs has subtleties. May need validation with real Perforce server testing.
 
-Phases with standard patterns (skip deep research):
-- **Phase 3 (Context Menus + Shortcuts):** Well-documented Radix/shadcn patterns. Custom hook is trivial.
-- **Phase 4 (History/Search/Diff):** Standard CRUD views with TanStack Query. Diff launch is fire-and-forget spawn.
-- **Phase 6 (Polish):** CSS/design work, no technical research needed.
+Phases with standard patterns (skip research-phase):
+- **Phase 1 (Auto-Refresh):** TanStack Query `refetchInterval` is well-documented, official examples exist
+- **Phase 2 (Actionable Search):** Standard React state management and DOM scrolling, no unknowns
+- **Phase 4 (Depot Browser):** react-arborist lazy loading is established pattern from v2.0 changelist trees
+- **Phase 6 (E2E Testing):** Official Tauri WebdriverIO guide provides complete setup
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | All additions are official plugins or established libraries; clear rationale for each; explicit rejection list |
-| Features | HIGH | Based on official Perforce 2025.x documentation and P4V behavior analysis |
-| Architecture | HIGH | Based on direct codebase analysis of existing v1.0 implementation |
-| Pitfalls | HIGH | Based on P4 CLI behavior, Tauri/WebView constraints, and known library limitations |
+| Stack | HIGH | Official Tauri/TanStack docs, verified npm versions, existing v2.0 patterns |
+| Features | HIGH | Official P4V documentation, Perforce command reference, verified workflows |
+| Architecture | HIGH | Extends proven v2.0 architecture, no breaking changes, integration points clear |
+| Pitfalls | HIGH | Official Perforce resolve docs, Tauri WebDriver docs, TanStack Query issues/discussions |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **Tauri WebView2 key interception:** Exact API for disabling default shortcuts (F5 reload, Ctrl+P print) needs validation during Phase 3 implementation
-- **p4 reconcile streaming output format:** Need to verify parseable progress indicators exist in reconcile stdout for progress bar
-- **dnd-kit + react-arborist interop:** Both libraries handle drag events; potential conflict if file tree nodes are also drag sources
-- **Command concurrency limits:** With 13+ commands, concurrent p4.exe spawns could spike on Windows (~10ms per spawn). May need a command queue limiting concurrency to 3-4 processes. Evaluate during Phase 1.
+Research was comprehensive, but some areas need validation during implementation:
+
+- **P4MERGE vs other merge tools:** Research focused on P4MERGE (Perforce official tool). Supporting other tools (Beyond Compare, KDiff3, VS Code) may require tool-specific exit code mapping. Handle during Phase 5 with extensible tool configuration.
+
+- **Large depot performance:** Lazy loading pattern is sound, but actual performance with 100k+ file depots needs validation. May need additional optimizations (search-to-jump, bookmarks) in v3.x based on user feedback.
+
+- **WebdriverIO version compatibility:** tauri-driver may require downgrading to WebdriverIO v7 (docs show v9, but community reports compatibility issues). Verify during Phase 6 setup; prepared to adjust versions.
+
+- **Stream auto-shelve edge cases:** P4V auto-shelves default CL only; research suggests extending to numbered CLs is valuable but needs testing. Validate during Phase 3 with real multi-stream workflows.
+
+- **Auto-refresh optimal intervals:** Research suggests 30s for changelists, 60s for files, but optimal values depend on server performance and network latency. Make configurable in settings, let users tune.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- Direct codebase analysis of `src-tauri/src/` and `src/` directories
-- [Perforce 2025.x CLI reference](https://help.perforce.com/helix-core/server-apps/cmdref/current/) -- shelve, reconcile, filelog, reopen, changes
-- [Tauri 2.0 Store Plugin](https://v2.tauri.app/plugin/store/) -- official docs
-- [Tauri 2.0 Global Shortcut Plugin](https://v2.tauri.app/plugin/global-shortcut/) -- official docs
-- [shadcn/ui components](https://ui.shadcn.com/docs/) -- context-menu, command
-- [Radix UI primitives](https://www.radix-ui.com/primitives/docs/) -- context menu
+- [Tauri v2 WebDriver Testing](https://v2.tauri.app/develop/tests/webdriver/) — E2E testing approach
+- [TanStack Query Auto Refetching](https://tanstack.com/query/v4/docs/framework/react/examples/auto-refetching) — Polling patterns
+- [p4 resolve Command Reference](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_resolve.html) — Resolve workflow
+- [p4 dirs Command Reference](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_dirs.html) — Depot directory queries
+- [p4 switch Command Reference](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_switch.html) — Stream switching
+- [Resolve files | P4V Documentation](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/branches.resolve.html) — UI workflow
+- [Shelve streams | P4V Documentation](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/streams.shelved.html) — Auto-shelve behavior
 
 ### Secondary (MEDIUM confidence)
-- [dnd-kit documentation](https://docs.dndkit.com) -- stable but last release ~1yr ago
-- [Radix context menu position issue #2611](https://github.com/radix-ui/primitives/issues/2611) -- known minor issue
-- [Aptabase: Persistent state in Tauri apps](https://aptabase.com/blog/persistent-state-tauri-apps) -- Store vs SQL vs localStorage guidance
+- [react-arborist performance discussion](https://blog.openreplay.com/interactive-tree-components-with-react-arborist/) — Virtualization for 10,000+ nodes
+- [WebDriver Tauri GitHub Issue #10670](https://github.com/tauri-apps/tauri/issues/10670) — Setup issues and workarounds
+- [TanStack Query invalidation race Discussion #6953](https://github.com/TanStack/query/discussions/6953) — Stale UI during races
+- [P4V usability issues - GitHub Gist](https://gist.github.com/gorlak/abbf2ed0b60169afd4189744a7d0c38b) — Competitive analysis
 
 ### Tertiary (LOW confidence)
-- Tauri WebView2 keyboard interception behavior -- needs runtime validation on Windows
+- [Playwright CDP with Tauri](https://github.com/Haprog/playwright-cdp) — Why NOT to use Playwright (requires workarounds)
+- [Custom Merge Tool Bug #2529](https://github.com/fork-dev/TrackerWin/issues/2529) — Exit code handling issues
 
 ---
-*Research completed: 2026-01-28*
+*Research completed: 2026-01-29*
 *Ready for roadmap: yes*

@@ -1,555 +1,629 @@
-# Architecture: v2.0 Feature Integration
+# Architecture Research: v3.0 Feature Integration
 
-**Project:** P4Now
-**Researched:** 2026-01-28
-**Overall confidence:** HIGH (based on direct codebase analysis of existing implementation)
+**Domain:** Tauri 2.0 + React 19 Desktop GUI for Perforce (P4Now v3.0)
+**Researched:** 2026-01-29
+**Confidence:** HIGH
 
-## Current Architecture Snapshot
+## Integration with Existing Architecture
+
+### Current System Overview
 
 ```
-React 19 Frontend (src/)              Rust Backend (src-tauri/src/)
-==============================        ==============================
-App.tsx                               lib.rs
-  QueryClientProvider                   plugins: opener, shell
-    AppContent                          managed state: ProcessManager
-      useP4Events()                     invoke_handler: 12 commands
-      MainLayout
-        SyncToolbar                   commands/
-        FileTree (react-arborist)       p4.rs (~710 lines, 8 commands)
-        ChangelistPanel                 process.rs (spawn, kill)
-      OutputPanel                       mod.rs (re-exports)
-      StatusBar
-      Toaster                         state/
-                                        process_manager.rs
-Stores (Zustand):
-  changelistStore (Map<id, CL>)
-  fileTreeStore (Map<depotPath, File>)
-  operationStore
+┌─────────────────────────────────────────────────────────────┐
+│                    React Frontend (src/)                     │
+├─────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │   FileTree   │  │  Changelist  │  │    Search    │      │
+│  │  Component   │  │    Panel     │  │    Panel     │      │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘      │
+│         │                 │                 │              │
+│  ┌──────┴─────────────────┴─────────────────┴───────┐      │
+│  │          TanStack Query Layer                     │      │
+│  │  (useFileTree, useChangelists, useSearch)         │      │
+│  └────────────────────┬──────────────────────────────┘      │
+│                       │                                      │
+├───────────────────────┼──────────────────────────────────────┤
+│                    Tauri IPC                                 │
+├───────────────────────┼──────────────────────────────────────┤
+│                  Rust Backend (src-tauri/src/)               │
+├─────────────────────────────────────────────────────────────┤
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              P4 Commands Module                      │    │
+│  │  (p4_fstat, p4_opened, p4_sync, p4_edit, etc.)      │    │
+│  └────────────────────┬────────────────────────────────┘    │
+│                       │                                      │
+│  ┌────────────────────┴────────────────────────────────┐    │
+│  │          ProcessManager (tokio::sync::Mutex)         │    │
+│  │  - Process tracking with UUIDs                       │    │
+│  │  - Cancellation support (taskkill on Windows)        │    │
+│  │  - Channel for streaming output                      │    │
+│  └─────────────────────────────────────────────────────┘    │
+├─────────────────────────────────────────────────────────────┤
+│                        P4 CLI Layer                          │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐                   │
+│  │ p4.exe   │  │ p4.exe   │  │ p4.exe   │                   │
+│  │ (spawn)  │  │ (spawn)  │  │ (spawn)  │                   │
+│  └──────────┘  └──────────┘  └──────────┘                   │
+└─────────────────────────────────────────────────────────────┘
 
-Queries (TanStack):
-  ['p4','changes','pending']
-  ['p4','opened']
-
-IPC: Tauri invoke() + Channel (streaming) + Emitter (push events)
+Settings: tauri-plugin-store (settings.json)
+State: Zustand stores (connectionStore, fileTreeStore, operationStore)
+UI: shadcn/ui components, react-arborist for trees
+Events: Custom Tauri event system for file-status-changed
 ```
 
-**Existing Rust commands:** `p4_info`, `p4_fstat`, `p4_opened`, `p4_changes`, `p4_edit`, `p4_revert`, `p4_submit`, `p4_sync`, `spawn_p4_command`, `p4_command`, `kill_process`, `kill_all_processes`
+## v3.0 Feature Integration Points
 
-**Existing events emitted from Rust:** `file-status-changed`, `changelist-submitted`
+### Feature 1: Resolve Workflow
+
+**What:** Detect merge conflicts, launch external merge tool, apply resolutions
+
+**Integration Points:**
+- **Backend (Rust):** New commands in `src-tauri/src/commands/p4.rs`
+  - `p4_resolve_preview()` - Runs `p4 resolve -n` to detect conflicts (similar to `p4_reconcile_preview`)
+  - `p4_resolve_accept()` - Runs `p4 resolve -am/-at/-ay` to accept resolutions
+  - `launch_merge_tool()` - Launches P4MERGE tool (similar to existing `launch_diff_tool`)
+  - Reuses existing `-ztag` parsing patterns from `parse_ztag_fstat`
+
+- **Frontend (React):** New components in `src/components/dialogs/`
+  - `ResolvePreviewDialog.tsx` - Similar to existing `ReconcilePreviewDialog.tsx`
+  - Shows conflict list with depot paths and conflict types
+  - Buttons: "Accept Yours", "Accept Theirs", "Merge", "Skip"
+  - Reuses existing dialog patterns from `FileHistoryDialog.tsx`
+
+- **Data Flow:**
+  1. User triggers sync or submit → Backend returns conflict error
+  2. Frontend detects error, calls `p4_resolve_preview` → Gets conflict list
+  3. User selects files, clicks "Merge" → `launch_merge_tool` spawns P4MERGE
+  4. User completes merge → Clicks "Accept Merge" → `p4_resolve_accept -am`
+  5. Invalidate changelist queries → UI updates
+
+**New Components:**
+- `src-tauri/src/commands/resolve.rs` (or extend `p4.rs`)
+- `src/hooks/useResolve.ts` (TanStack Query hook)
+- `src/components/dialogs/ResolveDialog.tsx`
+
+**Modified Components:**
+- `src/hooks/useSync.ts` - Add conflict detection after sync
+- `src/components/ChangelistPanel/SubmitDialog.tsx` - Detect pre-submit conflicts
 
 ---
 
-## 1. New Rust Backend Commands
+### Feature 2: Depot Tree Browser
 
-### Commands to add
+**What:** Browse depot hierarchy with lazy-loading directories
 
-| Command | P4 CLI | Args | Returns | Complexity |
-|---------|--------|------|---------|------------|
-| `p4_reopen` | `p4 reopen -c CL paths...` | paths: Vec<String>, changelist: i32 | Result<Vec<P4FileInfo>> | Low |
-| `p4_change_new` | `p4 change -i` (pipe form with description) | description: String | Result<i32> (new CL id) | Med |
-| `p4_change_delete` | `p4 change -d CL` | changelist: i32 | Result<()> | Low |
-| `p4_filelog` | `p4 -ztag filelog -l path` | depot_path: String, max_revs: Option<i32> | Result<Vec<P4FileRevision>> | Med |
-| `p4_shelve` | `p4 shelve -c CL` | changelist: i32 | Result<String> | Low |
-| `p4_unshelve` | `p4 unshelve -s CL -c target` | source_cl: i32, target_cl: Option<i32> | Result<Vec<P4FileInfo>> | Med |
-| `p4_delete_shelve` | `p4 shelve -d -c CL` | changelist: i32 | Result<()> | Low |
-| `p4_reconcile` | `p4 reconcile paths...` | paths: Vec<String>, on_progress: Channel | Result<String> | Med (streaming) |
-| `p4_diff_external` | spawn diff tool | local_path: String, tool_path: String, tool_args: String | Result<()> | Low (fire-and-forget) |
-| `p4_describe` | `p4 -ztag describe -s CL` | changelist: i32 | Result<P4ChangelistDetail> | Med |
-| `p4_changes_search` | `p4 -ztag changes -s submitted -l -m N` | query: Option<String>, max: Option<i32> | Result<Vec<P4Changelist>> | Low |
-| `p4_set` | `p4 set` | None | Result<HashMap<String,String>> | Low |
-| `p4_set_var` | `p4 set VAR=VAL` | key: String, value: String | Result<()> | Low |
+**Integration Points:**
+- **Backend (Rust):** New commands in `src-tauri/src/commands/p4.rs`
+  - `p4_dirs(path: String)` - Returns immediate subdirectories
+  - Runs `p4 dirs <path>/*` to get directory list
+  - Returns `Vec<String>` of depot paths
+  - Note: `p4 dirs` computes directories, doesn't track them in DB
+  - Does NOT support "..." wildcard, only "*"
+  - Use `-D` flag to include directories with only deleted files
 
-### New Rust structs needed
+- **Frontend (React):** Reuse react-arborist pattern
+  - `src/components/DepotBrowser/DepotTree.tsx` - Clone of `FileTree.tsx`
+  - Lazy load: On node expand → call `p4_dirs` for children
+  - File list: On directory select → call `p4_files <path>/*` for files
+  - Reuse `FileStatusIcon.tsx` for file status display
+  - Double-click file → Show in workspace tree (navigate to local path)
 
-```rust
-#[derive(Debug, Clone, Serialize)]
-pub struct P4FileRevision {
-    pub depot_path: String,
-    pub revision: i32,
-    pub change: i32,
-    pub action: String,
-    pub file_type: String,
-    pub date: String,
-    pub user: String,
-    pub client: String,
-    pub description: String,
-}
+- **Data Flow:**
+  1. Component mounts → Load root directories `p4 dirs //depot/*`
+  2. User expands node → `p4 dirs //depot/subdir/*` → Cache in TanStack Query
+  3. User selects directory → `p4 files //depot/subdir/*` → Show file list
+  4. Click "Sync This" → Call existing `p4_sync` with depot path
 
-#[derive(Debug, Clone, Serialize)]
-pub struct P4ChangelistDetail {
-    pub id: i32,
-    pub description: String,
-    pub user: String,
-    pub client: String,
-    pub status: String,
-    pub date: String,
-    pub files: Vec<P4DescribeFile>,
-}
+**New Components:**
+- `src/components/DepotBrowser/` directory
+  - `DepotTree.tsx` (lazy-loading tree)
+  - `DepotNode.tsx` (tree node renderer)
+  - `DepotContextMenu.tsx` (sync, view history)
+- `src/hooks/useDepotTree.ts` (TanStack Query with lazy loading)
 
-#[derive(Debug, Clone, Serialize)]
-pub struct P4DescribeFile {
-    pub depot_path: String,
-    pub action: String,
-    pub file_type: String,
-    pub revision: i32,
-}
-```
+**Modified Components:**
+- `src/components/MainLayout.tsx` - Add DepotBrowser panel to layout
+- Add panel toggle button to toolbar
 
-### Recommended: Split `p4.rs` into modules
-
-Current `p4.rs` is ~710 lines with 8 commands. Adding 13 more would make it ~1500+ lines. Split into:
-
-```
-src-tauri/src/commands/
-  mod.rs              (re-exports everything)
-  process.rs          (existing: spawn, kill)
-  p4/
-    mod.rs            (re-exports all p4 commands)
-    info.rs           (p4_info, p4_set, p4_set_var)
-    files.rs          (p4_fstat, p4_opened, p4_edit, p4_revert, p4_reconcile)
-    changelists.rs    (p4_changes, p4_change_new, p4_change_delete, p4_describe, p4_changes_search)
-    sync.rs           (p4_sync)
-    shelve.rs         (p4_shelve, p4_unshelve, p4_delete_shelve)
-    history.rs        (p4_filelog, p4_diff_external)
-    submit.rs         (p4_submit + update_changelist_description)
-    parser.rs         (parse_ztag_fstat, parse_ztag_changes, build_file_info, etc.)
-```
-
-Shared parsing logic (the `-ztag` parser) moves to `parser.rs`. Each module imports from it.
-
----
-
-## 2. New React Components and Views
-
-### New components
-
-| Component | Path | Purpose |
-|-----------|------|---------|
-| `SettingsDialog` | `components/dialogs/SettingsDialog.tsx` | P4PORT, P4USER, P4CLIENT, diff tool config |
-| `FileHistoryPanel` | `components/FileHistory/FileHistoryPanel.tsx` | Table of revisions for selected file |
-| `ConnectionIndicator` | `components/ConnectionIndicator.tsx` | Green/red dot in StatusBar |
-| `SearchPanel` | `components/SearchPanel/SearchPanel.tsx` | Search submitted changelists |
-| `SearchResultItem` | `components/SearchPanel/SearchResultItem.tsx` | Single search result row |
-| `KeyboardShortcutHelp` | `components/dialogs/KeyboardShortcutHelp.tsx` | Modal listing all shortcuts |
-| `ContextMenuPrimitive` | `components/ui/context-menu.tsx` | Shared context menu with submenu support |
-
-### Modified existing components
-
-| Component | What changes |
-|-----------|-------------|
-| `StatusBar.tsx` | Add ConnectionIndicator, repo/stream display from p4_info data |
-| `FileContextMenu.tsx` | Refactor to use ContextMenuPrimitive; add History, Diff, Move to CL, Shelve items |
-| `ChangelistPanel.tsx` | Add DnD drop targets, new CL button, shelve/unshelve buttons per CL |
-| `ChangelistNode.tsx` | Add drag source behavior, right-click context menu |
-| `MainLayout.tsx` | Add keyboard shortcut provider, settings button in header, tabbed right panel |
-| `App.tsx` | Add DndContext wrapper, settings initialization |
-| `SyncToolbar.tsx` | Add reconcile button |
-
-### Layout evolution
-
-Current layout is: Header | FileTree (left) | ChangelistPanel (right sidebar) | OutputPanel | StatusBar
-
-Proposed v2.0 layout:
-
-```
-+-------------------------------------------------------------+
-| P4Now  [//stream/main]              [Search] [Settings] [Sync] [Reconcile] |
-+-------------------------------------------------------------+
-|                       |                                      |
-|   File Tree           |  [Changelists] [History] [Search]    |  <- tabs
-|   (existing)          |  +---------------------------------+ |
-|                       |  | Tab content here                | |
-|                       |  | (changelist panel / history /   | |
-|                       |  |  search results)                | |
-|                       |  +---------------------------------+ |
-+-------------------------------------------------------------+
-| [Output Panel - collapsible]                                 |
-+-------------------------------------------------------------+
-| [green dot] Connected | //depot/stream/main | user@server    |
-+-------------------------------------------------------------+
-```
-
-The right sidebar becomes tabbed. History and Search are new tabs alongside the existing Changelists tab. This avoids layout disruption -- same panel area, just tabbed content.
-
----
-
-## 3. State Management Changes
-
-### New TanStack Query keys
-
-| Query Key | Command | Trigger | staleTime |
-|-----------|---------|---------|-----------|
-| `['p4','filelog', depotPath]` | `p4_filelog` | File selected + history tab open | 60s |
-| `['p4','describe', clId]` | `p4_describe` | CL clicked in search results | 60s |
-| `['p4','changes','submitted', {query, max}]` | `p4_changes_search` | Search input debounced | 30s |
-| `['p4','connection']` | `p4_info` | Polling every 30s | 0 (always refetch) |
-| `['p4','set']` | `p4_set` | Settings dialog opened | Infinity (manual) |
-
-### New Zustand stores
-
-**`stores/settingsStore.ts`** -- persisted via tauri-plugin-store
-
+**Key Pattern:**
 ```typescript
-interface SettingsState {
-  p4port: string;
-  p4user: string;
-  p4client: string;
-  diffToolPath: string;
-  diffToolArgs: string;  // e.g. "%1 %2"
-  setConnection: (p4port: string, p4user: string, p4client: string) => void;
-  setDiffTool: (path: string, args: string) => void;
-}
+// Lazy load on expand
+const { data: subdirs } = useQuery({
+  queryKey: ['depotDirs', depotPath],
+  queryFn: () => invokeP4Dirs(depotPath),
+  enabled: isExpanded, // Only fetch when node expanded
+  staleTime: Infinity, // Depot structure rarely changes
+});
 ```
 
-**`stores/uiStore.ts`** -- ephemeral UI state
+---
 
+### Feature 3: Workspace/Stream Switching
+
+**What:** Switch P4CLIENT or stream without restarting app
+
+**Integration Points:**
+- **Backend (Rust):** New commands
+  - `p4_switch_stream(stream_name: String)` - Runs `p4 switch <stream>`
+  - Workflow: `p4 switch` automatically reconciles → shelves → switches → syncs → unshelves
+  - Returns success/error, no additional parsing needed
+  - NOTE: Cannot switch if numbered changelists are open (constraint)
+
+- **Frontend (React):** Settings dialog extension
+  - Add "Switch Workspace" button to `SettingsDialog.tsx`
+  - Dropdown with workspace list from `p4_list_workspaces` (already exists)
+  - On switch → Update connectionStore state → Invalidate ALL queries
+  - Add "Switch Stream" button if workspace has stream
+  - Dropdown with streams from `p4 streams` (new query)
+
+- **State Management (Critical):**
+  - Update `connectionStore` with new workspace/stream
+  - Call `queryClient.invalidateQueries()` to refresh ALL data
+  - Pattern: connectionStore change → trigger global refetch
+  - Use `useEffect` to watch connectionStore and invalidate
+
+- **Data Flow:**
+  1. User clicks "Switch Workspace" → Shows workspace picker
+  2. User selects workspace → `saveSettings({ p4client: newClient })`
+  3. Settings save → `connectionStore.setConnected()` with new client
+  4. Effect detects change → `queryClient.invalidateQueries()`
+  5. All hooks refetch with new P4CLIENT → UI updates
+
+**New Components:**
+- `src/hooks/useWorkspaceSwitcher.ts` - Manages switch logic and invalidation
+- Add workspace/stream picker to `src/components/SettingsDialog.tsx`
+
+**Modified Components:**
+- `src/stores/connectionStore.ts` - Add stream switching methods
+- `src/lib/settings.ts` - Add stream persistence
+- `src/App.tsx` - Add useEffect to watch connection changes and invalidate
+
+**Critical Pattern:**
 ```typescript
-interface UIState {
-  activeRightTab: 'changelists' | 'history' | 'search';
-  selectedFilePath: string | null;  // depot path of currently selected file
-  searchQuery: string;
-  setActiveRightTab: (tab: string) => void;
-  setSelectedFile: (path: string | null) => void;
-  setSearchQuery: (query: string) => void;
-}
+// In App.tsx or layout
+useEffect(() => {
+  if (connectionStore.p4client) {
+    queryClient.invalidateQueries(); // Refresh all data
+  }
+}, [connectionStore.p4client, connectionStore.stream]);
 ```
 
-### Modified stores
+---
 
-**`changelistStore.ts`** -- add these actions:
+### Feature 4: Actionable Search Results
 
+**What:** Make search results clickable with navigation to changelist/file
+
+**Integration Points:**
+- **Frontend Only:** Modify existing components
+  - `SearchResultsPanel.tsx` already displays changelist cards
+  - Add onClick handlers to navigate
+  - Navigation target: Expand changelist in ChangelistPanel
+  - If submitted changelist → Show FileHistoryDialog for files
+
+- **Navigation Implementation:**
+  - Use Zustand store method to expand specific changelist
+  - `changelistStore.setExpandedChangelist(id)`
+  - Scroll changelist into view with `scrollIntoView()`
+  - Highlight changelist with temporary CSS class animation
+
+- **Data Flow:**
+  1. User clicks search result changelist #12345
+  2. Check if pending or submitted
+  3. If pending → `changelistStore.setExpandedChangelist(12345)` + scroll
+  4. If submitted → Open FileHistoryDialog with changelist details
+  5. Clear search (optional) → Focus moves to changelist
+
+**Modified Components:**
+- `src/components/SearchResultsPanel.tsx` - Add onClick handlers
+- `src/stores/changelistStore.ts` - Add `setExpandedChangelist` method
+- `src/components/ChangelistPanel/ChangelistPanel.tsx` - Add scroll-to logic
+
+**No New Backend:** Reuses existing data, pure UI enhancement
+
+---
+
+### Feature 5: Auto-Refresh
+
+**What:** Automatically refetch key queries on interval
+
+**Integration Points:**
+- **Frontend Only:** TanStack Query configuration
+  - Add `refetchInterval` to critical queries
+  - Changelist query: `refetchInterval: 30000` (30s)
+  - File tree query: `refetchInterval: 60000` (60s)
+  - Search query: `refetchInterval: 300000` (5min)
+  - Use `refetchIntervalInBackground: false` to pause when minimized
+
+- **User Control:**
+  - Add "Auto-refresh" toggle to SettingsDialog
+  - Store setting in tauri-plugin-store
+  - Pass setting to hooks as `enabled` prop
+  - Dynamic interval: `refetchInterval: autoRefresh ? 30000 : false`
+
+- **Optimization:**
+  - Only enable for connected state: `enabled: isConnected && autoRefresh`
+  - Use `refetchOnWindowFocus: true` for manual refresh fallback
+  - Don't refresh during active operations (check operationStore)
+
+**Modified Components:**
+- `src/components/ChangelistPanel/useChangelists.ts` - Add `refetchInterval`
+- `src/components/FileTree/useFileTree.ts` - Add `refetchInterval`
+- `src/hooks/useSearch.ts` - Add `refetchInterval`
+- `src/types/settings.ts` - Add `autoRefresh: boolean`
+- `src/components/SettingsDialog.tsx` - Add toggle control
+
+**Pattern:**
 ```typescript
-// New actions for v2.0
-moveFile: (fromCl: number, toCl: number, depotPath: string) => void;  // optimistic DnD
-createChangelist: (cl: P4Changelist) => void;  // optimistic add
-deleteChangelist: (id: number) => void;  // optimistic remove
+const { data, refetch } = useQuery({
+  queryKey: ['changelists'],
+  queryFn: fetchChangelists,
+  enabled: isConnected && autoRefreshEnabled,
+  refetchInterval: autoRefreshEnabled ? 30000 : false,
+  refetchIntervalInBackground: false, // Pause when minimized
+});
 ```
 
-### Query invalidation map
-
-| Mutation | Invalidate these queries |
-|----------|------------------------|
-| `p4_reopen` (move file between CLs) | `['p4','opened']`, `['p4','changes']` |
-| `p4_shelve` | `['p4','opened']`, `['p4','changes']` |
-| `p4_unshelve` | `['p4','opened']`, `['p4','changes']` |
-| `p4_reconcile` | `['p4','opened']`, `['p4','fstat']` |
-| `p4_change_new` | `['p4','changes']` |
-| `p4_change_delete` | `['p4','changes']` |
-| `p4_set_var` | `['p4','set']`, `['p4','connection']` |
-| `p4_submit` | `['p4','opened']`, `['p4','changes']` (already done) |
+**No Backend Changes:** Pure TanStack Query configuration
 
 ---
 
-## 4. Settings Persistence
+### Feature 6: E2E Testing
 
-### Recommendation: `tauri-plugin-store`
+**What:** WebdriverIO + tauri-driver for end-to-end tests
 
-Use `tauri-plugin-store` for all app settings. It writes a JSON file to the OS app data directory, handles atomic writes, and has a simple get/set API.
+**Integration Points:**
+- **Testing Infrastructure:** New directory structure
+  - `e2e-tests/` directory at project root
+  - `wdio.conf.js` - WebdriverIO configuration
+  - `test/specs/` - Test files
+  - Uses `@crabnebula/tauri-driver` package
 
-**Add to Cargo.toml:**
-```toml
-tauri-plugin-store = "2"
-```
+- **Platform Requirements:**
+  - **Windows:** Microsoft Edge Driver (must match Edge version)
+  - **Linux:** WebKitWebDriver (check `which WebKitWebDriver`)
+  - **macOS:** NOT SUPPORTED (no WKWebView driver)
+  - CI: Use windows-latest or ubuntu-latest runners
 
-**Add to lib.rs:**
-```rust
-.plugin(tauri_plugin_store::Builder::new().build())
-```
+- **Test Structure:**
+  - Unit tests: Component logic with Vitest (existing)
+  - Integration tests: Hook behavior with Mock Service Worker
+  - E2E tests: Full app workflows with WebdriverIO
 
-**Frontend usage:**
+- **Setup Process:**
+  1. `npm install --save-dev webdriverio @wdio/cli @crabnebula/tauri-driver`
+  2. Configure `wdio.conf.js` to launch tauri-driver
+  3. Build app before tests: `npm run tauri build`
+  4. Run tests: `npm run test:e2e`
+
+- **Test Coverage (Initial):**
+  - Connection workflow: Settings → Test Connection → Success
+  - File operations: Check out → Edit → Revert
+  - Changelist: Create → Add files → Delete
+  - Search: Type query → Click result → Verify navigation
+
+**New Components:**
+- `e2e-tests/wdio.conf.js` - Main config
+- `e2e-tests/test/specs/connection.spec.js` - Connection tests
+- `e2e-tests/test/specs/changelist.spec.js` - Changelist tests
+- `e2e-tests/helpers/` - Test utilities
+- `package.json` - Add scripts: `test:e2e`, `test:e2e:headless`
+
+**CI Integration:**
+- `.github/workflows/test.yml` - Add E2E job
+- Matrix: `[windows-latest, ubuntu-latest]` (skip macOS)
+- Requires: Build app → Install Edge Driver → Run tests
+
+**Known Compatibility:**
+- May need to downgrade to WebdriverIO v7 for tauri-driver compat
+- TypeScript types may require manual definitions
+- tauri-driver acts as proxy for native WebDriver servers
+
+**No Application Code Changes:** Pure testing infrastructure
+
+---
+
+## Component Dependency Map
+
+### New Components Needed
+
+| Component | Dependencies | Integrates With |
+|-----------|--------------|-----------------|
+| `ResolveDialog.tsx` | TanStack Query, shadcn/ui | ChangelistPanel, SyncToolbar |
+| `DepotTree.tsx` | react-arborist, TanStack Query | MainLayout (new panel) |
+| `useResolve.ts` | `invokeP4ResolvePreview`, `invokeP4ResolveAccept` | ResolveDialog |
+| `useDepotTree.ts` | `invokeP4Dirs`, `invokeP4Files` | DepotTree |
+| `useWorkspaceSwitcher.ts` | connectionStore, queryClient | SettingsDialog |
+| `p4_resolve_*` (Rust) | Existing p4 module patterns | Frontend hooks |
+| `p4_dirs` (Rust) | Existing p4 module patterns | useDepotTree |
+| `e2e-tests/` | WebdriverIO, tauri-driver | CI pipeline |
+
+### Modified Components
+
+| Component | Modifications | Reason |
+|-----------|---------------|--------|
+| `useChangelists.ts` | Add `refetchInterval` option | Auto-refresh |
+| `useFileTree.ts` | Add `refetchInterval` option | Auto-refresh |
+| `useSearch.ts` | Add `refetchInterval` option | Auto-refresh |
+| `SearchResultsPanel.tsx` | Add onClick navigation | Actionable search |
+| `changelistStore.ts` | Add `setExpandedChangelist` method | Search navigation |
+| `SettingsDialog.tsx` | Add workspace/stream switcher, auto-refresh toggle | Settings UI |
+| `connectionStore.ts` | Add stream switching methods | State management |
+| `App.tsx` | Add query invalidation on connection change | Workspace switching |
+| `useSync.ts` | Add conflict detection | Resolve workflow trigger |
+| `SubmitDialog.tsx` | Add pre-submit conflict check | Resolve workflow trigger |
+
+---
+
+## Data Flow Patterns
+
+### Pattern 1: Query Invalidation Cascade
+
+**What:** When workspace/stream changes, invalidate all queries to refetch
+
+**When to use:** Workspace switching, stream switching, major setting changes
+
+**Trade-offs:**
+- **Pro:** Simple, comprehensive, ensures consistency
+- **Pro:** Reuses existing TanStack Query cache keys
+- **Con:** Refetches everything, brief loading state
+
+**Implementation:**
 ```typescript
-import { Store } from '@tauri-apps/plugin-store';
+// In App.tsx or similar
+const queryClient = useQueryClient();
+const { p4client, stream } = useConnectionStore();
 
-const store = await Store.load('settings.json');
-await store.set('connection.p4port', 'ssl:server:1666');
-await store.save();
-const port = await store.get<string>('connection.p4port');
+useEffect(() => {
+  if (p4client) {
+    // Invalidate all queries when workspace changes
+    queryClient.invalidateQueries();
+  }
+}, [p4client, stream, queryClient]);
 ```
 
-**Hybrid approach for P4 connection vars:** When user changes P4PORT/P4USER/P4CLIENT:
-1. Save to `tauri-plugin-store` (for UI display on next launch)
-2. Call `p4_set_var` to set as P4 environment variables (so spawned `p4.exe` picks them up)
+### Pattern 2: Lazy Loading with Enabled Flag
 
-This ensures both the UI and the backend stay in sync.
+**What:** Load data only when UI element expands
 
-**Settings schema:**
-```json
-{
-  "connection": { "p4port": "", "p4user": "", "p4client": "" },
-  "diffTool": { "path": "", "args": "%1 %2" },
-  "ui": { "sidebarWidth": 320 }
-}
-```
+**When to use:** Depot tree, nested file lists, expandable panels
 
----
+**Trade-offs:**
+- **Pro:** Reduces initial load, only fetches needed data
+- **Pro:** Perfect for hierarchical/tree structures
+- **Con:** Brief loading spinner on first expand
 
-## 5. Drag-and-Drop for Changelist File Moves
-
-### Recommendation: `@dnd-kit/core`
-
-**Why:** Lightweight, accessible, actively maintained. `react-beautiful-dnd` is deprecated.
-
-**Architecture:**
-
-Wrap ChangelistPanel in DndContext. Each changelist is a Droppable. Each file node is a Draggable.
-
-```
-<DndContext onDragEnd={handleDragEnd}>
-  <SortableContext>  {/* optional: for reordering within CL */}
-    <ChangelistPanel>
-      <DroppableChangelist id="cl-0">
-        <DraggableFile id="file-//depot/a.txt" />
-        <DraggableFile id="file-//depot/b.txt" />
-      </DroppableChangelist>
-      <DroppableChangelist id="cl-12345">
-        ...
-      </DroppableChangelist>
-    </ChangelistPanel>
-  </SortableContext>
-  <DragOverlay>
-    <FileDragPreview />  {/* ghost showing filename + count if multi-select */}
-  </DragOverlay>
-</DndContext>
-```
-
-**Drop handler flow:**
-1. `onDragEnd` fires with `active` (file) and `over` (target CL)
-2. Extract: `fromCl` from file's current changelist, `toCl` from drop target id, `depotPath` from file id
-3. Optimistic: `changelistStore.moveFile(fromCl, toCl, depotPath)`
-4. Backend: `invoke('p4_reopen', { paths: [depotPath], changelist: toCl })`
-5. On success: invalidate `['p4','opened']` and `['p4','changes']` to confirm
-6. On failure: rollback optimistic update, toast error
-
-**Multi-select:** Track selected files in uiStore or changelistStore. When dragging one selected file, all selected files move together.
-
----
-
-## 6. Context Menu Integration
-
-### Refactor to shared primitive
-
-Current `FileContextMenu` is a standalone component with hardcoded items. Extend to a reusable primitive.
-
-**Create `components/ui/context-menu.tsx`:**
-
+**Implementation:**
 ```typescript
-interface MenuItem {
-  label: string;
-  icon?: ReactNode;
-  action?: () => void;
-  children?: MenuItem[];  // submenu
-  disabled?: boolean;
-  separator?: boolean;
-}
-
-interface ContextMenuProps {
-  items: MenuItem[];
-  x: number;
-  y: number;
-  onClose: () => void;
-}
+const { data: subdirs, isLoading } = useQuery({
+  queryKey: ['depotDirs', depotPath],
+  queryFn: () => invokeP4Dirs(depotPath),
+  enabled: isExpanded, // Only fetch when expanded
+  staleTime: Infinity, // Depot structure rarely changes
+});
 ```
 
-**File context menu items (v2.0):**
+### Pattern 3: Conditional Auto-Refresh
 
-```
-Checkout for Edit         (existing)
-Revert Changes            (existing)
----
-Show History              (new: sets activeRightTab='history', selectedFile)
-Diff Against Depot        (new: invokes p4_diff_external)
----
-Move to Changelist >      (new: submenu listing pending CLs)
-  Default Changelist
-  CL 12345 - "fix bug"
-  New Changelist...
----
-Shelve                    (new: if file is opened)
----
-Copy Local Path           (existing)
-Copy Depot Path           (new)
-```
+**What:** Refetch on interval only when enabled and connected
 
-**Changelist context menu (new):**
+**When to use:** Real-time updates for changelist/file status
 
-```
-Edit Description          (inline rename or dialog)
-Submit...                 (existing via SubmitDialog)
----
-Shelve All Files          (invokes p4_shelve)
-Unshelve Files            (invokes p4_unshelve)
----
-Delete Changelist         (only if empty, invokes p4_change_delete)
-```
+**Trade-offs:**
+- **Pro:** Keeps UI fresh without manual refresh
+- **Pro:** User can disable to reduce load
+- **Con:** Increased server requests
+- **Con:** Can cause conflicts with user edits
 
-**Integration with react-arborist:** The existing FileTree uses `onContextMenu` on nodes. Same pattern applies -- right-click sets `contextMenu` state with position + target data, render the context menu component.
-
----
-
-## 7. Keyboard Shortcut System
-
-### Recommendation: Custom hook (no library needed)
-
-A `useKeyboardShortcuts` hook is ~30 lines and avoids adding a dependency.
-
+**Implementation:**
 ```typescript
-// hooks/useKeyboardShortcuts.ts
-interface Shortcut {
-  key: string;
-  ctrl?: boolean;
-  shift?: boolean;
-  action: () => void;
-  when?: () => boolean;  // conditional activation
-}
-
-function useKeyboardShortcuts(shortcuts: Shortcut[]) {
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      // Skip if user is typing in an input/textarea
-      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
-
-      for (const s of shortcuts) {
-        if (
-          e.key.toLowerCase() === s.key.toLowerCase() &&
-          !!e.ctrlKey === !!s.ctrl &&
-          !!e.shiftKey === !!s.shift &&
-          (!s.when || s.when())
-        ) {
-          e.preventDefault();
-          s.action();
-          return;
-        }
-      }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [shortcuts]);
-}
+const { data } = useQuery({
+  queryKey: ['changelists'],
+  queryFn: fetchChangelists,
+  enabled: isConnected && autoRefreshEnabled,
+  refetchInterval: autoRefreshEnabled ? 30000 : false,
+  refetchIntervalInBackground: false, // Pause when minimized
+});
 ```
 
-**Shortcut map:**
+### Pattern 4: State-Based Navigation
 
-| Shortcut | Action | Scope |
-|----------|--------|-------|
-| `Ctrl+S` | Sync workspace | Global |
-| `Ctrl+Shift+S` | Submit selected CL | Global |
-| `Ctrl+E` | Checkout selected file | File selected |
-| `Ctrl+Z` | Revert selected file | File selected |
-| `Ctrl+Shift+N` | New changelist | Global |
-| `Ctrl+F` | Focus search | Global |
-| `Ctrl+H` | Show file history | File selected |
-| `Ctrl+D` | External diff | File selected |
-| `?` | Show shortcut help | Global |
-| `Escape` | Close dialog/menu | Global |
+**What:** Update Zustand store to trigger UI changes, scroll to element
 
-Register in `MainLayout` or `App.tsx`. The `when` condition checks `uiStore.selectedFilePath` for file-specific shortcuts.
+**When to use:** Search result click, deep linking, programmatic navigation
 
----
+**Trade-offs:**
+- **Pro:** Reactive, works across components
+- **Pro:** Can be triggered from anywhere (keyboard shortcuts, search)
+- **Con:** Requires store method and scroll logic
 
-## 8. Connection Monitoring
-
-### Polling with existing `p4_info`
-
-No new Rust command needed. Reuse `p4_info` -- it already returns server, user, client, stream. It is fast (local `p4 info` call).
-
+**Implementation:**
 ```typescript
-// hooks/useConnectionStatus.ts
-function useConnectionStatus() {
-  const { data, error, isError } = useQuery({
-    queryKey: ['p4', 'connection'],
-    queryFn: () => invokeP4Info(),
-    refetchInterval: 30_000,  // poll every 30s
-    staleTime: 0,             // always refetch
-    retry: false,             // don't retry on failure (it means disconnected)
-  });
+// In store
+setExpandedChangelist: (id: number) => set({ expandedId: id }),
 
-  return {
-    isConnected: !isError && !!data,
-    serverInfo: data,
-    error,
-  };
-}
-```
+// In component
+const handleNavigate = (id: number) => {
+  changelistStore.setExpandedChangelist(id);
 
-**StatusBar display:**
-```
-[green dot] Connected | //stream/main | jsmith@ssl:server:1666
-[red dot]   Disconnected
-```
-
-**Reconnection behavior:** When transitioning disconnected -> connected, invalidate all queries to refresh stale data:
-```typescript
-queryClient.invalidateQueries();
+  // Scroll after state update
+  setTimeout(() => {
+    document.getElementById(`cl-${id}`)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center'
+    });
+  }, 100);
+};
 ```
 
 ---
 
-## Suggested Build Order (Dependency-Aware)
+## Architectural Recommendations
 
-```
-Phase 1: Backend Infrastructure
-  1a. Split p4.rs into modules (refactor, no new features)
-  1b. Add tauri-plugin-store (Cargo.toml + lib.rs)
-  1c. Add p4_reopen, p4_change_new, p4_change_delete commands
-  1d. Add p4_filelog command + P4FileRevision struct
-  1e. Add p4_shelve, p4_unshelve, p4_delete_shelve commands
-  1f. Add p4_reconcile command (streaming)
-  1g. Add p4_describe, p4_changes_search commands
-  1h. Add p4_set, p4_set_var, p4_diff_external commands
+### Build Order (Suggested Phases)
 
-Phase 2: Settings + Connection (depends on 1b, 1h)
-  2a. settingsStore + SettingsDialog
-  2b. Connection monitoring (useConnectionStatus hook)
-  2c. Enhanced StatusBar with connection + repo/stream
+**Phase 1: Foundation (Auto-Refresh)**
+- Modify existing query hooks with `refetchInterval`
+- Add settings UI for auto-refresh toggle
+- Lowest risk, no new components, validates query patterns
 
-Phase 3: Changelist Management (depends on 1c)
-  3a. Changelist CRUD UI (new CL, delete CL, edit description)
-  3b. @dnd-kit integration for file moves between CLs
-  3c. Multi-select support in changelist file list
+**Phase 2: Navigation (Actionable Search)**
+- Add navigation handlers to SearchResultsPanel
+- Extend changelistStore with setExpandedChangelist
+- Pure frontend, builds on existing search
 
-Phase 4: Context Menus + Shortcuts (depends on 1c, 1d, 1e)
-  4a. ContextMenuPrimitive component
-  4b. Enhanced FileContextMenu (history, diff, move-to-CL, shelve)
-  4c. New ChangelistContextMenu
-  4d. useKeyboardShortcuts hook + KeyboardShortcutHelp dialog
+**Phase 3: Workspace Management**
+- Add workspace/stream switcher to settings
+- Implement query invalidation on switch
+- Tests existing architecture's flexibility
 
-Phase 5: History + Search + Diff (depends on 1d, 1g, 1h)
-  5a. Tabbed right panel (refactor MainLayout)
-  5b. FileHistoryPanel
-  5c. SearchPanel for submitted changelists
-  5d. External diff tool launch
+**Phase 4: Depot Browser**
+- Implement `p4_dirs` and `p4_files` backend commands
+- Build DepotTree component (clone FileTree pattern)
+- Add lazy loading with TanStack Query enabled flag
+- Larger feature, but self-contained
 
-Phase 6: Advanced Operations (depends on 1e, 1f)
-  6a. Shelve/unshelve UI (per-CL buttons + context menu)
-  6b. Reconcile UI (toolbar button, streaming progress)
-```
+**Phase 5: Resolve Workflow**
+- Implement `p4_resolve_*` backend commands
+- Build ResolveDialog (clone ReconcilePreviewDialog)
+- Integrate with sync and submit workflows
+- Complex feature, touches multiple areas
 
-**Rationale:** Backend first (all frontend features need commands). Settings next (diff tool path needed for diff, connection needed for status). Changelist management next (most impactful UX improvement). Context menus and shortcuts span all features. History/search/diff are independent panels. Shelve/reconcile last (less common workflows).
+**Phase 6: E2E Testing**
+- Set up WebdriverIO and tauri-driver
+- Write initial test specs
+- Integrate with CI
+- Independent, can run parallel with other phases
 
-**Parallelizable:** Phases 3, 4, and 5 are mostly independent once Phase 1 is complete.
+**Rationale:** Start simple (auto-refresh), validate patterns, build confidence. Progress to user-facing navigation, then larger features. E2E testing last to validate completed features.
+
+---
+
+## Integration Complexity Assessment
+
+| Feature | Backend Complexity | Frontend Complexity | Integration Risk | Suggested Phase |
+|---------|-------------------|---------------------|------------------|-----------------|
+| Auto-Refresh | None (config only) | Low (query options) | Low | Phase 1 |
+| Actionable Search | None | Low (handlers + store) | Low | Phase 2 |
+| Workspace Switching | Low (existing commands) | Medium (invalidation) | Medium | Phase 3 |
+| Depot Browser | Medium (new commands) | Medium (lazy tree) | Medium | Phase 4 |
+| Resolve Workflow | Medium (new commands) | Medium (dialog + logic) | High | Phase 5 |
+| E2E Testing | None | High (test infrastructure) | Low (isolated) | Phase 6 |
+
+**Risk Definitions:**
+- **Low:** Isolated change, established patterns, no cross-cutting concerns
+- **Medium:** New patterns, touches multiple components, requires coordination
+- **High:** Complex workflow, multiple integration points, potential edge cases
 
 ---
 
 ## Anti-Patterns to Avoid
 
-### 1. Synchronous `Command::new().output()` for long operations
-The existing code uses synchronous `.output()` which is fine for quick commands (`p4 info`, `p4 edit`). But `p4 reconcile` on a large workspace can take minutes. Use the streaming Channel pattern (already established in `p4_sync`) for reconcile and any search command that might return thousands of results.
+### Anti-Pattern 1: Global Auto-Refresh Without User Control
 
-### 2. Over-polling the P4 server
-Connection check (30s) + changelist refresh (30s staleTime) + opened files (30s) = 3 p4.exe spawns every 30s at baseline. Adding more polling queries compounds this. Use event-driven invalidation after user actions rather than adding more polling intervals.
+**What people do:** Set `refetchInterval` on all queries without opt-out
 
-### 3. DnD without optimistic updates
-If the DnD handler waits for `p4 reopen` to complete before moving the file in the UI, there will be a visible 200-500ms delay where nothing happens. Always update the store first, then confirm with the backend.
+**Why it's wrong:**
+- Causes conflicts during user edits (file tree updates mid-operation)
+- Wastes resources when user minimizes window
+- Frustrating when user wants stable UI to read
 
-### 4. Monolithic context menu
-Do not keep adding items to `FileContextMenu` as a single component. The shared primitive approach keeps each menu composable and testable.
+**Do this instead:**
+- Make auto-refresh opt-in via settings toggle
+- Use `refetchIntervalInBackground: false` to pause when minimized
+- Disable auto-refresh during active operations (check operationStore)
+- Provide manual refresh button as fallback
+
+### Anti-Pattern 2: Fetching All Depot Directories Upfront
+
+**What people do:** Load entire depot hierarchy on mount
+
+**Why it's wrong:**
+- `p4 dirs` computes directories, very slow for large depots
+- Wastes memory and network for data user may never view
+- Blocks UI with loading spinner
+
+**Do this instead:**
+- Lazy load with `enabled: isExpanded` flag
+- Fetch only immediate children when node expands
+- Use `staleTime: Infinity` since depot structure rarely changes
+- Show loading spinner only for expanded node, not whole tree
+
+### Anti-Pattern 3: Invalidating Specific Queries on Workspace Switch
+
+**What people do:** Manually list and invalidate each query key
+
+**Why it's wrong:**
+- Fragile, easy to miss new queries added later
+- Inconsistent state if some queries missed
+- Harder to maintain as app grows
+
+**Do this instead:**
+- Use `queryClient.invalidateQueries()` without filter to clear all
+- Let TanStack Query's `enabled` flags prevent unnecessary refetches
+- Simple, comprehensive, future-proof
+
+### Anti-Pattern 4: Blocking E2E Tests on Full Feature Coverage
+
+**What people do:** Wait until all features complete before starting E2E tests
+
+**Why it's wrong:**
+- Delays feedback on integration issues
+- Harder to debug failures across large feature sets
+- CI setup becomes rushed at end of project
+
+**Do this instead:**
+- Set up E2E infrastructure early (Phase 6 can start anytime)
+- Write tests incrementally as features complete
+- Run E2E in CI from day one, even with minimal tests
+- Catch integration issues early
+
+### Anti-Pattern 5: Calling `p4 resolve` Without Preview
+
+**What people do:** Auto-resolve conflicts with `-am` flag immediately
+
+**Why it's wrong:**
+- User loses visibility into what conflicts existed
+- Auto-merge can silently break code if conflicts are complex
+- No chance to review before accepting
+
+**Do this instead:**
+- Always show ResolvePreviewDialog with conflict list
+- Let user choose per-file: merge tool, accept yours, accept theirs
+- Show conflict count and depot paths before resolution
+- Provide "Resolve All" option but with confirmation
 
 ---
 
 ## Sources
 
-- Direct codebase analysis of all files in `src-tauri/src/` and `src/` (HIGH confidence)
-- Tauri 2.0 plugin ecosystem: `tauri-plugin-store` is an official Tauri plugin (HIGH confidence)
-- `@dnd-kit`: Well-established React DnD library, actively maintained (HIGH confidence)
-- `react-beautiful-dnd` deprecated status: confirmed by Atlassian (HIGH confidence)
-- P4 command-line reference for `reopen`, `shelve`, `unshelve`, `reconcile`, `filelog`, `describe`, `set` (HIGH confidence -- stable CLI API)
+### Perforce Resolve Workflow
+- [Merging to resolve conflicts](https://help.perforce.com/helix-core/server-apps/p4guide/2024.2/Content/P4Guide/merging-to-resolve-conflicts.html)
+- [p4 resolve](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_resolve.html)
+- [Resolve files | P4 Visual Client (P4V) Documentation](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/branches.resolve.html)
+- [How to resolve conflicts](https://www.perforce.com/manuals/p4guide/Content/P4Guide/resolve.howto.html)
+
+### Perforce Depot Browser
+- [p4 dirs | P4 Command Reference](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_dirs.html)
+- [p4 dirs // P4 Command Reference](https://www.perforce.com/manuals/v15.2/cmdref/p4_dirs.html)
+
+### Perforce Stream Switching
+- [p4 switch | Helix Core Command-Line (P4) Reference 2024.2](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_switch.html)
+- [Switch between streams | P4 Server Administration](https://help.perforce.com/helix-core/server-apps/p4sag/current/Content/DVCS/streams.switch.html)
+
+### Tauri E2E Testing
+- [WebdriverIO | Tauri](https://v2.tauri.app/develop/tests/webdriver/example/webdriverio/)
+- [WebDriver | Tauri](https://v2.tauri.app/develop/tests/webdriver/)
+- [@crabnebula/tauri-driver - npm](https://www.npmjs.com/package/@crabnebula/tauri-driver)
+- [GitHub - Haprog/tauri-wdio-win-test](https://github.com/Haprog/tauri-wdio-win-test)
+
+### TanStack Query Auto-Refresh
+- [React TanStack Query Auto Refetching Example | TanStack Query Docs](https://tanstack.com/query/v4/docs/framework/react/examples/auto-refetching)
+- [useQuery | TanStack Query React Docs](https://tanstack.com/query/v4/docs/react/reference/useQuery)
+- [Automatically refetching with React Query - DEV Community](https://dev.to/dailydevtips1/automatically-refetching-with-react-query-1l0f)
+
+---
+
+*Architecture research for: P4Now v3.0 Feature Integration*
+*Researched: 2026-01-29*
