@@ -13,7 +13,7 @@ Milestone: v2.0 Feature Complete
 Phase: 08 of 08 (Visual Polish) — complete
 Plan: 03 of 03 complete
 Status: Phase complete
-Last activity: 2026-01-29 — Completed 08-03-PLAN.md
+Last activity: 2026-01-30 — Completed 08-02-PLAN.md (continuation after checkpoint)
 
 Progress: [############################] 100% (29/29 plans)
 
@@ -78,6 +78,7 @@ All v1.0 decisions documented in PROJECT.md Key Decisions table.
 | D-08-01-02 | 08-01 | VS Code blue accent (#007acc / 217 91% 60%) | Primary color and focus rings match VS Code's iconic blue |
 | D-08-01-03 | 08-01 | No animations on dialogs and menus | Instant UI feedback per design decision, removed all animate/transition classes |
 | D-08-01-04 | 08-01 | System font stack | ui-sans-serif first, falls back to native OS fonts for consistent typography |
+| D-08-02-01 | 08-02 | Use semantic CSS classes throughout dialogs | All dialogs use bg-background, text-foreground, border-border for theme consistency |
 | D-08-03-01 | 08-03 | Skeleton loading uses animate-pulse with varying widths | Creates natural, realistic placeholder that mimics actual content structure |
 | D-08-03-02 | 08-03 | Empty states are text-only with text-muted-foreground | Cleaner, less cluttered UI without icon-heavy empty states |
 | D-08-03-03 | 08-03 | Removed all transitions from StatusBar | Instant UI feedback, no animation delays |
@@ -103,8 +104,8 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-01-29
-Stopped at: Completed 08-03-PLAN.md
+Last session: 2026-01-30
+Stopped at: Completed 08-02-PLAN.md (continuation after checkpoint feedback)
 Resume file: None
 
 ---
