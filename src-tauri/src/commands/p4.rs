@@ -1433,6 +1433,8 @@ pub async fn p4_unshelve(
     cmd.arg("unshelve");
     cmd.arg("-s");
     cmd.arg(changelist_id.to_string());
+    cmd.arg("-c");
+    cmd.arg(changelist_id.to_string());
 
     // Add file paths if specified (for per-file unshelving)
     if let Some(paths) = file_paths {
