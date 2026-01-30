@@ -10,6 +10,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useConnectionStore } from '@/stores/connectionStore';
+import { useOperationStore } from '@/store/operation';
 import { invokeP4CreateChange } from '@/lib/tauri';
 import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -31,6 +32,7 @@ export function CreateChangelistDialog({
   onOpenChange,
 }: CreateChangelistDialogProps) {
   const { p4port, p4user, p4client } = useConnectionStore();
+  const { addOutputLine } = useOperationStore();
   const queryClient = useQueryClient();
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,17 +42,20 @@ export function CreateChangelistDialog({
 
     setIsSubmitting(true);
     try {
+      addOutputLine('p4 change -o (new changelist)', false);
       const newClId = await invokeP4CreateChange(
         description,
         p4port ?? undefined,
         p4user ?? undefined,
         p4client ?? undefined
       );
+      addOutputLine(`Change ${newClId} created.`, false);
       toast.success(`Created changelist #${newClId}`);
       queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
       setDescription('');
       onOpenChange(false);
     } catch (error) {
+      addOutputLine(`Error: ${error}`, true);
       toast.error(`Failed to create changelist: ${error}`);
     } finally {
       setIsSubmitting(false);

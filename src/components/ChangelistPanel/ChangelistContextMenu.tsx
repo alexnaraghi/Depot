@@ -3,6 +3,7 @@ import { ArrowRight, Archive } from 'lucide-react';
 import { P4File, P4Changelist } from '@/types/p4';
 import { invokeP4Reopen } from '@/lib/tauri';
 import { useConnectionStore } from '@/stores/connectionStore';
+import { useOperationStore } from '@/store/operation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useShelve } from '@/hooks/useShelvedFiles';
 import { FileContextMenuItems } from '@/components/shared/FileContextMenuItems';
@@ -42,6 +43,7 @@ export function ChangelistContextMenu({
   const submenuRef = useRef<HTMLDivElement>(null);
   const [submenuOpen, setSubmenuOpen] = useState(false);
   const { p4port, p4user, p4client } = useConnectionStore();
+  const { addOutputLine } = useOperationStore();
   const queryClient = useQueryClient();
   const shelve = useShelve();
 
@@ -78,13 +80,15 @@ export function ChangelistContextMenu({
   async function handleMoveToChangelist(targetId: number) {
     try {
       const filePaths = files.map((f) => f.depotPath);
-      await invokeP4Reopen(
+      addOutputLine(`p4 reopen -c ${targetId} ${filePaths.join(' ')}`, false);
+      const result = await invokeP4Reopen(
         filePaths,
         targetId,
         p4port ?? undefined,
         p4user ?? undefined,
         p4client ?? undefined
       );
+      addOutputLine(result.join('\n'), false);
 
       const targetLabel = targetId === 0 ? 'Default' : `#${targetId}`;
       toast.success(`Moved ${files.length} file(s) to changelist ${targetLabel}`);
@@ -95,6 +99,7 @@ export function ChangelistContextMenu({
 
       onClose();
     } catch (error) {
+      addOutputLine(`Error: ${error}`, true);
       toast.error(`Failed to move files: ${error}`);
       onClose();
     }

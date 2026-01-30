@@ -10,6 +10,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useConnectionStore } from '@/stores/connectionStore';
+import { useOperationStore } from '@/store/operation';
 import { invokeP4CreateChange, invokeP4EditChangeDescription } from '@/lib/tauri';
 import { useQueryClient } from '@tanstack/react-query';
 import { P4Changelist } from '@/types/p4';
@@ -35,6 +36,7 @@ export function EditDescriptionDialog({
   onOpenChange,
 }: EditDescriptionDialogProps) {
   const { p4port, p4user, p4client } = useConnectionStore();
+  const { addOutputLine } = useOperationStore();
   const queryClient = useQueryClient();
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,14 +55,17 @@ export function EditDescriptionDialog({
     try {
       // Special case: default CL (id === 0) creates a new numbered changelist
       if (changelist.id === 0) {
+        addOutputLine('p4 change -o (new changelist)', false);
         const newClId = await invokeP4CreateChange(
           description,
           p4port ?? undefined,
           p4user ?? undefined,
           p4client ?? undefined
         );
+        addOutputLine(`Change ${newClId} created.`, false);
         toast.success(`Created changelist #${newClId}`);
       } else {
+        addOutputLine(`p4 change -i (edit changelist ${changelist.id})`, false);
         await invokeP4EditChangeDescription(
           changelist.id,
           description,
@@ -68,11 +73,13 @@ export function EditDescriptionDialog({
           p4user ?? undefined,
           p4client ?? undefined
         );
+        addOutputLine(`Change ${changelist.id} updated.`, false);
         toast.success(`Updated changelist #${changelist.id}`);
       }
       queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
       onOpenChange(false);
     } catch (error) {
+      addOutputLine(`Error: ${error}`, true);
       toast.error(`Failed to update changelist: ${error}`);
     } finally {
       setIsSubmitting(false);

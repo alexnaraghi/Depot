@@ -8,6 +8,7 @@ import {
   type P4ShelvedFile,
 } from '@/lib/tauri';
 import { useConnectionStore } from '@/stores/connectionStore';
+import { useOperationStore } from '@/store/operation';
 import toast from 'react-hot-toast';
 
 /**
@@ -39,6 +40,7 @@ export function useShelvedFilesQuery(changelistId: number) {
 export function useShelve() {
   const { p4port, p4user, p4client } = useConnectionStore();
   const queryClient = useQueryClient();
+  const { addOutputLine } = useOperationStore();
 
   return useMutation({
     mutationFn: async ({
@@ -48,6 +50,7 @@ export function useShelve() {
       changelistId: number;
       filePaths: string[];
     }) => {
+      addOutputLine(`p4 shelve -c ${changelistId} ${filePaths.join(' ')}`, false);
       return invokeP4Shelve(
         changelistId,
         filePaths,
@@ -56,13 +59,15 @@ export function useShelve() {
         p4client ?? undefined
       );
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: (data, variables) => {
+      addOutputLine(String(data), false);
       toast.success(`Shelved ${variables.filePaths.length} file(s)`);
       queryClient.invalidateQueries({ queryKey: ['p4', 'shelved'] });
       queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
       queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
     },
     onError: (error) => {
+      addOutputLine(`Error: ${error}`, true);
       toast.error(`Failed to shelve files: ${error}`);
     },
   });
@@ -81,6 +86,7 @@ export function useShelve() {
 export function useUnshelve() {
   const { p4port, p4user, p4client } = useConnectionStore();
   const queryClient = useQueryClient();
+  const { addOutputLine } = useOperationStore();
 
   return useMutation({
     mutationFn: async ({
@@ -124,6 +130,7 @@ export function useUnshelve() {
       }
 
       // Proceed with unshelve
+      addOutputLine(`p4 unshelve -s ${changelistId}${filePaths ? ' ' + filePaths.join(' ') : ''}`, false);
       return invokeP4Unshelve(
         changelistId,
         filePaths,
@@ -132,7 +139,8 @@ export function useUnshelve() {
         p4client ?? undefined
       );
     },
-    onSuccess: (_data, variables) => {
+    onSuccess: (data, variables) => {
+      addOutputLine(String(data), false);
       const message = variables.filePaths
         ? `Unshelved ${variables.filePaths.length} file(s) successfully`
         : 'Unshelved files successfully';
@@ -144,6 +152,7 @@ export function useUnshelve() {
     onError: (error: Error) => {
       // Don't show error toast if user cancelled
       if (!error.message.includes('User cancelled')) {
+        addOutputLine(`Error: ${error}`, true);
         toast.error(`Failed to unshelve files: ${error}`);
       }
     },
@@ -158,9 +167,11 @@ export function useUnshelve() {
 export function useDeleteShelf() {
   const { p4port, p4user, p4client } = useConnectionStore();
   const queryClient = useQueryClient();
+  const { addOutputLine } = useOperationStore();
 
   return useMutation({
     mutationFn: async ({ changelistId }: { changelistId: number }) => {
+      addOutputLine(`p4 shelve -d -c ${changelistId}`, false);
       return invokeP4DeleteShelf(
         changelistId,
         p4port ?? undefined,
@@ -168,11 +179,13 @@ export function useDeleteShelf() {
         p4client ?? undefined
       );
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      addOutputLine(String(data), false);
       toast.success('Deleted shelf successfully');
       queryClient.invalidateQueries({ queryKey: ['p4', 'shelved'] });
     },
     onError: (error) => {
+      addOutputLine(`Error: ${error}`, true);
       toast.error(`Failed to delete shelf: ${error}`);
     },
   });
