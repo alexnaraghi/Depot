@@ -62,7 +62,7 @@ export function SubmitDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-md">
+      <AlertDialogContent className="max-w-md" data-testid="submit-dialog">
         <AlertDialogHeader>
           <AlertDialogTitle>
             Submit Changelist {changelist.id === 0 ? '(Default)' : changelist.id}
@@ -82,6 +82,7 @@ export function SubmitDialog({
             className="w-full h-24 px-3 py-2 bg-background border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             placeholder="Enter changelist description..."
             disabled={isSubmitting}
+            data-testid="submit-description"
           />
         </div>
 
@@ -99,6 +100,7 @@ export function SubmitDialog({
           <AlertDialogAction
             onClick={handleSubmit}
             disabled={isSubmitting || !description.trim()}
+            data-testid="submit-confirm-button"
           >
             {isSubmitting ? 'Submitting...' : 'Submit'}
           </AlertDialogAction>

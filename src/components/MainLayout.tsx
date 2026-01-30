@@ -169,7 +169,7 @@ export function MainLayout() {
   return (
     <DndProvider backend={HTML5Backend}>
     <DndContext>
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" data-testid="app-ready">
       {/* Unified Header Toolbar */}
       <header className="bg-background border-b border-border">
         <div className="flex items-center justify-between px-3 py-1.5">

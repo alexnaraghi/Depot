@@ -40,6 +40,7 @@ export function FileNode({ node, style, dragHandle }: NodeRendererProps<FileNode
       )}
       onClick={() => node.isInternal && node.toggle()}
       onContextMenu={handleContextMenu}
+      data-testid={!isFolder && file ? `file-node-${file.depotPath.replace(/[^a-zA-Z0-9]/g, '-')}` : undefined}
     >
       {/* Folder or file icon */}
       {isFolder ? (

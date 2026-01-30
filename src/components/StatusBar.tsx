@@ -17,7 +17,7 @@ export function StatusBar() {
   // Don't render if no operation
   if (!currentOperation) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 h-6 bg-accent border-t border-border px-4 flex items-center">
+      <div className="fixed bottom-0 left-0 right-0 h-6 bg-accent border-t border-border px-4 flex items-center" data-testid="status-bar">
         <span className="text-xs text-muted-foreground">Ready</span>
       </div>
     );
@@ -37,6 +37,7 @@ export function StatusBar() {
           ? 'bg-emerald-900/50 border-emerald-800/30 text-emerald-200'
           : 'bg-primary/20 border-primary/30 text-primary'
       }`}
+      data-testid="status-bar"
     >
       {/* Left: Operation status */}
       <div className="flex items-center gap-2 min-w-0 flex-1">

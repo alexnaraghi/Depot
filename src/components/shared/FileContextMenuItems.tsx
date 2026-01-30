@@ -115,6 +115,7 @@ export function FileContextMenuItems({
               'hover:bg-accent',
               'flex items-center justify-between gap-6'
             )}
+            data-testid="context-menu-checkout"
           >
             <span className="flex items-center gap-2">
               <Edit3 className="w-4 h-4" />
@@ -134,6 +135,7 @@ export function FileContextMenuItems({
               'hover:bg-accent',
               'flex items-center justify-between gap-6'
             )}
+            data-testid="context-menu-revert"
           >
             <span className="flex items-center gap-2">
               <Undo2 className="w-4 h-4" />

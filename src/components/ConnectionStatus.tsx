@@ -50,6 +50,7 @@ export function ConnectionStatus() {
       variant={getVariant()}
       className={getClassName()}
       title={status === 'error' && errorMessage ? errorMessage : undefined}
+      data-testid="connection-status"
     >
       {getText()}
     </Badge>

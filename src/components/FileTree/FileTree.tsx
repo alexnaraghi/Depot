@@ -195,7 +195,7 @@ export function FileTree() {
 
   // Tree view
   return (
-    <div ref={containerRef} className="h-full w-full bg-background tree-container">
+    <div ref={containerRef} className="h-full w-full bg-background tree-container" data-testid="file-tree">
       <Tree
         data={enhancedTree(tree)}
         idAccessor="id"

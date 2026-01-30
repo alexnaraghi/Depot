@@ -291,7 +291,7 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
   }
 
   return (
-    <div className={cn('flex flex-col h-full', className)}>
+    <div className={cn('flex flex-col h-full', className)} data-testid="changelist-panel">
       <div className="flex items-center justify-between p-4 pb-2">
         <h2 className="text-lg font-semibold">Pending Changes</h2>
         <button

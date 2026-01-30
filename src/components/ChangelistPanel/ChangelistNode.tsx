@@ -74,6 +74,7 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
           e.preventDefault();
           onHeaderContextMenu?.(e, changelist);
         }}
+        data-testid={isDefault ? 'changelist-default' : `changelist-${changelist.id}`}
       >
         {/* List icon */}
         <List className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -108,6 +109,7 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
             }}
             className="opacity-0 group-hover:opacity-100 p-1 hover:bg-accent rounded "
             title="Submit"
+            data-testid="context-menu-submit"
           >
             <Send className="w-4 h-4 text-foreground" />
           </button>
@@ -176,6 +178,7 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
         e.preventDefault();
         onContextMenu?.(e, file);
       }}
+      data-testid={`cl-file-${fileName.replace(/[^a-zA-Z0-9]/g, '-')}`}
     >
       {/* Status icon */}
       <FileStatusIcon status={file.status} className="flex-shrink-0" />

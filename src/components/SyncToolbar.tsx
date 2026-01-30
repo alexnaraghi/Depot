@@ -84,6 +84,7 @@ export function SyncToolbar() {
           size="sm"
           className="bg-blue-600 hover:bg-blue-700"
           title={`Sync Workspace (${SHORTCUTS.SYNC.label})`}
+          data-testid="sync-button"
         >
           <RefreshCw
             className={`h-4 w-4 mr-2 ${isRunning ? 'animate-spin' : ''}`}
@@ -120,7 +121,7 @@ export function SyncToolbar() {
 
         {/* Progress display */}
         {isRunning && (
-          <div className="flex items-center gap-2 text-sm text-slate-300">
+          <div className="flex items-center gap-2 text-sm text-slate-300" data-testid="sync-progress">
             <span className="font-mono">
               {syncedFiles} {totalFiles > 0 ? `/ ${totalFiles}` : ''} files
             </span>
