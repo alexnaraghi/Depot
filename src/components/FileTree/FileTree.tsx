@@ -8,7 +8,7 @@ import { useDiff } from '@/hooks/useDiff';
 import { useFileOperations } from '@/hooks/useFileOperations';
 import { useFileTreeStore } from '@/stores/fileTreeStore';
 import { P4File } from '@/types/p4';
-import { Loader2, FolderOpen, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { useDndManager } from '@/contexts/DndContext';
 
 /**
@@ -156,9 +156,13 @@ export function FileTree() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-2 text-slate-400">
-        <Loader2 className="w-8 h-8 animate-spin" />
-        <p className="text-sm">Loading workspace files...</p>
+      <div className="p-3 space-y-2">
+        {Array.from({ length: 10 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-2" style={{ paddingLeft: `${(i % 3) * 16}px` }}>
+            <div className="w-4 h-4 bg-slate-700 rounded animate-pulse" />
+            <div className="h-3.5 bg-slate-700 rounded animate-pulse" style={{ width: `${60 + (i * 7) % 40}%` }} />
+          </div>
+        ))}
       </div>
     );
   }
@@ -183,9 +187,8 @@ export function FileTree() {
   // Empty state
   if (tree.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-2 text-slate-400">
-        <FolderOpen className="w-8 h-8" />
-        <p className="text-sm">No files in workspace</p>
+      <div className="flex items-center justify-center h-full">
+        <p className="text-sm text-muted-foreground">No files in workspace</p>
       </div>
     );
   }

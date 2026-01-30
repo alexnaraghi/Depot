@@ -249,8 +249,21 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
   // Loading state
   if (isLoading) {
     return (
-      <div className={cn('p-4', className)}>
-        <div className="text-slate-400 text-sm">Loading changelists...</div>
+      <div className={cn('flex flex-col h-full', className)}>
+        <div className="p-4 pb-2">
+          <h2 className="text-lg font-semibold">Pending Changes</h2>
+        </div>
+        <div className="p-3 space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="space-y-2">
+              <div className="h-4 bg-slate-700 rounded animate-pulse w-32" />
+              <div className="space-y-1 pl-4">
+                <div className="h-3.5 bg-slate-700/50 rounded animate-pulse w-3/4" />
+                <div className="h-3.5 bg-slate-700/50 rounded animate-pulse w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -258,9 +271,13 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
   // Empty state
   if (treeData.length === 0) {
     return (
-      <div className={cn('p-4', className)}>
-        <h2 className="text-lg font-semibold mb-4">Pending Changes</h2>
-        <div className="text-slate-400 text-sm">No pending changes</div>
+      <div className={cn('flex flex-col h-full', className)}>
+        <div className="p-4 pb-2">
+          <h2 className="text-lg font-semibold">Pending Changes</h2>
+        </div>
+        <div className="flex items-center justify-center flex-1">
+          <p className="text-sm text-muted-foreground">No pending changelists</p>
+        </div>
       </div>
     );
   }

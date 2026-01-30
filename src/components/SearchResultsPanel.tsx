@@ -33,12 +33,18 @@ export function SearchResultsPanel({ results, isLoading }: SearchResultsPanelPro
   return (
     <div className="absolute top-full mt-2 w-96 max-h-96 overflow-auto bg-slate-800 border border-slate-600 rounded-md shadow-lg z-50">
       {isLoading ? (
-        <div className="p-4 text-center text-slate-400">
-          Loading...
+        <div className="p-3 space-y-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="space-y-1.5">
+              <div className="h-4 bg-slate-700 rounded animate-pulse w-24" />
+              <div className="h-3 bg-slate-700/50 rounded animate-pulse w-full" />
+              <div className="h-3 bg-slate-700/50 rounded animate-pulse w-2/3" />
+            </div>
+          ))}
         </div>
       ) : results.length === 0 ? (
-        <div className="p-4 text-center text-slate-400">
-          No results
+        <div className="p-4 text-center">
+          <p className="text-sm text-muted-foreground">No results found</p>
         </div>
       ) : (
         <>
