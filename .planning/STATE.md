@@ -95,6 +95,7 @@ All v1.0 decisions documented in PROJECT.md Key Decisions table.
 2. **Move files when editing default CL description** (ui) — `.planning/todos/pending/2026-01-29-move-files-when-editing-default-cl-description.md`
 3. **Unshelve file to same changelist, not default** (ui) — `.planning/todos/pending/2026-01-29-unshelve-to-same-changelist.md`
 4. **Add resolve dialog after unshelving conflicting files** (ui) — `.planning/todos/pending/2026-01-29-unshelve-resolve-conflicts.md`
+5. **Integrate automated E2E testing with WebdriverIO** (testing) — `.planning/todos/pending/2026-01-29-integrate-automated-e2e-testing.md`
 
 ### Quick Tasks Completed
 
