@@ -61,6 +61,18 @@ export function SyncToolbar() {
     };
   }, [handleSync]);
 
+  // Listen for reconcile keyboard shortcut / command palette
+  useEffect(() => {
+    const handleReconcileEvent = () => {
+      setReconcileDialogOpen(true);
+    };
+
+    window.addEventListener('p4now:reconcile', handleReconcileEvent);
+    return () => {
+      window.removeEventListener('p4now:reconcile', handleReconcileEvent);
+    };
+  }, []);
+
   return (
     <>
       <div className="flex items-center gap-3 px-4 py-2 bg-slate-800 border-b border-slate-700">
