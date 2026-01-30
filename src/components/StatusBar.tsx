@@ -17,8 +17,8 @@ export function StatusBar() {
   // Don't render if no operation
   if (!currentOperation) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 h-6 bg-slate-800 border-t border-slate-700 px-4 flex items-center">
-        <span className="text-xs text-slate-400">Ready</span>
+      <div className="fixed bottom-0 left-0 right-0 h-6 bg-accent border-t border-border px-4 flex items-center">
+        <span className="text-xs text-muted-foreground">Ready</span>
       </div>
     );
   }
@@ -32,10 +32,10 @@ export function StatusBar() {
     <div
       className={`fixed bottom-0 left-0 right-0 h-6 border-t px-4 flex items-center justify-between text-xs ${
         isError
-          ? 'bg-red-900 border-red-800 text-red-100'
+          ? 'bg-destructive/20 border-destructive/30 text-destructive'
           : isSuccess
-          ? 'bg-green-900 border-green-800 text-green-100'
-          : 'bg-blue-900 border-blue-800 text-blue-100'
+          ? 'bg-emerald-900/50 border-emerald-800/30 text-emerald-200'
+          : 'bg-primary/20 border-primary/30 text-primary'
       }`}
     >
       {/* Left: Operation status */}
@@ -59,7 +59,7 @@ export function StatusBar() {
           <button
             onClick={cancel}
             disabled={isCancelling}
-            className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1 px-2 py-0.5 rounded hover:bg-black/20 disabled:opacity-50 disabled:cursor-not-allowed"
             title="Cancel operation"
           >
             <X className="h-3 w-3" />
