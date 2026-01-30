@@ -39,6 +39,7 @@ Full v2.0 decision log (50+ entries) available in phase SUMMARY.md files.
 3. **Unshelve file to same changelist, not default** (ui) — `.planning/todos/pending/2026-01-29-unshelve-to-same-changelist.md`
 4. **Add resolve dialog after unshelving conflicting files** (ui) — `.planning/todos/pending/2026-01-29-unshelve-resolve-conflicts.md`
 5. **Integrate automated E2E testing with WebdriverIO** (testing) — `.planning/todos/pending/2026-01-29-integrate-automated-e2e-testing.md`
+6. **Implement refresh button** (ui) — `.planning/todos/pending/2026-01-30-implement-refresh-button.md`
 
 ### Blockers/Concerns
 
