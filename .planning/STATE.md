@@ -10,19 +10,19 @@ See: .planning/PROJECT.md (updated 2026-01-28)
 ## Current Position
 
 Milestone: v2.0 Feature Complete
-Phase: 07 of 08 (Context Menus & Keyboard Shortcuts) — COMPLETE
-Plan: 02 of 02 complete
-Status: Phase complete, verified
-Last activity: 2026-01-29 — Completed Phase 07
+Phase: 08 of 08 (Visual Polish) — executing
+Plan: 01 of 03 complete
+Status: In progress
+Last activity: 2026-01-29 — Completed 08-01-PLAN.md
 
-Progress: [###########################.] 96% (27/~28 plans estimated)
+Progress: [###########################.] 97% (28/~29 plans estimated)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 27 (14 v1.0 + 13 v2.0)
+- Total plans completed: 28 (14 v1.0 + 14 v2.0)
 - Average duration: 7 min
-- Total execution time: ~189 min (104 v1.0 + ~85 v2.0)
+- Total execution time: ~192 min (104 v1.0 + ~88 v2.0)
 
 ## Accumulated Context
 
@@ -74,6 +74,10 @@ All v1.0 decisions documented in PROJECT.md Key Decisions table.
 | D-07-02-01 | 07-02 | Context-sensitive shortcuts via event dispatch | Global shortcuts dispatch events, components with selection context handle them (no-op when no selection) |
 | D-07-02-02 | 07-02 | Selected file tracking via context menu | FileTree tracks selectedFile state on context menu open for keyboard shortcuts |
 | D-07-02-03 | 07-02 | Submit shortcut targets first CL with files | Most common workflow, no multi-select UI needed for MVP |
+| D-08-01-01 | 08-01 | Blue-tinted dark theme with hue 220 | VS Code aesthetic using blue-gray surfaces instead of neutral grays |
+| D-08-01-02 | 08-01 | VS Code blue accent (#007acc / 217 91% 60%) | Primary color and focus rings match VS Code's iconic blue |
+| D-08-01-03 | 08-01 | No animations on dialogs and menus | Instant UI feedback per design decision, removed all animate/transition classes |
+| D-08-01-04 | 08-01 | System font stack | ui-sans-serif first, falls back to native OS fonts for consistent typography |
 
 ### Pending Todos
 
@@ -96,8 +100,8 @@ None active.
 ## Session Continuity
 
 Last session: 2026-01-29
-Stopped at: Completed quick task 002 (Disable Context-Sensitive Command Palette)
+Stopped at: Completed 08-01-PLAN.md
 Resume file: None
 
 ---
-**v2.0 In Progress:** Phases 03-07 complete (13/13 plans), Phase 08 remaining (~1 plan)
+**v2.0 In Progress:** Phases 03-07 complete (13/13 plans), Phase 08 in progress (1/3 plans)
