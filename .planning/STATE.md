@@ -10,12 +10,12 @@ See: .planning/PROJECT.md (updated 2026-01-28)
 ## Current Position
 
 Milestone: v2.0 Feature Complete
-Phase: 08 of 08 (Visual Polish) — complete
-Plan: 03 of 03 complete
-Status: Phase complete
-Last activity: 2026-01-30 — Completed 08-02-PLAN.md (continuation after checkpoint)
+Phase: 08 of 08 (Visual Polish) — gap closure in progress
+Plan: 04 of 05 complete (gap closure plans)
+Status: In progress
+Last activity: 2026-01-30 — Completed 08-04-PLAN.md (semantic colors gap closure)
 
-Progress: [############################] 100% (29/29 plans)
+Progress: [############################] 100% (30/30 plans)
 
 ## Performance Metrics
 
@@ -83,6 +83,9 @@ All v1.0 decisions documented in PROJECT.md Key Decisions table.
 | D-08-03-02 | 08-03 | Empty states are text-only with text-muted-foreground | Cleaner, less cluttered UI without icon-heavy empty states |
 | D-08-03-03 | 08-03 | Removed all transitions from StatusBar | Instant UI feedback, no animation delays |
 | D-08-03-04 | 08-03 | App.css completely cleaned | File unused (no imports), contained only Vite template boilerplate |
+| D-08-04-01 | 08-04 | Map slate-* colors to semantic equivalents | bg-background, text-foreground, border-border, hover:bg-accent for theme consistency |
+| D-08-04-02 | 08-04 | StatusBar uses semi-transparent theme-aligned overlays | bg-destructive/20, bg-emerald-900/50, bg-primary/20 blend with hue 220 theme |
+| D-08-04-03 | 08-04 | Cancel button uses relative black/20 hover | Works on any colored background without hardcoding |
 
 ### Pending Todos
 
@@ -105,8 +108,8 @@ None active.
 ## Session Continuity
 
 Last session: 2026-01-30
-Stopped at: Completed 08-02-PLAN.md (continuation after checkpoint feedback)
+Stopped at: Completed 08-04-PLAN.md (semantic colors gap closure)
 Resume file: None
 
 ---
-**v2.0 Complete:** All phases complete (15/15 plans) - Phase 08 Visual Polish finished
+**v2.0 Gap Closure:** Phase 08 gap closure plans in progress (4/5 complete)
