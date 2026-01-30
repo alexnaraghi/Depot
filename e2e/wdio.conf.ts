@@ -38,18 +38,45 @@ export const config = {
     timeout: 60000,
   },
 
-  // Before test session: Start tauri-driver
-  beforeSession: async () => {
+  // Start tauri-driver once before all workers
+  onPrepare: async () => {
     tauriDriver = spawn('tauri-driver', [], {
       stdio: ['ignore', 'pipe', 'pipe'],
     })
 
-    // Give tauri-driver time to start
-    await new Promise((resolve) => setTimeout(resolve, 500))
+    // Wait for tauri-driver to bind to port 4444
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        resolve() // proceed anyway after 2s, connection retries will handle it
+      }, 2000)
+
+      tauriDriver.stderr?.on('data', (data: Buffer) => {
+        const msg = data.toString()
+        // tauri-driver logs to stderr when ready
+        if (msg.includes('listening')) {
+          clearTimeout(timeout)
+          resolve()
+        }
+      })
+
+      tauriDriver.on('error', (err) => {
+        clearTimeout(timeout)
+        reject(new Error(`Failed to start tauri-driver: ${err.message}`))
+      })
+
+      tauriDriver.on('close', (code) => {
+        if (code !== null && code !== 0) {
+          clearTimeout(timeout)
+          reject(new Error(`tauri-driver exited with code ${code}`))
+        }
+      })
+    })
   },
 
-  // After test session: Kill tauri-driver
-  afterSession: async () => {
-    tauriDriver.kill()
+  // Stop tauri-driver after all workers finish
+  onComplete: async () => {
+    if (tauriDriver) {
+      tauriDriver.kill()
+    }
   },
 }
