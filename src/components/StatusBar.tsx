@@ -30,7 +30,7 @@ export function StatusBar() {
 
   return (
     <div
-      className={`fixed bottom-0 left-0 right-0 h-6 border-t px-4 flex items-center justify-between text-xs transition-colors ${
+      className={`fixed bottom-0 left-0 right-0 h-6 border-t px-4 flex items-center justify-between text-xs ${
         isError
           ? 'bg-red-900 border-red-800 text-red-100'
           : isSuccess
