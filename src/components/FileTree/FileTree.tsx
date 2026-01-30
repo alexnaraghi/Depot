@@ -5,6 +5,7 @@ import { FileNode, FileNodeData } from './FileNode';
 import { FileContextMenu } from './FileContextMenu';
 import { FileHistoryDialog } from '@/components/dialogs/FileHistoryDialog';
 import { useDiff } from '@/hooks/useDiff';
+import { useFileOperations } from '@/hooks/useFileOperations';
 import { P4File } from '@/types/p4';
 import { Loader2, FolderOpen, AlertCircle } from 'lucide-react';
 import { useDndManager } from '@/contexts/DndContext';
@@ -30,7 +31,9 @@ export function FileTree() {
     depotPath: string;
     localPath: string;
   } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<P4File | null>(null);
   const { diffAgainstWorkspace } = useDiff();
+  const { checkout, revert } = useFileOperations();
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerHeight, setContainerHeight] = useState(600);
 
@@ -51,6 +54,45 @@ export function FileTree() {
     return () => window.removeEventListener('resize', updateHeight);
   }, []);
 
+  // Listen for context-sensitive shortcut events
+  useEffect(() => {
+    const handleDiffSelected = () => {
+      if (selectedFile) {
+        handleDiffAgainstHave(selectedFile.depotPath, selectedFile.localPath);
+      }
+    };
+
+    const handleHistorySelected = () => {
+      if (selectedFile) {
+        handleShowHistory(selectedFile.depotPath, selectedFile.localPath);
+      }
+    };
+
+    const handleRevertSelected = () => {
+      if (selectedFile) {
+        revert([selectedFile.depotPath]);
+      }
+    };
+
+    const handleCheckoutSelected = () => {
+      if (selectedFile) {
+        checkout([selectedFile.depotPath]);
+      }
+    };
+
+    window.addEventListener('p4now:diff-selected', handleDiffSelected);
+    window.addEventListener('p4now:history-selected', handleHistorySelected);
+    window.addEventListener('p4now:revert-selected', handleRevertSelected);
+    window.addEventListener('p4now:checkout-selected', handleCheckoutSelected);
+
+    return () => {
+      window.removeEventListener('p4now:diff-selected', handleDiffSelected);
+      window.removeEventListener('p4now:history-selected', handleHistorySelected);
+      window.removeEventListener('p4now:revert-selected', handleRevertSelected);
+      window.removeEventListener('p4now:checkout-selected', handleCheckoutSelected);
+    };
+  }, [selectedFile, checkout, revert]);
+
   // Attach onContextMenu handler to tree data
   const enhancedTree = useCallback(
     (data: FileNodeData[]): FileNodeData[] => {
@@ -65,6 +107,7 @@ export function FileTree() {
 
   function handleContextMenu(event: React.MouseEvent, file: P4File) {
     event.preventDefault();
+    setSelectedFile(file); // Track selected file for keyboard shortcuts
     setContextMenu({
       file,
       x: event.clientX,

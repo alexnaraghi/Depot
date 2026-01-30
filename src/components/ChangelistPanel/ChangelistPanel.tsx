@@ -200,6 +200,23 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
     };
   }, []);
 
+  // Listen for submit shortcut event
+  useEffect(() => {
+    const handleSubmit = () => {
+      // Get the first changelist with files (or selected changelist if tracked)
+      const changelistWithFiles = changelists.find(cl => cl.fileCount > 0);
+      if (changelistWithFiles) {
+        setSelectedChangelist(changelistWithFiles);
+        setSubmitDialogOpen(true);
+      }
+    };
+
+    window.addEventListener('p4now:submit', handleSubmit);
+    return () => {
+      window.removeEventListener('p4now:submit', handleSubmit);
+    };
+  }, [changelists]);
+
   // Handle diff against have
   const handleDiffAgainstHave = useCallback((depotPath: string, localPath: string) => {
     // Find the file in tree to get its revision
