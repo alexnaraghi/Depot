@@ -225,7 +225,11 @@ fn parse_ztag_fstat(output: &str) -> Result<Vec<P4FileInfo>, String> {
 fn build_file_info(fields: &HashMap<String, String>) -> Option<P4FileInfo> {
     // Required fields
     let depot_path = fields.get("depotFile")?.clone();
-    let local_path = fields.get("clientFile")?.clone();
+    // Prefer "path" (local filesystem path from fstat) over "clientFile" (client-spec path).
+    // p4 opened only provides "clientFile" as local path, while p4 fstat provides both
+    // "clientFile" (//client/...) and "path" (C:\workspace\...).
+    let local_path = fields.get("path")
+        .or_else(|| fields.get("clientFile"))?.clone();
 
     // Parse revisions (default to 0 if not present)
     let head_revision = fields.get("headRev")
