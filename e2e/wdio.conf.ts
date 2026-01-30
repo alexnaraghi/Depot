@@ -1,5 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { join } from 'node:path'
+import { seedSettings } from './test/helpers/seed-settings.js'
 
 // PREREQUISITES:
 // 1. Build the app: npm run tauri build
@@ -8,6 +9,10 @@ import { join } from 'node:path'
 //    - Download from https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/
 //    - Match your Edge version (edge://version to check)
 //    - Add msedgedriver.exe to your PATH
+// 4. Set environment variables for P4 connection:
+//    - P4E2E_PORT: P4 server address (e.g., "ssl:perforce:1666")
+//    - P4E2E_USER: P4 username
+//    - P4E2E_CLIENT: P4 client/workspace name
 
 let tauriDriver: ChildProcess
 
@@ -44,6 +49,9 @@ export const config = {
 
   // Start tauri-driver once before all workers
   onPrepare: async () => {
+    // Seed P4 connection settings BEFORE launching the app
+    await seedSettings()
+
     tauriDriver = spawn('tauri-driver', [], {
       stdio: ['ignore', 'pipe', 'pipe'],
     })
