@@ -31,19 +31,19 @@ Make the app look professional and feel polished with consistent design, loading
 - Section headers get background bar treatment (subtle background behind header text)
 - Keep Lucide icons throughout — already in use, stay consistent
 
-### Header toolbar redesign
+### Unified top bar
+- Consolidate the two existing top bars into a single bar
+- **Left:** Repository and Stream text with labels above values (GitKraken-style). Remove "P4Now" text. Text-only for now (future: clickable buttons)
+- **Center:** Perforce action buttons — Refresh, Sync, Reconcile, Add (new CL), Checkout, Revert, Diff
+- **Right:** Search, connection status indicator, settings button
+- All elements already exist across the two bars — this is a layout consolidation, not new functionality
+
+### Header button style
 - GitKraken-style buttons: large icon with smaller text below
 - No borders on buttons — only highlight on hover
 - All hover/selection behavior consistent between buttons
-- Toolbar buttons: Refresh, Sync, Reconcile, Add (new CL), Checkout, Revert, Diff
-- Settings already has a button (keep as-is or match new style)
 - Context-sensitive greying: Checkout/Revert/Diff greyed out when no file selected
 - Command palette (Ctrl+K) remains as keyboard-first alternative
-
-### Header info bar
-- Remove "P4Now" text from the top bar showing repository and stream
-- Add "Repository" and "Stream" labels above the values (GitKraken-style)
-- These remain text-only for now (future phase: make them clickable buttons)
 
 ### Dialog consistency
 - All dialogs must follow dark theme — currently inconsistent
