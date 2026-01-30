@@ -3,6 +3,8 @@ import { useQuery, useQueries } from '@tanstack/react-query';
 import { useChangelistStore } from '@/stores/changelistStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { invokeP4Changes, invokeP4Opened, invokeP4DescribeShelved, type P4ShelvedFile } from '@/lib/tauri';
+import { useOperationStore } from '@/store/operation';
+import { getVerboseLogging } from '@/lib/settings';
 import { buildChangelistTree, ChangelistTreeNode } from '@/utils/treeBuilder';
 import { P4Changelist, P4File, FileStatus } from '@/types/p4';
 
@@ -26,7 +28,14 @@ export function useChangelists(): {
   // Load pending changelists (only when connected)
   const { data: clData, isLoading: clLoading } = useQuery({
     queryKey: ['p4', 'changes', 'pending', p4port, p4user, p4client],
-    queryFn: () => invokeP4Changes('pending', p4port ?? undefined, p4user ?? undefined, p4client ?? undefined),
+    queryFn: async () => {
+      const { addOutputLine } = useOperationStore.getState();
+      const verbose = await getVerboseLogging();
+      if (verbose) addOutputLine('p4 changes -s pending', false);
+      const result = await invokeP4Changes('pending', p4port ?? undefined, p4user ?? undefined, p4client ?? undefined);
+      if (verbose) addOutputLine(`... returned ${result.length} items`, false);
+      return result;
+    },
     refetchOnWindowFocus: false,
     staleTime: 30000,
     enabled: isConnected,
@@ -35,7 +44,14 @@ export function useChangelists(): {
   // Load opened files (to associate with changelists) (only when connected)
   const { data: openedData, isLoading: openedLoading } = useQuery({
     queryKey: ['p4', 'opened', p4port, p4user, p4client],
-    queryFn: () => invokeP4Opened(p4port ?? undefined, p4user ?? undefined, p4client ?? undefined),
+    queryFn: async () => {
+      const { addOutputLine } = useOperationStore.getState();
+      const verbose = await getVerboseLogging();
+      if (verbose) addOutputLine('p4 opened', false);
+      const result = await invokeP4Opened(p4port ?? undefined, p4user ?? undefined, p4client ?? undefined);
+      if (verbose) addOutputLine(`... returned ${result.length} items`, false);
+      return result;
+    },
     refetchOnWindowFocus: false,
     staleTime: 30000,
     enabled: isConnected,
@@ -106,12 +122,19 @@ export function useChangelists(): {
   const shelvedQueries = useQueries({
     queries: numberedClIds.map(clId => ({
       queryKey: ['p4', 'shelved', clId],
-      queryFn: () => invokeP4DescribeShelved(
-        clId,
-        p4port ?? undefined,
-        p4user ?? undefined,
-        p4client ?? undefined
-      ),
+      queryFn: async () => {
+        const { addOutputLine } = useOperationStore.getState();
+        const verbose = await getVerboseLogging();
+        if (verbose) addOutputLine(`p4 describe -S ${clId}`, false);
+        const result = await invokeP4DescribeShelved(
+          clId,
+          p4port ?? undefined,
+          p4user ?? undefined,
+          p4client ?? undefined
+        );
+        if (verbose) addOutputLine(`... returned ${result.length} items`, false);
+        return result;
+      },
       enabled: isConnected,
       staleTime: 30000,
       refetchOnWindowFocus: false,

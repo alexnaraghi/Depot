@@ -9,6 +9,7 @@ import {
 } from '@/lib/tauri';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useOperationStore } from '@/store/operation';
+import { getVerboseLogging } from '@/lib/settings';
 import toast from 'react-hot-toast';
 
 /**
@@ -21,13 +22,19 @@ export function useShelvedFilesQuery(changelistId: number) {
 
   return useQuery<P4ShelvedFile[]>({
     queryKey: ['p4', 'shelved', changelistId],
-    queryFn: () =>
-      invokeP4DescribeShelved(
+    queryFn: async () => {
+      const { addOutputLine } = useOperationStore.getState();
+      const verbose = await getVerboseLogging();
+      if (verbose) addOutputLine(`p4 describe -S ${changelistId}`, false);
+      const result = await invokeP4DescribeShelved(
         changelistId,
         p4port ?? undefined,
         p4user ?? undefined,
         p4client ?? undefined
-      ),
+      );
+      if (verbose) addOutputLine(`... returned ${result.length} items`, false);
+      return result;
+    },
     enabled: changelistId > 0 && !!p4port && !!p4user && !!p4client,
   });
 }

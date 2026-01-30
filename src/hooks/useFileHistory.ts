@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { invokeP4Filelog, type P4Revision } from '@/lib/tauri';
+import { useOperationStore } from '@/store/operation';
+import { getVerboseLogging } from '@/lib/settings';
 import { useConnectionStore } from '@/stores/connectionStore';
 
 /**
@@ -15,13 +17,20 @@ export function useFileHistory(depotPath: string, enabled: boolean = true) {
 
   const query = useQuery<P4Revision[]>({
     queryKey: ['p4', 'filelog', depotPath, maxRevisions],
-    queryFn: () => invokeP4Filelog(
-      depotPath,
-      maxRevisions,
-      p4port ?? undefined,
-      p4user ?? undefined,
-      p4client ?? undefined
-    ),
+    queryFn: async () => {
+      const { addOutputLine } = useOperationStore.getState();
+      const verbose = await getVerboseLogging();
+      if (verbose) addOutputLine(`p4 filelog ${depotPath}`, false);
+      const result = await invokeP4Filelog(
+        depotPath,
+        maxRevisions,
+        p4port ?? undefined,
+        p4user ?? undefined,
+        p4client ?? undefined
+      );
+      if (verbose) addOutputLine(`... returned ${result.length} items`, false);
+      return result;
+    },
     enabled: enabled && !!p4port && !!p4user && !!p4client,
   });
 

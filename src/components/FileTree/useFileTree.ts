@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { useFileTreeStore } from '@/stores/fileTreeStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { invokeP4Fstat, invokeP4Info, P4FileInfo } from '@/lib/tauri';
+import { useOperationStore } from '@/store/operation';
+import { getVerboseLogging } from '@/lib/settings';
 import { buildFileTree } from '@/utils/treeBuilder';
 import { P4File, FileStatus, FileAction } from '@/types/p4';
 
@@ -67,7 +69,14 @@ export function useFileTree() {
   // Only runs when connected (settings configured and connection verified)
   const { data: clientInfo, isLoading: clientInfoLoading, error: clientInfoError } = useQuery({
     queryKey: ['p4Info', p4port, p4user, p4client],
-    queryFn: () => invokeP4Info(p4port ?? undefined, p4user ?? undefined, p4client ?? undefined),
+    queryFn: async () => {
+      const { addOutputLine } = useOperationStore.getState();
+      const verbose = await getVerboseLogging();
+      if (verbose) addOutputLine('p4 info', false);
+      const result = await invokeP4Info(p4port ?? undefined, p4user ?? undefined, p4client ?? undefined);
+      if (verbose) addOutputLine('... ok', false);
+      return result;
+    },
     staleTime: Infinity, // Client info doesn't change during session
     refetchOnWindowFocus: false,
     enabled: isConnected,
@@ -89,10 +98,14 @@ export function useFileTree() {
   const { data: files = [], isLoading: filesLoading, error: filesError, refetch } = useQuery({
     queryKey: ['fileTree', rootPath, depotPath],
     queryFn: async () => {
+      const { addOutputLine } = useOperationStore.getState();
+      const verbose = await getVerboseLogging();
+      if (verbose) addOutputLine(`p4 fstat ${depotPath}`, false);
       setLoading(true);
       try {
         // Pass depot path to query files (avoids -d flag issues with DVCS)
         const fileInfos = await invokeP4Fstat([], depotPath, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined);
+        if (verbose) addOutputLine(`... returned ${fileInfos.length} items`, false);
         const mappedFiles = fileInfos.map(mapP4FileInfo);
         setFiles(mappedFiles);
         return mappedFiles;

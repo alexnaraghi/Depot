@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { invokeP4Sync, invokeKillProcess, invokeP4Info, SyncProgress } from '@/lib/tauri';
 import { useOperationStore } from '@/store/operation';
+import { getVerboseLogging } from '@/lib/settings';
 import { useFileTreeStore } from '@/stores/fileTreeStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 
@@ -41,7 +42,14 @@ export function useSync() {
   // Get client info for depot path (only when connected)
   const { data: clientInfo } = useQuery({
     queryKey: ['p4Info', p4port, p4user, p4client],
-    queryFn: () => invokeP4Info(p4port ?? undefined, p4user ?? undefined, p4client ?? undefined),
+    queryFn: async () => {
+      const { addOutputLine } = useOperationStore.getState();
+      const verbose = await getVerboseLogging();
+      if (verbose) addOutputLine('p4 info', false);
+      const result = await invokeP4Info(p4port ?? undefined, p4user ?? undefined, p4client ?? undefined);
+      if (verbose) addOutputLine('... ok', false);
+      return result;
+    },
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     enabled: isConnected,

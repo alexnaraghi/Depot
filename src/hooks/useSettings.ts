@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { loadSettings } from '@/lib/settings';
+import { loadSettings, getVerboseLogging } from '@/lib/settings';
 import { useConnectionStore } from '@/stores/connectionStore';
+import { useOperationStore } from '@/store/operation';
 import { invokeP4Info } from '@/lib/tauri';
 import type { P4Settings } from '@/types/settings';
 
@@ -19,7 +20,11 @@ export function useSettings() {
     // Test connection with saved settings
     setConnecting();
     try {
+      const { addOutputLine } = useOperationStore.getState();
+      const verbose = await getVerboseLogging();
+      if (verbose) addOutputLine('p4 info', false);
       const info = await invokeP4Info(s.p4port, s.p4user, s.p4client);
+      if (verbose) addOutputLine('... ok', false);
       setConnected({
         workspace: info.client_name,
         stream: info.client_stream || undefined,

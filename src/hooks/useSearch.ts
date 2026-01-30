@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { invokeP4ChangesSubmitted } from '@/lib/tauri';
+import { useOperationStore } from '@/store/operation';
+import { getVerboseLogging } from '@/lib/settings';
 import { useConnectionStore } from '@/stores/connectionStore';
 
 export function useSearch(searchTerm: string) {
@@ -13,7 +15,12 @@ export function useSearch(searchTerm: string) {
       if (!p4port || !p4user || !p4client) {
         return [];
       }
-      return invokeP4ChangesSubmitted(500, p4port, p4user, p4client);
+      const { addOutputLine } = useOperationStore.getState();
+      const verbose = await getVerboseLogging();
+      if (verbose) addOutputLine('p4 changes -s submitted', false);
+      const result = await invokeP4ChangesSubmitted(500, p4port, p4user, p4client);
+      if (verbose) addOutputLine(`... returned ${result.length} items`, false);
+      return result;
     },
     enabled: status === 'connected', // Only fetch when connected
     staleTime: 5 * 60 * 1000, // 5 minutes cache

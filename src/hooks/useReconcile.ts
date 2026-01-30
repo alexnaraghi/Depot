@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { invokeP4ReconcilePreview, invokeP4ReconcileApply, invokeP4Info, ReconcilePreview } from '@/lib/tauri';
+import { useOperationStore } from '@/store/operation';
+import { getVerboseLogging } from '@/lib/settings';
 import toast from 'react-hot-toast';
 
 /**
@@ -18,7 +20,14 @@ export function useReconcile() {
   // Get client info for depot path (only when connected)
   const { data: clientInfo } = useQuery({
     queryKey: ['p4Info', p4port, p4user, p4client],
-    queryFn: () => invokeP4Info(p4port ?? undefined, p4user ?? undefined, p4client ?? undefined),
+    queryFn: async () => {
+      const { addOutputLine } = useOperationStore.getState();
+      const verbose = await getVerboseLogging();
+      if (verbose) addOutputLine('p4 info', false);
+      const result = await invokeP4Info(p4port ?? undefined, p4user ?? undefined, p4client ?? undefined);
+      if (verbose) addOutputLine('... ok', false);
+      return result;
+    },
     staleTime: Infinity,
     refetchOnWindowFocus: false,
     enabled: isConnected,
@@ -35,12 +44,17 @@ export function useReconcile() {
    */
   const reconcilePreview = useMutation<ReconcilePreview[], Error, void>({
     mutationFn: async () => {
-      return invokeP4ReconcilePreview(
+      const { addOutputLine } = useOperationStore.getState();
+      const verbose = await getVerboseLogging();
+      if (verbose) addOutputLine('p4 reconcile -n', false);
+      const result = await invokeP4ReconcilePreview(
         depotPath,
         p4port ?? undefined,
         p4user ?? undefined,
         p4client ?? undefined
       );
+      if (verbose) addOutputLine(`... returned ${result.length} items`, false);
+      return result;
     },
   });
 
@@ -55,6 +69,8 @@ export function useReconcile() {
     { filePaths: string[]; changelistId?: number }
   >({
     mutationFn: async ({ filePaths, changelistId }) => {
+      const { addOutputLine } = useOperationStore.getState();
+      addOutputLine(`p4 reconcile ${filePaths.join(' ')}`, false);
       return invokeP4ReconcileApply(
         filePaths,
         changelistId,
@@ -64,6 +80,8 @@ export function useReconcile() {
       );
     },
     onSuccess: (result, { changelistId }) => {
+      const { addOutputLine } = useOperationStore.getState();
+      addOutputLine(result, false);
       const clTarget = changelistId ? `changelist ${changelistId}` : 'default changelist';
       const fileCount = result.trim().split('\n').filter(l => l.trim().length > 0).length;
       toast.success(`Reconciled ${fileCount} file(s) to ${clTarget}`);
@@ -73,6 +91,8 @@ export function useReconcile() {
       queryClient.invalidateQueries({ queryKey: ['p4', 'fstat'] });
     },
     onError: (error) => {
+      const { addOutputLine } = useOperationStore.getState();
+      addOutputLine(`Error: ${error}`, true);
       const msg = error instanceof Error ? error.message : String(error);
       toast.error(`Reconcile failed: ${msg}`);
     },
