@@ -36,13 +36,13 @@ export function OutputPanel() {
   const isPending = outputLines.length !== deferredLines.length;
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="border-t border-slate-700">
-      <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2 bg-slate-800 hover:bg-slate-700 transition-colors">
-        <div className="flex items-center gap-2 text-sm text-slate-300">
+    <Collapsible open={isOpen} onOpenChange={setIsOpen} className="border-t border-border">
+      <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2 bg-accent hover:bg-accent/80">
+        <div className="flex items-center gap-2 text-sm text-foreground">
           <Terminal className="h-4 w-4" />
           <span>Output</span>
           {lineCount > 0 && (
-            <span className="text-xs text-slate-500">({lineCount} lines)</span>
+            <span className="text-xs text-muted-foreground">({lineCount} lines)</span>
           )}
           {isPending && (
             <span className="text-xs text-yellow-500">(updating...)</span>
@@ -55,14 +55,14 @@ export function OutputPanel() {
                 e.stopPropagation();
                 clearOutput();
               }}
-              className="p-1 rounded hover:bg-slate-600 text-slate-400 hover:text-slate-200"
+              className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
               title="Clear output"
             >
               <Trash2 className="h-3 w-3" />
             </button>
           )}
           <ChevronDown
-            className={`h-4 w-4 text-slate-400 transition-transform ${
+            className={`h-4 w-4 text-muted-foreground transition-transform ${
               isOpen ? 'rotate-180' : ''
             }`}
           />
@@ -71,12 +71,12 @@ export function OutputPanel() {
 
       <CollapsibleContent>
         <div
-          className={`max-h-64 overflow-y-auto bg-slate-900 font-mono text-xs ${
+          className={`max-h-64 overflow-y-auto bg-background font-mono text-xs ${
             isPending ? 'opacity-80' : ''
           }`}
         >
           {deferredLines.length === 0 ? (
-            <div className="px-4 py-8 text-center text-slate-500">
+            <div className="px-4 py-8 text-center text-muted-foreground">
               No output yet. Run a p4 command to see output here.
             </div>
           ) : (
@@ -85,7 +85,7 @@ export function OutputPanel() {
                 <div
                   key={`${line.timestamp}-${index}`}
                   className={`py-0.5 px-2 ${
-                    line.isStderr ? 'text-red-400' : 'text-slate-300'
+                    line.isStderr ? 'text-red-400' : 'text-foreground'
                   }`}
                 >
                   {line.line}

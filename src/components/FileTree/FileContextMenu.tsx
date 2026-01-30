@@ -112,7 +112,7 @@ export function FileContextMenu({ file, x, y, onClose, onShowHistory, onDiffAgai
   return (
     <div
       ref={menuRef}
-      className="fixed z-50 min-w-48 bg-slate-900 border border-slate-700 rounded-md shadow-xl py-1"
+      className="fixed z-50 min-w-48 bg-background border border-border rounded-md shadow-xl py-1"
       style={{ left: x, top: y }}
     >
       {/* Shared file operations */}
@@ -124,14 +124,14 @@ export function FileContextMenu({ file, x, y, onClose, onShowHistory, onDiffAgai
       />
 
       {/* Workspace-specific operations */}
-      {(canSync || canAdd) && <div className="h-px bg-slate-700 my-1" />}
+      {(canSync || canAdd) && <div className="h-px bg-border my-1" />}
 
       {canSync && (
         <button
           onClick={handleGetRevision}
           className={cn(
-            'w-full px-4 py-2 text-left text-sm text-slate-200',
-            'hover:bg-slate-800 transition-colors',
+            'w-full px-4 py-2 text-left text-sm text-foreground',
+            'hover:bg-accent',
             'flex items-center justify-between gap-6'
           )}
         >
@@ -146,8 +146,8 @@ export function FileContextMenu({ file, x, y, onClose, onShowHistory, onDiffAgai
         <button
           onClick={handleAddToDepot}
           className={cn(
-            'w-full px-4 py-2 text-left text-sm text-slate-200',
-            'hover:bg-slate-800 transition-colors',
+            'w-full px-4 py-2 text-left text-sm text-foreground',
+            'hover:bg-accent',
             'flex items-center justify-between gap-6'
           )}
         >

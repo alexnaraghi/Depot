@@ -95,8 +95,8 @@ export function FileContextMenuItems({
           <button
             onClick={handleCheckout}
             className={cn(
-              'w-full px-4 py-2 text-left text-sm text-slate-200',
-              'hover:bg-slate-800 transition-colors',
+              'w-full px-4 py-2 text-left text-sm text-foreground',
+              'hover:bg-accent',
               'flex items-center justify-between gap-6'
             )}
           >
@@ -105,7 +105,7 @@ export function FileContextMenuItems({
               Checkout for Edit
             </span>
           </button>
-          <div className="h-px bg-slate-700 my-1" />
+          <div className="h-px bg-border my-1" />
         </>
       )}
 
@@ -114,8 +114,8 @@ export function FileContextMenuItems({
           <button
             onClick={handleRevert}
             className={cn(
-              'w-full px-4 py-2 text-left text-sm text-slate-200',
-              'hover:bg-slate-800 transition-colors',
+              'w-full px-4 py-2 text-left text-sm text-foreground',
+              'hover:bg-accent',
               'flex items-center justify-between gap-6'
             )}
           >
@@ -123,17 +123,17 @@ export function FileContextMenuItems({
               <Undo2 className="w-4 h-4" />
               Revert Changes
             </span>
-            <span className="text-xs text-slate-500">{SHORTCUTS.REVERT.label}</span>
+            <span className="text-xs text-muted-foreground">{SHORTCUTS.REVERT.label}</span>
           </button>
-          <div className="h-px bg-slate-700 my-1" />
+          <div className="h-px bg-border my-1" />
         </>
       )}
 
       <button
         onClick={handleShowHistory}
         className={cn(
-          'w-full px-4 py-2 text-left text-sm text-slate-200',
-          'hover:bg-slate-800 transition-colors',
+          'w-full px-4 py-2 text-left text-sm text-foreground',
+          'hover:bg-accent',
           'flex items-center justify-between gap-6'
         )}
       >
@@ -141,15 +141,15 @@ export function FileContextMenuItems({
           <History className="w-4 h-4" />
           File History
         </span>
-        <span className="text-xs text-slate-500">{SHORTCUTS.HISTORY.label}</span>
+        <span className="text-xs text-muted-foreground">{SHORTCUTS.HISTORY.label}</span>
       </button>
 
       {canRevert && (
         <button
           onClick={handleDiffAgainstHave}
           className={cn(
-            'w-full px-4 py-2 text-left text-sm text-slate-200',
-            'hover:bg-slate-800 transition-colors',
+            'w-full px-4 py-2 text-left text-sm text-foreground',
+            'hover:bg-accent',
             'flex items-center justify-between gap-6'
           )}
         >
@@ -157,17 +157,17 @@ export function FileContextMenuItems({
             <GitCompare className="w-4 h-4" />
             Diff against Have
           </span>
-          <span className="text-xs text-slate-500">{SHORTCUTS.DIFF.label}</span>
+          <span className="text-xs text-muted-foreground">{SHORTCUTS.DIFF.label}</span>
         </button>
       )}
 
-      <div className="h-px bg-slate-700 my-1" />
+      <div className="h-px bg-border my-1" />
 
       <button
         onClick={handleCopyPath}
         className={cn(
-          'w-full px-4 py-2 text-left text-sm text-slate-200',
-          'hover:bg-slate-800 transition-colors',
+          'w-full px-4 py-2 text-left text-sm text-foreground',
+          'hover:bg-accent',
           'flex items-center justify-between gap-6'
         )}
       >
@@ -180,8 +180,8 @@ export function FileContextMenuItems({
       <button
         onClick={handleOpenInExplorer}
         className={cn(
-          'w-full px-4 py-2 text-left text-sm text-slate-200',
-          'hover:bg-slate-800 transition-colors',
+          'w-full px-4 py-2 text-left text-sm text-foreground',
+          'hover:bg-accent',
           'flex items-center justify-between gap-6'
         )}
       >

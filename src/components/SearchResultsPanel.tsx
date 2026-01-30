@@ -31,14 +31,14 @@ export function SearchResultsPanel({ results, isLoading }: SearchResultsPanelPro
   };
 
   return (
-    <div className="absolute top-full mt-2 w-96 max-h-96 overflow-auto bg-slate-800 border border-slate-600 rounded-md shadow-lg z-50">
+    <div className="absolute top-full mt-2 w-96 max-h-96 overflow-auto bg-accent border border-border rounded-md shadow-lg z-50">
       {isLoading ? (
         <div className="p-3 space-y-2">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="space-y-1.5">
-              <div className="h-4 bg-slate-700 rounded animate-pulse w-24" />
-              <div className="h-3 bg-slate-700/50 rounded animate-pulse w-full" />
-              <div className="h-3 bg-slate-700/50 rounded animate-pulse w-2/3" />
+              <div className="h-4 bg-border rounded animate-pulse w-24" />
+              <div className="h-3 bg-border/50 rounded animate-pulse w-full" />
+              <div className="h-3 bg-border/50 rounded animate-pulse w-2/3" />
             </div>
           ))}
         </div>
@@ -48,42 +48,42 @@ export function SearchResultsPanel({ results, isLoading }: SearchResultsPanelPro
         </div>
       ) : (
         <>
-          <div className="p-2 border-b border-slate-700 text-xs text-slate-400">
+          <div className="p-2 border-b border-border text-xs text-muted-foreground">
             {results.length} {results.length === 1 ? 'result' : 'results'}
           </div>
-          <div className="divide-y divide-slate-700">
+          <div className="divide-y divide-border">
             {results.map((changelist) => {
               const isExpanded = expandedId === changelist.id;
               return (
                 <div
                   key={changelist.id}
-                  className="p-3 hover:bg-slate-750 cursor-pointer transition-colors"
+                  className="p-3 hover:bg-accent/50 cursor-pointer"
                   onClick={() => toggleExpanded(changelist.id)}
                 >
                   <div className="flex items-start gap-2">
                     <div className="flex-shrink-0 mt-0.5">
                       {isExpanded ? (
-                        <ChevronDown className="h-4 w-4 text-slate-400" />
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
                       ) : (
-                        <ChevronRight className="h-4 w-4 text-slate-400" />
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       {/* Changelist header */}
                       <div className="flex items-baseline gap-2 mb-1">
-                        <span className="font-semibold text-slate-100">
+                        <span className="font-semibold text-foreground">
                           #{changelist.id}
                         </span>
-                        <span className="text-xs text-slate-400">
+                        <span className="text-xs text-muted-foreground">
                           {formatDate(changelist.time)}
                         </span>
-                        <span className="text-xs text-slate-400">
+                        <span className="text-xs text-muted-foreground">
                           by {changelist.user}
                         </span>
                       </div>
 
                       {/* Description */}
-                      <div className="text-sm text-slate-300">
+                      <div className="text-sm text-foreground">
                         {isExpanded ? (
                           <div className="whitespace-pre-wrap">
                             {changelist.description}
@@ -97,7 +97,7 @@ export function SearchResultsPanel({ results, isLoading }: SearchResultsPanelPro
 
                       {/* File count */}
                       {isExpanded && (
-                        <div className="mt-2 text-xs text-slate-400">
+                        <div className="mt-2 text-xs text-muted-foreground">
                           {changelist.file_count} {changelist.file_count === 1 ? 'file' : 'files'}
                         </div>
                       )}

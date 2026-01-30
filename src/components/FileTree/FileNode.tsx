@@ -35,7 +35,7 @@ export function FileNode({ node, style, dragHandle }: NodeRendererProps<FileNode
       style={style}
       className={cn(
         'flex items-center gap-2 px-2 py-1 cursor-pointer text-sm',
-        'hover:bg-slate-800 transition-colors',
+        'hover:bg-accent',
         isSelected && 'bg-blue-900/50'
       )}
       onClick={() => node.isInternal && node.toggle()}
@@ -44,12 +44,12 @@ export function FileNode({ node, style, dragHandle }: NodeRendererProps<FileNode
       {/* Folder or file icon */}
       {isFolder ? (
         isOpen ? (
-          <FolderOpen className="w-4 h-4 text-slate-400 flex-shrink-0" />
+          <FolderOpen className="w-4 h-4 text-muted-foreground flex-shrink-0" />
         ) : (
-          <Folder className="w-4 h-4 text-slate-400 flex-shrink-0" />
+          <Folder className="w-4 h-4 text-muted-foreground flex-shrink-0" />
         )
       ) : (
-        <File className="w-4 h-4 text-slate-400 flex-shrink-0" />
+        <File className="w-4 h-4 text-muted-foreground flex-shrink-0" />
       )}
 
       {/* Status icon for files */}
@@ -58,11 +58,11 @@ export function FileNode({ node, style, dragHandle }: NodeRendererProps<FileNode
       )}
 
       {/* File/folder name */}
-      <span className="flex-1 truncate text-slate-200">{name}</span>
+      <span className="flex-1 truncate text-foreground">{name}</span>
 
       {/* Revision number for files */}
       {!isFolder && file && (
-        <span className="text-slate-500 text-xs flex-shrink-0">
+        <span className="text-muted-foreground text-xs flex-shrink-0">
           #{file.revision}
         </span>
       )}

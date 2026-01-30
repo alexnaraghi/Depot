@@ -173,10 +173,10 @@ export function FileTree() {
       <div className="flex flex-col items-center justify-center h-full gap-3 text-red-400 p-4">
         <AlertCircle className="w-8 h-8" />
         <p className="text-sm text-center">Failed to load workspace files</p>
-        <p className="text-xs text-slate-500 text-center">{String(error)}</p>
+        <p className="text-xs text-muted-foreground text-center">{String(error)}</p>
         <button
           onClick={() => refetch()}
-          className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded text-sm text-slate-200 transition-colors"
+          className="px-4 py-2 bg-accent hover:bg-accent/80 rounded text-sm text-foreground"
         >
           Retry
         </button>
@@ -195,7 +195,7 @@ export function FileTree() {
 
   // Tree view
   return (
-    <div ref={containerRef} className="h-full w-full bg-slate-950 tree-container">
+    <div ref={containerRef} className="h-full w-full bg-background tree-container">
       <Tree
         data={enhancedTree(tree)}
         idAccessor="id"
