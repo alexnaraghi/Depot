@@ -9,10 +9,15 @@ let tauriDriver: ChildProcess
 
 export const config = {
   specs: ['./test/specs/**/*.ts'],
-  maxInstances: 1, // Sequential execution for stability
+  maxInstances: 1, // Sequential execution — tauri-driver handles one session at a time
+
+  // Connect to tauri-driver's WebDriver server
+  hostname: 'localhost',
+  port: 4444,
 
   capabilities: [
     {
+      browserName: 'wry',
       'tauri:options': {
         application: join(process.cwd(), '..', 'src-tauri', 'target', 'release', 'p4now.exe'),
       },
