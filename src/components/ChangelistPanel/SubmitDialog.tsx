@@ -73,22 +73,22 @@ export function SubmitDialog({
         </AlertDialogHeader>
 
         <div className="my-4">
-          <label className="block text-sm font-medium text-slate-300 mb-2">
+          <label className="block text-sm font-medium text-foreground mb-2">
             Description
           </label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full h-24 px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full h-24 px-3 py-2 bg-background border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             placeholder="Enter changelist description..."
             disabled={isSubmitting}
           />
         </div>
 
         <div className="mb-4 max-h-32 overflow-y-auto">
-          <div className="text-sm text-slate-400 mb-1">Files:</div>
+          <div className="text-sm text-muted-foreground mb-1">Files:</div>
           {changelist.files.map((file) => (
-            <div key={file.depotPath} className="text-sm text-slate-300 truncate">
+            <div key={file.depotPath} className="text-sm text-foreground truncate">
               {file.depotPath.split('/').pop()}
             </div>
           ))}

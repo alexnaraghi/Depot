@@ -143,16 +143,16 @@ export function ReconcilePreviewDialog({
           {isScanning ? (
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-blue-400 mb-3" />
-              <p className="text-sm text-slate-400">Scanning workspace for offline changes...</p>
+              <p className="text-sm text-muted-foreground">Scanning workspace for offline changes...</p>
             </div>
           ) : previewFiles.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <p className="text-slate-400">No offline changes detected</p>
+              <p className="text-muted-foreground">No offline changes detected</p>
             </div>
           ) : (
             <>
               {/* Toolbar */}
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-700">
+              <div className="flex items-center justify-between mb-4 pb-3 border-b border-border">
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -171,7 +171,7 @@ export function ReconcilePreviewDialog({
                     Select None
                   </Button>
                 </div>
-                <span className="text-sm text-slate-400">
+                <span className="text-sm text-muted-foreground">
                   {selectedCount} of {totalCount} file{totalCount !== 1 ? 's' : ''} selected
                 </span>
               </div>
@@ -217,8 +217,8 @@ export function ReconcilePreviewDialog({
               </div>
 
               {/* Changelist picker */}
-              <div className="mt-6 pt-4 border-t border-slate-700">
-                <label className="block text-sm font-medium mb-2">Target Changelist</label>
+              <div className="mt-6 pt-4 border-t border-border">
+                <label className="block text-sm font-medium text-foreground mb-2">Target Changelist</label>
                 <Select value={targetChangelistId} onValueChange={setTargetChangelistId}>
                   <SelectTrigger className="w-full">
                     <SelectValue />
@@ -300,18 +300,18 @@ function FileGroup({
             <label
               key={file.depotPath}
               className={cn(
-                'flex items-center gap-2 px-3 py-2 rounded cursor-pointer transition-colors',
-                'hover:bg-slate-800/50',
-                isSelected && 'bg-slate-800/30'
+                'flex items-center gap-2 px-3 py-2 rounded cursor-pointer',
+                'hover:bg-muted/50',
+                isSelected && 'bg-muted/30'
               )}
             >
               <input
                 type="checkbox"
                 checked={isSelected}
                 onChange={() => onToggle(file.depotPath)}
-                className="w-4 h-4 rounded border-slate-600 bg-slate-900 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+                className="w-4 h-4 rounded border-border bg-background text-blue-600 focus:ring-2 focus:ring-ring focus:ring-offset-0 cursor-pointer"
               />
-              <span className="flex-1 text-sm font-mono text-slate-300" title={file.depotPath}>
+              <span className="flex-1 text-sm font-mono text-foreground" title={file.depotPath}>
                 {truncatePath(file.depotPath)}
               </span>
               <span className={cn('px-2 py-0.5 rounded text-xs font-medium', badgeColor)}>

@@ -80,7 +80,6 @@ export function SearchBar() {
         size="icon"
         onClick={handleExpand}
         title="Search changelists"
-        className="text-slate-400 hover:text-slate-100"
       >
         <Search className="h-5 w-5" />
       </Button>
@@ -90,21 +89,21 @@ export function SearchBar() {
   return (
     <div ref={containerRef} className="relative">
       {/* Expanded search input */}
-      <div className="flex items-center gap-2 bg-slate-800 rounded-md px-3 py-1 border border-slate-600">
-        <Search className="h-4 w-4 text-slate-400" />
+      <div className="flex items-center gap-2 bg-muted rounded-md px-3 py-1 border border-border">
+        <Search className="h-4 w-4 text-muted-foreground" />
         <Input
           ref={inputRef}
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Search changelists..."
-          className="w-64 bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-slate-100 placeholder:text-slate-500"
+          className="w-64 bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-foreground placeholder:text-muted-foreground"
         />
         <Button
           variant="ghost"
           size="icon"
           onClick={handleClose}
-          className="h-6 w-6 text-slate-400 hover:text-slate-100"
+          className="h-6 w-6"
         >
           <X className="h-4 w-4" />
         </Button>

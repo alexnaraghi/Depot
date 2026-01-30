@@ -225,8 +225,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               />
             )}
 
-            <div className="border-t border-slate-700 pt-4 mt-2">
-              <h3 className="text-sm font-medium mb-3">Diff Tool</h3>
+            <div className="border-t border-border pt-4 mt-2">
+              <h3 className="text-sm font-medium text-foreground mb-3">Diff Tool</h3>
 
               <FormField
                 control={form.control}

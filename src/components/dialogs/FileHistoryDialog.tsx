@@ -77,15 +77,15 @@ export function FileHistoryDialog({
         <div className="flex-1 overflow-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
           ) : revisions.length === 0 ? (
-            <div className="text-center py-8 text-slate-400">
+            <div className="text-center py-8 text-muted-foreground">
               No revision history available
             </div>
           ) : (
             <table className="w-full text-sm">
-              <thead className="border-b border-slate-700 sticky top-0 bg-slate-900">
+              <thead className="border-b border-border sticky top-0 bg-background">
                 <tr className="text-left">
                   <th className="px-3 py-2 font-medium">Rev</th>
                   <th className="px-3 py-2 font-medium">Change</th>
@@ -105,12 +105,12 @@ export function FileHistoryDialog({
                   return (
                     <tr
                       key={`${revision.rev}-${revision.change}`}
-                      className="border-b border-slate-800 hover:bg-slate-800/50"
+                      className="border-b border-border hover:bg-muted/50"
                     >
-                      <td className="px-3 py-2 font-mono text-slate-300">
+                      <td className="px-3 py-2 font-mono text-foreground">
                         #{revision.rev}
                       </td>
-                      <td className="px-3 py-2 font-mono text-slate-300">
+                      <td className="px-3 py-2 font-mono text-foreground">
                         {revision.change}
                       </td>
                       <td className="px-3 py-2">
@@ -127,13 +127,13 @@ export function FileHistoryDialog({
                           {revision.action}
                         </span>
                       </td>
-                      <td className="px-3 py-2 text-slate-400">
+                      <td className="px-3 py-2 text-muted-foreground">
                         {formatDate(revision.time)}
                       </td>
-                      <td className="px-3 py-2 text-slate-300">
+                      <td className="px-3 py-2 text-foreground">
                         {revision.user}
                       </td>
-                      <td className="px-3 py-2 text-slate-400" title={revision.desc}>
+                      <td className="px-3 py-2 text-muted-foreground" title={revision.desc}>
                         {truncateDescription(revision.desc)}
                       </td>
                       <td className="px-3 py-2">
@@ -174,7 +174,7 @@ export function FileHistoryDialog({
         </div>
 
         {hasMore && (
-          <div className="flex justify-center pt-4 border-t border-slate-700">
+          <div className="flex justify-center pt-4 border-t border-border">
             <Button
               variant="outline"
               onClick={loadMore}
