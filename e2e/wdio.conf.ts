@@ -1,9 +1,13 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { join } from 'node:path'
 
-// PREREQUISITE: Build the app before running tests
-// Run: npm run tauri build
-// This config does NOT auto-build to avoid adding minutes to every test run
+// PREREQUISITES:
+// 1. Build the app: npm run tauri build
+// 2. Install tauri-driver: cargo install tauri-driver
+// 3. Install msedgedriver (required by tauri-driver on Windows):
+//    - Download from https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/
+//    - Match your Edge version (edge://version to check)
+//    - Add msedgedriver.exe to your PATH
 
 let tauriDriver: ChildProcess
 
