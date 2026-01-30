@@ -163,19 +163,19 @@ export function MainLayout() {
     <DndContext>
     <div className="flex flex-col h-full">
       {/* Unified Header Toolbar */}
-      <header className="bg-slate-900 border-b border-slate-700">
+      <header className="bg-background border-b border-border">
         <div className="flex items-center justify-between px-3 py-1.5">
 
           {/* LEFT: Repository and Stream info */}
           <div className="flex items-center gap-6">
             <div className="flex flex-col">
-              <span className="text-[10px] uppercase tracking-wider text-slate-500">Repository</span>
-              <span className="text-sm font-medium text-slate-200">{workspace || 'No workspace'}</span>
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Repository</span>
+              <span className="text-sm font-medium text-foreground">{workspace || 'No workspace'}</span>
             </div>
             {stream && (
               <div className="flex flex-col">
-                <span className="text-[10px] uppercase tracking-wider text-slate-500">Stream</span>
-                <span className="text-sm font-medium text-slate-200">{stream}</span>
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Stream</span>
+                <span className="text-sm font-medium text-foreground">{stream}</span>
               </div>
             )}
           </div>
@@ -185,7 +185,7 @@ export function MainLayout() {
             {/* Refresh */}
             <button
               onClick={handleRefresh}
-              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded text-muted-foreground hover:bg-accent hover:text-foreground"
               title={`Refresh (${SHORTCUTS.REFRESH.label})`}
             >
               <RefreshCw className="w-5 h-5" />
@@ -196,7 +196,7 @@ export function MainLayout() {
             <button
               onClick={handleSync}
               disabled={isRunning || isCancelling}
-              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded text-slate-400 hover:bg-slate-800 hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
               title={`Sync Workspace (${SHORTCUTS.SYNC.label})`}
             >
               <Download className={`w-5 h-5 ${isRunning ? 'animate-spin' : ''}`} />
@@ -207,7 +207,7 @@ export function MainLayout() {
             <button
               onClick={handleReconcile}
               disabled={isRunning || isCancelling}
-              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded text-slate-400 hover:bg-slate-800 hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
               title="Reconcile Workspace"
             >
               <FolderSync className="w-5 h-5" />
@@ -217,7 +217,7 @@ export function MainLayout() {
             {/* New Changelist */}
             <button
               onClick={handleNewChangelist}
-              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded text-muted-foreground hover:bg-accent hover:text-foreground"
               title={`New Changelist (${SHORTCUTS.NEW_CHANGELIST.label})`}
             >
               <Plus className="w-5 h-5" />
@@ -228,7 +228,7 @@ export function MainLayout() {
             <button
               onClick={handleCheckout}
               disabled={!selectedFile}
-              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded text-slate-400 hover:bg-slate-800 hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
               title="Checkout for Edit"
             >
               <FileEdit className="w-5 h-5" />
@@ -239,7 +239,7 @@ export function MainLayout() {
             <button
               onClick={handleRevert}
               disabled={!selectedFile}
-              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded text-slate-400 hover:bg-slate-800 hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
               title={`Revert (${SHORTCUTS.REVERT.label})`}
             >
               <Undo2 className="w-5 h-5" />
@@ -250,7 +250,7 @@ export function MainLayout() {
             <button
               onClick={handleDiff}
               disabled={!selectedFile}
-              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded text-slate-400 hover:bg-slate-800 hover:text-slate-200 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
               title={`Diff (${SHORTCUTS.DIFF.label})`}
             >
               <GitCompare className="w-5 h-5" />
@@ -267,7 +267,7 @@ export function MainLayout() {
               size="icon"
               onClick={() => setSettingsOpen(true)}
               title="Settings"
-              className="text-slate-400 hover:text-slate-100"
+              className="text-muted-foreground hover:text-foreground"
             >
               <Settings className="h-5 w-5" />
             </Button>
@@ -298,7 +298,7 @@ export function MainLayout() {
       {/* Main content area */}
       <div className="flex-1 flex overflow-hidden">
         {/* File tree - takes remaining space */}
-        <main className="flex-1 overflow-hidden bg-slate-950">
+        <main className="flex-1 overflow-hidden bg-background">
           <FileTree />
         </main>
 
@@ -306,13 +306,13 @@ export function MainLayout() {
         {!sidebarCollapsed && (
           <div
             onMouseDown={handleMouseDown}
-            className="w-1 bg-slate-700 hover:bg-blue-500 cursor-col-resize active:bg-blue-600"
+            className="w-1 bg-border hover:bg-primary cursor-col-resize active:bg-primary"
           />
         )}
 
         {/* Sidebar */}
         <aside
-          className="bg-slate-900 border-l border-slate-700 flex flex-col"
+          className="bg-background border-l border-border flex flex-col"
           style={{
             width: sidebarCollapsed ? 0 : `${sidebarWidth}px`,
             minWidth: sidebarCollapsed ? 0 : '200px',
@@ -322,10 +322,10 @@ export function MainLayout() {
           {!sidebarCollapsed && (
             <>
               {/* Collapse button */}
-              <div className="flex justify-end p-2 border-b border-slate-700">
+              <div className="flex justify-end p-2 border-b border-border">
                 <button
                   onClick={() => setSidebarCollapsed(true)}
-                  className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200"
+                  className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
                   title="Collapse sidebar"
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -340,10 +340,10 @@ export function MainLayout() {
 
         {/* Expand button when sidebar is collapsed */}
         {sidebarCollapsed && (
-          <div className="bg-slate-900 border-l border-slate-700 w-8 flex items-center justify-center">
+          <div className="bg-background border-l border-border w-8 flex items-center justify-center">
             <button
               onClick={() => setSidebarCollapsed(false)}
-              className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200"
+              className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
               title="Expand sidebar"
             >
               <ChevronLeft className="h-4 w-4" />
