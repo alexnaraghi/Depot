@@ -10,6 +10,7 @@ import { useSettings } from '@/hooks/useSettings';
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
+      retry: 1,
       staleTime: 30000, // 30 seconds as per 02-05 decision
       refetchOnWindowFocus: false,
     },

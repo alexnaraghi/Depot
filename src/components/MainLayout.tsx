@@ -52,8 +52,16 @@ export function MainLayout() {
   }, [queryClient]);
 
   // Toolbar action handlers
-  const handleRefresh = () => {
-    queryClient.invalidateQueries();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await queryClient.invalidateQueries();
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const handleSync = async () => {
@@ -185,10 +193,11 @@ export function MainLayout() {
             {/* Refresh */}
             <button
               onClick={handleRefresh}
-              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded text-muted-foreground hover:bg-accent hover:text-foreground"
+              disabled={isRefreshing}
+              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
               title={`Refresh (${SHORTCUTS.REFRESH.label})`}
             >
-              <RefreshCw className="w-5 h-5" />
+              <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
               <span className="text-[10px]">Refresh</span>
             </button>
 

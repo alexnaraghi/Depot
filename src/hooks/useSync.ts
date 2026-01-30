@@ -155,9 +155,12 @@ export function useSync() {
       // For now, mark as complete (backend will send completion via events in future)
       completeOperation(true);
 
-      // Invalidate file tree query to refresh all file states
-      // This ensures reverted files, synced files, etc. are all updated
-      await queryClient.invalidateQueries({ queryKey: ['fileTree'] });
+      // Invalidate queries to refresh all file and changelist states
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['fileTree'] }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] }),
+      ]);
     } catch (error) {
       completeOperation(false, String(error));
       throw error;
