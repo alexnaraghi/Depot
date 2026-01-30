@@ -19,6 +19,7 @@ export async function loadSettings(): Promise<P4Settings> {
     p4client: (await store.get<string>('p4client')) || defaultSettings.p4client,
     diffToolPath: (await store.get<string>('diffToolPath')) || defaultSettings.diffToolPath,
     diffToolArgs: (await store.get<string>('diffToolArgs')) || defaultSettings.diffToolArgs,
+    verboseLogging: (await store.get<boolean>('verboseLogging')) ?? defaultSettings.verboseLogging,
   };
 }
 
@@ -29,5 +30,11 @@ export async function saveSettings(settings: P4Settings): Promise<void> {
   await store.set('p4client', settings.p4client);
   await store.set('diffToolPath', settings.diffToolPath);
   await store.set('diffToolArgs', settings.diffToolArgs);
+  await store.set('verboseLogging', settings.verboseLogging);
   await store.save();
+}
+
+export async function getVerboseLogging(): Promise<boolean> {
+  const store = await getStore();
+  return (await store.get<boolean>('verboseLogging')) ?? false;
 }

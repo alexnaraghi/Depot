@@ -52,6 +52,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       p4client: '',
       diffToolPath: '',
       diffToolArgs: '',
+      verboseLogging: false,
     },
     mode: 'onSubmit',
   });
@@ -264,6 +265,32 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                       Optional: Use {'{left}'} and {'{right}'} as placeholders, or leave empty to append files as final arguments
                     </p>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="border-t border-border pt-4 mt-2">
+              <h3 className="text-sm font-medium text-foreground mb-3">Logging</h3>
+              <FormField
+                control={form.control}
+                name="verboseLogging"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-3">
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className="h-4 w-4 rounded border-border accent-primary"
+                      />
+                    </FormControl>
+                    <div>
+                      <FormLabel className="text-sm">Verbose Logging</FormLabel>
+                      <p className="text-xs text-muted-foreground">
+                        Log read-only P4 commands to the output panel
+                      </p>
+                    </div>
                   </FormItem>
                 )}
               />

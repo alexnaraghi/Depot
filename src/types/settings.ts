@@ -6,6 +6,7 @@ export const settingsSchema = z.object({
   p4client: z.string().min(1, 'Workspace is required'),
   diffToolPath: z.string(),
   diffToolArgs: z.string(),
+  verboseLogging: z.boolean(),
 });
 
 export type P4Settings = z.infer<typeof settingsSchema>;
@@ -16,4 +17,5 @@ export const defaultSettings: P4Settings = {
   p4client: '',
   diffToolPath: '',
   diffToolArgs: '',
+  verboseLogging: false,
 };
