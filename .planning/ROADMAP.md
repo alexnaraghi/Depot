@@ -30,7 +30,7 @@ Key accomplishments:
 - [x] **Phase 05: History, Diff & Search** - File history viewer, external diff integration, and submitted changelist search
 - [x] **Phase 06: Shelve & Reconcile** - Shelve/unshelve workflows and offline reconcile with preview
 - [x] **Phase 07: Context Menus & Keyboard Shortcuts** - Right-click menus, keyboard shortcuts, and command palette
-- [ ] **Phase 08: Visual Polish** - Consistent design, loading states, and professional appearance
+- [x] **Phase 08: Visual Polish** - Consistent design, loading states, and professional appearance
 
 ## Phase Details
 
@@ -129,8 +129,8 @@ Plans:
 - [x] 08-01-PLAN.md — Blue-tinted dark theme CSS variables, font stack, dialog/dropdown dark theme consistency
 - [x] 08-02-PLAN.md — Unified header toolbar (consolidate two bars, GitKraken-style buttons)
 - [x] 08-03-PLAN.md — Skeleton loading states, text-only empty states, section headers, spacing consistency
-- [ ] 08-04-PLAN.md — (gap closure) Replace hardcoded colors in MainLayout and StatusBar with semantic classes
-- [ ] 08-05-PLAN.md — (gap closure) Remove transition-colors and replace slate-* across all application components
+- [x] 08-04-PLAN.md — (gap closure) Replace hardcoded colors in MainLayout and StatusBar with semantic classes
+- [x] 08-05-PLAN.md — (gap closure) Remove transition-colors and replace slate-* across all application components
 
 ## Progress
 
@@ -147,7 +147,7 @@ Phases execute in numeric order: 03 -> 04 -> 05 -> 06 -> 07 -> 08
 | 05. History, Diff & Search | v2.0 | 3/3 | Complete | 2026-01-29 |
 | 06. Shelve & Reconcile | v2.0 | 3/3 | Complete | 2026-01-29 |
 | 07. Context Menus & Keyboard Shortcuts | v2.0 | 2/2 | Complete | 2026-01-29 |
-| 08. Visual Polish | v2.0 | 0/TBD | Not started | - |
+| 08. Visual Polish | v2.0 | 5/5 | Complete | 2026-01-30 |
 
 ---
-*Last updated: 2026-01-29 after Phase 07 completion*
+*Last updated: 2026-01-30 after Phase 08 completion*
