@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 Milestone: v3.0 Daily Driver
 Phase: 11.1 of 15 (Unified Three-Column Layout)
-Plan: 2 of 5 in current phase
+Plan: 4 of 5 in current phase
 Status: In progress
-Last activity: 2026-02-01 — Completed 11.1-02-PLAN.md
+Last activity: 2026-01-31 — Completed 11.1-04-PLAN.md
 
-Progress: [██░░░░░░░░] 25% (10 of ~40 estimated plans for v3.0)
+Progress: [███░░░░░░░] 30% (12 of ~40 estimated plans for v3.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 42 (14 v1.0 + 17 v2.0 + 11 v3.0)
+- Total plans completed: 44 (14 v1.0 + 17 v2.0 + 13 v3.0)
 - Quick tasks completed: 5
 - Average duration: 5 min
-- Total execution time: ~279 min (104 v1.0 + ~112 v2.0 + 63 v3.0)
+- Total execution time: ~287 min (104 v1.0 + ~112 v2.0 + 71 v3.0)
 
 **By Phase (v3.0):**
 
@@ -32,11 +32,11 @@ Progress: [██░░░░░░░░] 25% (10 of ~40 estimated plans for v3
 | 09 | 3 | 16 min | 5 min |
 | 10 | 2 | 9 min | 5 min |
 | 11 | 2 | 9 min | 5 min |
-| 11.1 | 4 | 29 min | 7 min |
+| 11.1 | 6 | 37 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 15 min (11.1-01), 4 min (11.1-02), 5 min (11.1-03), 5 min (11.1-02)
-- Trend: Consistent 5-min execution, architectural foundation work takes longer (11.1-01)
+- Last 5 plans: 5 min (11.1-02), 5 min (11.1-03), 3 min (11.1-04)
+- Trend: Consistent quick execution, architectural foundation work (11.1-01) took longer, implementation plans very fast
 
 *Updated after each plan completion*
 
@@ -77,6 +77,9 @@ Recent decisions affecting v3.0 work:
 - Conditional action buttons (v3.0/11.1-02) — File action buttons shown/hidden based on file status from fileTreeStore for better UX
 - Reuse existing dialogs for detail views (v3.0/11.1-03) — SubmitDialog and EditDescriptionDialog imported from ChangelistPanel directory to maintain consistency
 - Revision sibling files placeholder (v3.0/11.1-03) — Backend lacks p4_describe for submitted CLs, placeholder with TODO for future backend enhancement
+- Breadcrumb visibility pattern (v3.0/11.1-04) — Breadcrumb hides when selection.type === 'none' (workspace summary has no navigation)
+- Escape key in DetailPane (v3.0/11.1-04) — Global keyboard handler added to DetailPane via useEffect, works even when breadcrumb not rendered
+- Side column click preservation (v3.0/11.1-04) — Click handlers additive to existing behavior, preserve expand/collapse, drag-drop, context menus
 
 ### Roadmap Evolution
 
@@ -121,9 +124,9 @@ Recent decisions affecting v3.0 work:
 
 ## Session Continuity
 
-Last session: 2026-02-01
-Stopped at: Completed 11.1-02-PLAN.md (Phase 11.1 in progress - 2 of 5 plans complete)
+Last session: 2026-01-31
+Stopped at: Completed 11.1-04-PLAN.md (Phase 11.1 in progress - 4 of 5 plans complete)
 Resume file: None
 
 ---
-**Next step:** Continue Phase 11.1 with plan 03 or 04 (Detail views and click wiring)
+**Next step:** Continue Phase 11.1 with plan 05 (Final polish and integration)
