@@ -87,6 +87,14 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
 
     if (filePaths.length === 0) return;
 
+    // Optimistic update pattern: cancel outgoing refetches and snapshot data
+    await queryClient.cancelQueries({ queryKey: ['p4', 'opened'] });
+    await queryClient.cancelQueries({ queryKey: ['p4', 'changes'] });
+
+    // Snapshot current data for rollback
+    const previousOpened = queryClient.getQueryData(['p4', 'opened']);
+    const previousChanges = queryClient.getQueryData(['p4', 'changes']);
+
     try {
       // Move files to new changelist via p4 reopen
       addOutputLine(`p4 reopen -c ${targetClId} ${filePaths.join(' ')}`, false);
@@ -99,15 +107,15 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
       );
       addOutputLine(result.join('\n'), false);
       toast.success(`Moved ${filePaths.length} file(s) to changelist ${targetClId}`);
-      // Invalidate queries to refresh UI
+      // On success, invalidate queries to refetch fresh data
       queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
       queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
     } catch (error) {
       addOutputLine(`Error: ${error}`, true);
       toast.error(`Failed to move files: ${error}`);
-      // Invalidate queries even on error to ensure UI shows correct state
-      queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
-      queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
+      // On error, rollback to previous state
+      queryClient.setQueryData(['p4', 'opened'], previousOpened);
+      queryClient.setQueryData(['p4', 'changes'], previousChanges);
     }
   }, [p4port, p4user, p4client, queryClient, addOutputLine]);
 
