@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useDetailPaneStore } from '@/stores/detailPaneStore';
 
 interface SearchFilterState {
   // State
@@ -25,12 +26,16 @@ export const useSearchFilterStore = create<SearchFilterState>((set) => ({
     isActive: term.trim().length > 0,
   }),
 
-  clearFilter: () => set({
-    filterTerm: '',
-    isActive: false,
-    fileTreeMatchCount: 0,
-    changelistMatchCount: 0,
-  }),
+  clearFilter: () => {
+    set({
+      filterTerm: '',
+      isActive: false,
+      fileTreeMatchCount: 0,
+      changelistMatchCount: 0,
+    });
+    // Reset detail pane to workspace summary when clearing filter
+    useDetailPaneStore.getState().clear();
+  },
 
   setFileTreeMatchCount: (count) => set({ fileTreeMatchCount: count }),
   setChangelistMatchCount: (count) => set({ changelistMatchCount: count }),

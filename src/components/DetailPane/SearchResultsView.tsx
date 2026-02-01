@@ -4,7 +4,7 @@ import { useConnectionStore } from '@/stores/connectionStore';
 import { useSearchFilterStore } from '@/stores/searchFilterStore';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
 import { invokeP4ChangesSubmitted, invokeP4Files, P4FileResult } from '@/lib/tauri';
-import { Search, ChevronDown, ChevronRight, Loader2, AlertCircle, Copy, FileText } from 'lucide-react';
+import { Search, List, Loader2, AlertCircle, Copy, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
@@ -35,7 +35,6 @@ export function SearchResultsView({ searchType, query, toolbarDriven }: SearchRe
   // Local state for standalone search input (only used when not toolbar-driven)
   const [searchInput, setSearchInput] = useState(query);
   const [displayLimit, setDisplayLimit] = useState(50);
-  const [expandedCL, setExpandedCL] = useState<number | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; type: 'cl' | 'file'; data: any } | null>(null);
 
   // The effective search term: toolbar filter or local input
@@ -80,12 +79,8 @@ export function SearchResultsView({ searchType, query, toolbarDriven }: SearchRe
     setDisplayLimit(prev => prev + 50);
   }
 
-  function handleCLClick(clId: number) {
-    if (expandedCL === clId) {
-      setExpandedCL(null);
-    } else {
-      setExpandedCL(clId);
-    }
+  function handleCLClick(cl: any) {
+    handleViewCLDetail(cl);
   }
 
   function handleAuthorClick(author: string) {
@@ -208,55 +203,36 @@ export function SearchResultsView({ searchType, query, toolbarDriven }: SearchRe
                 </div>
 
                 {filteredSubmittedCLs.slice(0, displayLimit).map((cl) => (
-                  <div
+                  <button
                     key={cl.id}
-                    className="border border-border rounded-md overflow-hidden hover:border-accent-foreground transition-colors"
+                    onClick={() => handleCLClick(cl)}
+                    onContextMenu={(e) => handleContextMenu(e, 'cl', cl)}
+                    className="w-full p-3 text-left border border-border rounded-md hover:border-accent-foreground hover:bg-accent transition-colors"
                   >
-                    <button
-                      onClick={() => handleCLClick(cl.id)}
-                      onContextMenu={(e) => handleContextMenu(e, 'cl', cl)}
-                      className="w-full p-3 text-left hover:bg-accent transition-colors"
-                    >
-                      <div className="flex items-start gap-2">
-                        {expandedCL === cl.id ? (
-                          <ChevronDown className="w-4 h-4 mt-1 flex-shrink-0" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4 mt-1 flex-shrink-0" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="font-mono text-sm font-semibold">CL {cl.id}</span>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(cl.time * 1000).toLocaleDateString()}
-                            </span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAuthorClick(cl.user);
-                              }}
-                              className="text-xs text-blue-400 hover:underline"
-                            >
-                              {cl.user}
-                            </button>
-                          </div>
-                          <div className="text-sm text-foreground line-clamp-2">
-                            {cl.description.split('\n')[0]}
-                          </div>
+                    <div className="flex items-start gap-2">
+                      <List className="w-4 h-4 mt-1 flex-shrink-0 text-muted-foreground" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-mono text-sm font-semibold">CL {cl.id}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(cl.time * 1000).toLocaleDateString()}
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAuthorClick(cl.user);
+                            }}
+                            className="text-xs text-blue-400 hover:underline"
+                          >
+                            {cl.user}
+                          </button>
+                        </div>
+                        <div className="text-sm text-foreground line-clamp-2">
+                          {cl.description.split('\n')[0]}
                         </div>
                       </div>
-                    </button>
-
-                    {/* Expanded CL details */}
-                    {expandedCL === cl.id && (
-                      <div className="p-3 bg-muted border-t border-border">
-                        <div className="text-sm whitespace-pre-wrap mb-3">{cl.description}</div>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                          <span>{cl.file_count} {cl.file_count === 1 ? 'file' : 'files'}</span>
-                          <span>Client: {cl.client}</span>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  </button>
                 ))}
 
                 {/* Load more button */}
