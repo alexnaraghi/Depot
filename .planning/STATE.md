@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** The user is never blocked — operations are always cancellable, errors are non-blocking, and the app remains responsive even during network issues or long-running operations.
-**Current focus:** Phase 10 - Bug Fixes
+**Current focus:** Phase 11 - Auto-Refresh Settings
 
 ## Current Position
 
 Milestone: v3.0 Daily Driver
-Phase: 10 of 15 (Bug Fixes)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-01 — Completed 10-02-PLAN.md
+Phase: 11 of 15 (Auto-Refresh Settings)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-01-31 — Completed 11-01-PLAN.md
 
-Progress: [█░░░░░░░░░] 13% (5 of ~40 estimated plans for v3.0)
+Progress: [██░░░░░░░░] 15% (6 of ~40 estimated plans for v3.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 36 (14 v1.0 + 17 v2.0 + 5 v3.0)
+- Total plans completed: 37 (14 v1.0 + 17 v2.0 + 6 v3.0)
 - Quick tasks completed: 5
 - Average duration: 5 min
-- Total execution time: ~241 min (104 v1.0 + ~112 v2.0 + 25 v3.0)
+- Total execution time: ~245 min (104 v1.0 + ~112 v2.0 + 29 v3.0)
 
 **By Phase (v3.0):**
 
@@ -31,10 +31,11 @@ Progress: [█░░░░░░░░░] 13% (5 of ~40 estimated plans for v3.
 |-------|-------|-------|----------|
 | 09 | 3 | 16 min | 5 min |
 | 10 | 2 | 9 min | 5 min |
+| 11 | 1 | 4 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 2 min (09-03), 4 min (10-01), 5 min (10-02)
-- Trend: Consistent ~5 min average per plan, efficient execution
+- Last 5 plans: 4 min (10-01), 5 min (10-02), 4 min (11-01)
+- Trend: Consistent ~4-5 min average per plan, efficient execution
 
 *Updated after each plan completion*
 
@@ -60,6 +61,10 @@ Recent decisions affecting v3.0 work:
 - Targeted query invalidation (v3.0/10-01) — Use refetchType: 'all' to force immediate refetch instead of blanket invalidation
 - Separate source/target CL params (v3.0/10-02) — Enables future unshelve-to-different-CL UI while maintaining backward compatibility
 - Post-operation conflict detection (v3.0/10-02) — Non-blocking async checks in onSuccess callbacks with graceful error handling
+- TanStack Query refetchInterval for auto-refresh (v3.0/11-01) — Use built-in polling instead of custom setInterval, conditional based on connection + operation + window focus + user preference
+- Pause auto-refresh during operations (v3.0/11-01) — Check useOperationStore.currentOperation to prevent query invalidation mid-operation
+- Default 5-minute auto-refresh (v3.0/11-01) — 300000ms default with 0 = disabled, max 10 minutes
+- Window focus tracking via Tauri events (v3.0/11-01) — Use tauri://focus and tauri://blur events to pause auto-refresh when window is inactive
 
 ### Pending Todos
 
@@ -83,8 +88,8 @@ Recent decisions affecting v3.0 work:
 - E2E tests require P4E2E_PORT, P4E2E_USER, P4E2E_CLIENT env vars
 
 **Phase 11 (Auto-Refresh):**
-- Query invalidation race conditions (disable auto-refresh during active operations)
-- Optimal intervals depend on server performance (make configurable)
+- Query invalidation race conditions → RESOLVED (11-01: auto-refresh pauses when currentOperation exists)
+- Optimal intervals depend on server performance → RESOLVED (11-01: configurable interval with 5-minute default, 0 = disabled)
 
 **Phase 13 (Workspace/Stream Switching):**
 - Numbered CL files block stream switching (need pre-flight validation + shelve workflow)
@@ -99,9 +104,9 @@ Recent decisions affecting v3.0 work:
 
 ## Session Continuity
 
-Last session: 2026-02-01
-Stopped at: Completed 10-02-PLAN.md
+Last session: 2026-01-31
+Stopped at: Completed 11-01-PLAN.md
 Resume file: None
 
 ---
-**Next step:** Phase 10 complete. Begin Phase 11 (Auto-Refresh) or Phase 12 (Diff Viewer)
+**Next step:** Continue Phase 11 with 11-02 (Settings UI) or begin Phase 12 (Diff Viewer)
