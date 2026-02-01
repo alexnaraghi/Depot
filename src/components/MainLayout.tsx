@@ -12,17 +12,20 @@ import { SyncConflictDialog } from '@/components/dialogs/SyncConflictDialog';
 import { ReconcilePreviewDialog } from '@/components/dialogs/ReconcilePreviewDialog';
 import { WorkspaceSwitcher } from '@/components/Header/WorkspaceSwitcher';
 import { StreamSwitcher } from '@/components/Header/StreamSwitcher';
+import { DepotBrowser } from '@/components/DepotBrowser/DepotBrowser';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { useFileTreeStore } from '@/stores/fileTreeStore';
 import { useSync } from '@/hooks/useSync';
 import { useFileOperations } from '@/hooks/useFileOperations';
 import { useDiff } from '@/hooks/useDiff';
-import { Settings, RefreshCw, Download, FolderSync, Plus, FileEdit, Undo2, GitCompare } from 'lucide-react';
+import { Settings, RefreshCw, Download, FolderSync, Plus, FileEdit, Undo2, GitCompare, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { DndContext } from '@/contexts/DndContext';
 import { SHORTCUTS } from '@/lib/shortcuts';
 import { getColumnWidths, saveColumnWidths } from '@/lib/settings';
+import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 /**
@@ -45,6 +48,16 @@ export function MainLayout() {
   const selectedFile = useFileTreeStore(s => s.selectedFile);
   const queryClient = useQueryClient();
 
+  // Accordion state with localStorage persistence
+  const [workspaceOpen, setWorkspaceOpen] = useState(() => {
+    const saved = localStorage.getItem('accordion-workspace');
+    return saved !== null ? saved === 'true' : true;
+  });
+  const [depotOpen, setDepotOpen] = useState(() => {
+    const saved = localStorage.getItem('accordion-depot');
+    return saved !== null ? saved === 'true' : true;
+  });
+
   // Load saved column widths on mount
   useEffect(() => {
     getColumnWidths().then(({ left, right }) => {
@@ -52,6 +65,15 @@ export function MainLayout() {
       setRightWidth(right);
     });
   }, []);
+
+  // Persist accordion state
+  useEffect(() => {
+    localStorage.setItem('accordion-workspace', String(workspaceOpen));
+  }, [workspaceOpen]);
+
+  useEffect(() => {
+    localStorage.setItem('accordion-depot', String(depotOpen));
+  }, [depotOpen]);
 
   // Sync and file operations
   const { sync, skipConflict, forceSync, conflict, isRunning, isCancelling } = useSync();
@@ -336,9 +358,29 @@ export function MainLayout() {
 
       {/* Main content area - Three-column layout */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left column: File tree */}
-        <div style={{ width: `${leftWidth}px`, minWidth: '200px', flexShrink: 0 }} className="overflow-hidden">
-          <FileTree />
+        {/* Left column: Workspace Files and Depot sections */}
+        <div style={{ width: `${leftWidth}px`, minWidth: '200px', flexShrink: 0 }} className="flex flex-col overflow-hidden">
+          {/* Workspace Files Section */}
+          <Collapsible open={workspaceOpen} onOpenChange={setWorkspaceOpen}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:bg-accent/50 cursor-pointer select-none">
+              Workspace Files
+              <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", workspaceOpen && "rotate-180")} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="flex-1 min-h-0 overflow-hidden">
+              <FileTree />
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* Depot Section */}
+          <Collapsible open={depotOpen} onOpenChange={setDepotOpen}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:bg-accent/50 cursor-pointer border-t border-border select-none">
+              Depot
+              <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", depotOpen && "rotate-180")} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="flex-1 min-h-0 overflow-hidden">
+              <DepotBrowser />
+            </CollapsibleContent>
+          </Collapsible>
         </div>
 
         {/* Left resize handle */}
