@@ -141,6 +141,12 @@ Recent decisions affecting v3.0 work:
 - External merge tool edge cases (exit codes, timeout handling, tool compatibility)
 - Resolve state sync after tool completes (use `child.wait()`, invalidate queries immediately)
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 005 | Fix detail pane selection and CL click behavior | 2026-02-01 | 1c7a040 | [005-fix-detail-pane-selection-and-cl-click](./quick/005-fix-detail-pane-selection-and-cl-click/) |
+
 ## Session Continuity
 
 Last session: 2026-02-01
