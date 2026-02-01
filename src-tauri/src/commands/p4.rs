@@ -1782,6 +1782,30 @@ pub async fn p4_resolve_preview(
     Ok(files)
 }
 
+/// Stream information from p4 streams
+#[derive(Debug, Clone, Serialize)]
+pub struct P4Stream {
+    pub stream: String,            // Full path: //depot/main
+    pub name: String,               // Display name
+    pub parent: Option<String>,     // Parent stream path
+    pub stream_type: String,        // mainline, development, release
+    pub description: String,
+}
+
+/// Client spec information from p4 client -o
+#[derive(Debug, Clone, Serialize)]
+pub struct P4ClientSpec {
+    pub client: String,
+    pub root: String,
+    pub stream: Option<String>,
+    pub owner: String,
+    pub description: String,
+    pub view: Vec<String>,
+    pub options: String,
+    pub host: String,
+    pub submit_options: String,
+}
+
 /// File result from p4 files command
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -1873,4 +1897,231 @@ pub async fn p4_files(
     }
 
     Ok(results)
+}
+
+/// List available streams for the depot
+#[tauri::command]
+pub async fn p4_list_streams(
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<Vec<P4Stream>, String> {
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+    cmd.args(["-ztag", "streams"]);
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 streams: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    parse_ztag_streams(&stdout)
+}
+
+/// Parse p4 -ztag streams output into P4Stream structs
+fn parse_ztag_streams(output: &str) -> Result<Vec<P4Stream>, String> {
+    let mut streams = Vec::new();
+    let mut current: HashMap<String, String> = HashMap::new();
+
+    for line in output.lines() {
+        let line = line.trim();
+
+        if line.is_empty() {
+            if !current.is_empty() {
+                if let Some(stream) = build_stream(&current) {
+                    streams.push(stream);
+                }
+                current.clear();
+            }
+            continue;
+        }
+
+        if let Some(stripped) = line.strip_prefix("... ") {
+            if let Some((key, value)) = stripped.split_once(' ') {
+                current.insert(key.to_string(), value.to_string());
+            }
+        }
+    }
+
+    // Handle last record if no trailing empty line
+    if !current.is_empty() {
+        if let Some(stream) = build_stream(&current) {
+            streams.push(stream);
+        }
+    }
+
+    Ok(streams)
+}
+
+/// Build P4Stream from parsed ztag fields
+fn build_stream(fields: &HashMap<String, String>) -> Option<P4Stream> {
+    let stream = fields.get("Stream")?.clone();
+    let name = fields.get("Name").cloned().unwrap_or_else(|| stream.clone());
+    let parent = fields.get("Parent").cloned();
+    let stream_type = fields.get("Type")?.clone();
+    let description = fields
+        .get("desc")
+        .cloned()
+        .unwrap_or_else(|| "".to_string());
+
+    Some(P4Stream {
+        stream,
+        name,
+        parent,
+        stream_type,
+        description,
+    })
+}
+
+/// Get client spec for a specific workspace
+#[tauri::command]
+pub async fn p4_get_client_spec(
+    workspace: String,
+    server: Option<String>,
+    user: Option<String>,
+) -> Result<P4ClientSpec, String> {
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &None);
+    cmd.args(["-ztag", "client", "-o", &workspace]);
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 client -o: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    parse_ztag_client_spec(&stdout)
+}
+
+/// Parse p4 -ztag client -o output into P4ClientSpec
+fn parse_ztag_client_spec(output: &str) -> Result<P4ClientSpec, String> {
+    let mut fields: HashMap<String, String> = HashMap::new();
+    let mut view_lines: Vec<String> = Vec::new();
+
+    for line in output.lines() {
+        let line = line.trim();
+        if let Some(stripped) = line.strip_prefix("... ") {
+            if let Some((key, value)) = stripped.split_once(' ') {
+                // Check for View mapping lines (View0, View1, View2, ...)
+                if key.starts_with("View") {
+                    view_lines.push(value.to_string());
+                } else {
+                    fields.insert(key.to_string(), value.to_string());
+                }
+            }
+        }
+    }
+
+    let client = fields
+        .get("Client")
+        .ok_or("Missing Client field")?
+        .clone();
+    let root = fields.get("Root").ok_or("Missing Root field")?.clone();
+    let stream = fields.get("Stream").cloned();
+    let owner = fields.get("Owner").ok_or("Missing Owner field")?.clone();
+    let description = fields
+        .get("Description")
+        .cloned()
+        .unwrap_or_else(|| "".to_string());
+    let options = fields
+        .get("Options")
+        .cloned()
+        .unwrap_or_else(|| "".to_string());
+    let host = fields
+        .get("Host")
+        .cloned()
+        .unwrap_or_else(|| "".to_string());
+    let submit_options = fields
+        .get("SubmitOptions")
+        .cloned()
+        .unwrap_or_else(|| "submitunchanged".to_string());
+
+    Ok(P4ClientSpec {
+        client,
+        root,
+        stream,
+        owner,
+        description,
+        view: view_lines,
+        options,
+        host,
+        submit_options,
+    })
+}
+
+/// Update client spec's Stream field (for stream switching)
+#[tauri::command]
+pub async fn p4_update_client_stream(
+    workspace: String,
+    new_stream: String,
+    server: Option<String>,
+    user: Option<String>,
+) -> Result<String, String> {
+    // 1. Get current client spec (without -ztag - need raw form format)
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &Some(workspace.clone()));
+    cmd.args(["client", "-o", &workspace]);
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to get client spec: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.to_string());
+    }
+
+    let form = String::from_utf8_lossy(&output.stdout);
+
+    // 2. Modify Stream field in form
+    let mut new_form = String::new();
+    for line in form.lines() {
+        if line.starts_with("Stream:") {
+            new_form.push_str(&format!("Stream:\t{}\n", new_stream));
+        } else {
+            new_form.push_str(line);
+            new_form.push('\n');
+        }
+    }
+
+    // 3. Submit modified form via p4 client -i
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &Some(workspace));
+    cmd.args(["client", "-i"]);
+    cmd.stdin(Stdio::piped());
+    cmd.stdout(Stdio::piped());
+    cmd.stderr(Stdio::piped());
+
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("Failed to spawn p4 client -i: {}", e))?;
+
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin
+            .write_all(new_form.as_bytes())
+            .map_err(|e| format!("Failed to write form: {}", e))?;
+        // Drop stdin to signal EOF
+        drop(stdin);
+    }
+
+    let result = child
+        .wait_with_output()
+        .map_err(|e| format!("Failed to update client: {}", e))?;
+
+    if !result.status.success() {
+        let stderr = String::from_utf8_lossy(&result.stderr);
+        return Err(stderr.to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&result.stdout);
+    Ok(stdout.to_string())
 }
