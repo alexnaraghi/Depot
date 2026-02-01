@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { Tree } from 'react-arborist';
-import { useDepotTree } from './useDepotTree';
+import { useDepotTree, DepotNodeData } from './useDepotTree';
 import { DepotNode } from './DepotNode';
 import { DepotContextMenu } from './DepotContextMenu';
 import { AlertCircle } from 'lucide-react';
@@ -63,6 +63,13 @@ export function DepotBrowser() {
     }
   }, [treeData, loadChildren]);
 
+  // Children accessor: return empty array for unloaded folders so react-arborist treats them as branches
+  const childrenAccessor = useCallback((node: DepotNodeData) => {
+    if (!node.isFolder) return null; // Files are leaves
+    if (node.children === null) return []; // Unloaded folder - show as expandable
+    return node.children; // Loaded folder - show actual children
+  }, []);
+
   // Handle context menu
   const handleContextMenu = useCallback((menu: { depotPath: string; isFolder: boolean; x: number; y: number }) => {
     setContextMenu(menu);
@@ -114,6 +121,7 @@ export function DepotBrowser() {
       <Tree
         data={treeData}
         idAccessor="id"
+        childrenAccessor={childrenAccessor}
         width="100%"
         indent={16}
         rowHeight={28}
