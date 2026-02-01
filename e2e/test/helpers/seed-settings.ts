@@ -30,9 +30,16 @@ export async function seedSettings(): Promise<void> {
   if (!client) missing.push('P4E2E_CLIENT')
 
   if (missing.length > 0) {
+    const details = [
+      `  P4E2E_PORT = ${port ? `"${port}"` : '(not set)'}`,
+      `  P4E2E_USER = ${user ? `"${user}"` : '(not set)'}`,
+      `  P4E2E_CLIENT = ${client ? `"${client}"` : '(not set)'}`,
+    ].join('\n')
+
     throw new Error(
-      `Missing required environment variables for E2E testing: ${missing.join(', ')}\n` +
-      `Set them before running tests:\n` +
+      `Missing required environment variables for E2E testing: ${missing.join(', ')}\n\n` +
+      `Current values:\n${details}\n\n` +
+      `Set them before running tests (requires a new terminal after setting):\n` +
       `  P4E2E_PORT=ssl:perforce:1666\n` +
       `  P4E2E_USER=your-username\n` +
       `  P4E2E_CLIENT=your-workspace`
