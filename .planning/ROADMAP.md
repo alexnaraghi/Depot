@@ -84,8 +84,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 10-01-PLAN.md — Fix drag-drop reliability, default CL file movement, refresh button
-- [ ] 10-02-PLAN.md — Fix unshelve target CL + resolve detection after unshelve
+- [x] 10-01-PLAN.md — Fix drag-drop reliability, default CL file movement, refresh button
+- [x] 10-02-PLAN.md — Fix unshelve target CL + resolve detection after unshelve
 
 #### Phase 11: Auto-Refresh + Settings
 **Goal**: Configurable periodic polling with smart operation gating
@@ -168,7 +168,7 @@ Phases execute in numeric order: 09 → 10 → 11 → 12 → 13 → 14 → 15
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 09. E2E Testing Foundation | 0/? | Not started | - |
-| 10. Bug Fixes | 0/? | Not started | - |
+| 10. Bug Fixes | 2/2 | ✓ Complete | 2026-01-31 |
 | 11. Auto-Refresh + Settings | 0/? | Not started | - |
 | 12. Actionable Search | 0/? | Not started | - |
 | 13. Workspace & Stream Switching | 0/? | Not started | - |

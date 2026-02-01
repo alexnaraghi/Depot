@@ -100,11 +100,11 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | TEST-01 | Phase 09 | Pending |
-| BUGF-01 | Phase 10 | Pending |
-| BUGF-02 | Phase 10 | Pending |
-| BUGF-03 | Phase 10 | Pending |
-| BUGF-04 | Phase 10 | Pending |
-| RFSH-02 | Phase 10 | Pending |
+| BUGF-01 | Phase 10 | Complete |
+| BUGF-02 | Phase 10 | Complete |
+| BUGF-03 | Phase 10 | Complete |
+| BUGF-04 | Phase 10 | Complete |
+| RFSH-02 | Phase 10 | Complete |
 | RFSH-01 | Phase 11 | Pending |
 | STNG-01 | Phase 11 | Pending |
 | STNG-02 | Phase 11 | Pending |
