@@ -19,6 +19,21 @@ describe('File Operations', () => {
     // Wait for app to be ready
     const appReady = await $('[data-testid="app-ready"]')
     await appReady.waitForDisplayed({ timeout: 30000 })
+
+    // Wait for file tree to load (P4 connection + fstat query)
+    const firstFile = await $('[data-testid^="file-node-"]')
+    await firstFile.waitForExist({ timeout: 30000 })
+
+    // If file is already checked out from a prior test run, revert it first
+    // so the checkout test can run cleanly
+    const existingCLFiles = await $$('[data-testid^="cl-file-"]')
+    if (existingCLFiles.length > 0) {
+      await existingCLFiles[0].click({ button: 'right' })
+      const revertMenuItem = await $('[data-testid="context-menu-revert"]')
+      await revertMenuItem.waitForDisplayed({ timeout: 5000 })
+      await revertMenuItem.click()
+      await browser.pause(2000)
+    }
   })
 
   it('should checkout a file and add it to default changelist', async () => {

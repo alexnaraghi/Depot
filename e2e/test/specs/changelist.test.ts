@@ -23,6 +23,10 @@ describe('Changelist Submit Workflow', () => {
     // Wait for app to be ready
     const appReady = await $('[data-testid="app-ready"]')
     await appReady.waitForDisplayed({ timeout: 30000 })
+
+    // Wait for file tree to load (P4 connection + fstat query)
+    const firstFile = await $('[data-testid^="file-node-"]')
+    await firstFile.waitForExist({ timeout: 30000 })
   })
 
   it('should submit a changelist with description', async () => {
@@ -39,6 +43,7 @@ describe('Changelist Submit Workflow', () => {
     await firstFile.waitForDisplayed({ timeout: 10000 })
     await firstFile.click({ button: 'right' })
 
+    // The checkout menu item only appears for synced files
     const checkoutMenuItem = await $('[data-testid="context-menu-checkout"]')
     await checkoutMenuItem.waitForDisplayed({ timeout: 5000 })
     await checkoutMenuItem.click()
@@ -46,18 +51,15 @@ describe('Changelist Submit Workflow', () => {
     // Wait for changelist panel to update
     await browser.pause(2000)
 
-    // Find and click the default changelist to expand it (if not already expanded)
+    // Wait for default changelist to appear with files
     const defaultChangelist = await $('[data-testid="changelist-default"]')
     await defaultChangelist.waitForDisplayed({ timeout: 5000 })
 
-    // Click the submit button on the changelist header (appears on hover)
-    // For E2E, we'll use the context menu approach instead
-    await defaultChangelist.click({ button: 'right' })
-
-    // Wait for context menu and find submit option
-    const submitMenuItem = await $('[data-testid="context-menu-submit"]')
-    await submitMenuItem.waitForDisplayed({ timeout: 5000 })
-    await submitMenuItem.click()
+    // The submit button is opacity-0 until hover and may be obscured by context menus.
+    // Use JavaScript click to bypass visibility/overlap issues.
+    const submitButton = await $('[data-testid="context-menu-submit"]')
+    await submitButton.waitForExist({ timeout: 5000 })
+    await browser.execute((el: HTMLElement) => el.click(), submitButton)
 
     // Wait for submit dialog to appear
     const submitDialog = await $('[data-testid="submit-dialog"]')
@@ -69,22 +71,14 @@ describe('Changelist Submit Workflow', () => {
     await descriptionTextarea.setValue('E2E test changelist submission')
 
     // Click submit button
-    const submitButton = await $('[data-testid="submit-confirm-button"]')
-    await submitButton.waitForEnabled({ timeout: 5000 })
-    await submitButton.click()
+    const submitConfirm = await $('[data-testid="submit-confirm-button"]')
+    await submitConfirm.waitForEnabled({ timeout: 5000 })
+    await submitConfirm.click()
 
     // Wait for dialog to close (30s timeout for submit operation)
     await submitDialog.waitForDisplayed({
       timeout: 30000,
       reverse: true
     })
-
-    // Verify file was removed from changelist (submit succeeded)
-    const changelistFiles = await $$('[data-testid^="cl-file-"]')
-    const remainingFileCount = await changelistFiles.length
-
-    // The file should be removed after successful submit
-    // (We expect 0 files, or potentially fewer files if multiple were checked out)
-    // For simplicity, we just verify the dialog closed, which indicates success
   })
 })

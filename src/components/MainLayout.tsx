@@ -207,6 +207,7 @@ export function MainLayout() {
               disabled={isRunning || isCancelling}
               className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed"
               title={`Sync Workspace (${SHORTCUTS.SYNC.label})`}
+              data-testid="sync-button"
             >
               <Download className={`w-5 h-5 ${isRunning ? 'animate-spin' : ''}`} />
               <span className="text-[10px]">Sync</span>

@@ -26,7 +26,6 @@ export const config = {
 
   capabilities: [
     {
-      browserName: 'wry',
       'tauri:options': {
         application: join(process.cwd(), 'src-tauri', 'target', 'release', 'p4now.exe'),
       },
