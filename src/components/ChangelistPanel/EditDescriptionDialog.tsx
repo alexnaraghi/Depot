@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useOperationStore } from '@/store/operation';
-import { invokeP4CreateChange, invokeP4EditChangeDescription } from '@/lib/tauri';
+import { invokeP4CreateChange, invokeP4EditChangeDescription, invokeP4Opened, invokeP4Reopen } from '@/lib/tauri';
 import { useQueryClient } from '@tanstack/react-query';
 import { P4Changelist } from '@/types/p4';
 import toast from 'react-hot-toast';
@@ -63,7 +63,33 @@ export function EditDescriptionDialog({
           p4client ?? undefined
         );
         addOutputLine(`Change ${newClId} created.`, false);
-        toast.success(`Created changelist #${newClId}`);
+
+        // Move files from default CL to new numbered CL
+        const openedFiles = await invokeP4Opened(
+          p4port ?? undefined,
+          p4user ?? undefined,
+          p4client ?? undefined
+        );
+        const defaultClFiles = openedFiles.filter(f => f.changelist === 0);
+
+        if (defaultClFiles.length > 0) {
+          addOutputLine(`p4 reopen -c ${newClId} (${defaultClFiles.length} files)`, false);
+          await invokeP4Reopen(
+            defaultClFiles.map(f => f.depot_path),
+            newClId,
+            p4port ?? undefined,
+            p4user ?? undefined,
+            p4client ?? undefined
+          );
+          addOutputLine(`Moved ${defaultClFiles.length} files to changelist ${newClId}.`, false);
+          toast.success(`Created changelist #${newClId} with ${defaultClFiles.length} files`);
+        } else {
+          toast.success(`Created changelist #${newClId}`);
+        }
+
+        // Invalidate both changes and opened queries
+        queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
+        queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
       } else {
         addOutputLine(`p4 change -i (edit changelist ${changelist.id})`, false);
         await invokeP4EditChangeDescription(
@@ -75,8 +101,8 @@ export function EditDescriptionDialog({
         );
         addOutputLine(`Change ${changelist.id} updated.`, false);
         toast.success(`Updated changelist #${changelist.id}`);
+        queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
       }
-      queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
       onOpenChange(false);
     } catch (error) {
       addOutputLine(`Error: ${error}`, true);

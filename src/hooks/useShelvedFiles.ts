@@ -5,6 +5,7 @@ import {
   invokeP4Unshelve,
   invokeP4DeleteShelf,
   invokeP4Opened,
+  invokeP4ResolvePreview,
   type P4ShelvedFile,
 } from '@/lib/tauri';
 import { useConnectionStore } from '@/stores/connectionStore';
@@ -137,16 +138,17 @@ export function useUnshelve() {
       }
 
       // Proceed with unshelve
-      addOutputLine(`p4 unshelve -s ${changelistId}${filePaths ? ' ' + filePaths.join(' ') : ''}`, false);
+      addOutputLine(`p4 unshelve -s ${changelistId} -c ${changelistId}${filePaths ? ' ' + filePaths.join(' ') : ''}`, false);
       return invokeP4Unshelve(
         changelistId,
+        changelistId,  // target = source (same CL)
         filePaths,
         p4port ?? undefined,
         p4user ?? undefined,
         p4client ?? undefined
       );
     },
-    onSuccess: (data, variables) => {
+    onSuccess: async (data, variables) => {
       addOutputLine(String(data), false);
       const message = variables.filePaths
         ? `Unshelved ${variables.filePaths.length} file(s) successfully`
@@ -155,6 +157,25 @@ export function useUnshelve() {
       queryClient.invalidateQueries({ queryKey: ['p4', 'shelved'] });
       queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
       queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
+
+      // Check for files needing resolution
+      try {
+        const { p4port, p4user, p4client } = useConnectionStore.getState();
+        const unresolvedFiles = await invokeP4ResolvePreview(
+          p4port ?? undefined,
+          p4user ?? undefined,
+          p4client ?? undefined
+        );
+        if (unresolvedFiles.length > 0) {
+          addOutputLine(`${unresolvedFiles.length} file(s) need resolution`, false);
+          toast(`${unresolvedFiles.length} file(s) need resolution after unshelve`, {
+            icon: '⚠️',
+            duration: 5000,
+          });
+        }
+      } catch {
+        // Non-blocking: if resolve check fails, don't block the unshelve success
+      }
     },
     onError: (error: Error) => {
       // Don't show error toast if user cancelled

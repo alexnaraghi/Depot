@@ -20,6 +20,7 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { DndContext } from '@/contexts/DndContext';
 import { SHORTCUTS } from '@/lib/shortcuts';
+import toast from 'react-hot-toast';
 
 /**
  * Main application layout
@@ -58,7 +59,12 @@ export function MainLayout() {
     if (isRefreshing) return;
     setIsRefreshing(true);
     try {
-      await queryClient.invalidateQueries();
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['p4', 'opened'], refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'changes'], refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'shelved'], refetchType: 'all' }),
+      ]);
+      toast.success('Workspace refreshed');
     } finally {
       setIsRefreshing(false);
     }

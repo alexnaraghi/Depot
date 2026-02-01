@@ -332,17 +332,27 @@ export async function invokeP4DescribeShelved(
 }
 
 /**
- * Unshelve all files from a changelist back to the original changelist.
+ * Unshelve files from a changelist to a target changelist.
  * Returns success message or error (including conflict info).
+ * @param changelistId - Source changelist ID to unshelve from
+ * @param targetChangelistId - Target changelist ID to unshelve into
  */
 export async function invokeP4Unshelve(
   changelistId: number,
+  targetChangelistId: number,
   filePaths?: string[],
   server?: string,
   user?: string,
   client?: string
 ): Promise<string> {
-  return invoke<string>('p4_unshelve', { changelistId, filePaths, server, user, client });
+  return invoke<string>('p4_unshelve', {
+    sourceChangelistId: changelistId,
+    targetChangelistId,
+    filePaths,
+    server,
+    user,
+    client
+  });
 }
 
 /**
@@ -386,4 +396,16 @@ export async function invokeP4ReconcileApply(
   client?: string
 ): Promise<string> {
   return invoke<string>('p4_reconcile_apply', { filePaths, changelistId, server, user, client });
+}
+
+/**
+ * Preview files needing resolution after merge/unshelve operations.
+ * Returns list of depot paths that require conflict resolution.
+ */
+export async function invokeP4ResolvePreview(
+  server?: string,
+  user?: string,
+  client?: string
+): Promise<string[]> {
+  return invoke<string[]>('p4_resolve_preview', { server, user, client });
 }
