@@ -2194,7 +2194,7 @@ fn parse_ztag_depots(output: &str) -> Result<Vec<P4Depot>, String> {
 /// Build P4Depot from parsed ztag fields
 fn build_depot(fields: &HashMap<String, String>) -> Option<P4Depot> {
     let name = fields.get("name")?.clone();
-    let depot_type = fields.get("Type")?.clone();
+    let depot_type = fields.get("type").or_else(|| fields.get("Type"))?.clone();
 
     Some(P4Depot { name, depot_type })
 }
