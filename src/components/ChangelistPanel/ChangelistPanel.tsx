@@ -386,8 +386,8 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
   // Loading state
   if (isLoading) {
     return (
-      <div className={cn('flex flex-col h-full', className)}>
-        <div className="p-4 pb-2">
+      <div className={cn('flex flex-col h-full bg-background', className)}>
+        <div className="flex items-center justify-between px-4 py-2 bg-secondary/50">
           <h2 className="text-lg font-semibold">Pending Changes</h2>
         </div>
         <div className="p-3 space-y-4">
@@ -408,8 +408,8 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
   // Empty state
   if (treeData.length === 0) {
     return (
-      <div className={cn('flex flex-col h-full', className)}>
-        <div className="p-4 pb-2">
+      <div className={cn('flex flex-col h-full bg-background', className)}>
+        <div className="flex items-center justify-between px-4 py-2 bg-secondary/50">
           <h2 className="text-lg font-semibold">Pending Changes</h2>
         </div>
         <div className="flex items-center justify-center flex-1">
@@ -422,13 +422,13 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
   return (
     <div
       className={cn(
-        'flex flex-col h-full',
+        'flex flex-col h-full bg-background',
         isActive && 'bg-blue-950/20',
         className
       )}
       data-testid="changelist-panel"
     >
-      <div className="flex items-center justify-between p-4 pb-2">
+      <div className="flex items-center justify-between px-4 py-2 bg-secondary/50">
         <h2 className="text-lg font-semibold">Pending Changes</h2>
         <button
           onClick={() => setCreateDialogOpen(true)}

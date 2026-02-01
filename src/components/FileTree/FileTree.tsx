@@ -253,13 +253,18 @@ export function FileTree() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="p-3 space-y-2">
-        {Array.from({ length: 10 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-2" style={{ paddingLeft: `${(i % 3) * 16}px` }}>
-            <div className="w-4 h-4 bg-slate-700 rounded animate-pulse" />
-            <div className="h-3.5 bg-slate-700 rounded animate-pulse" style={{ width: `${60 + (i * 7) % 40}%` }} />
-          </div>
-        ))}
+      <div className="flex flex-col h-full bg-background">
+        <div className="flex items-center justify-between px-4 py-2 bg-secondary/50">
+          <h2 className="text-lg font-semibold">Workspace</h2>
+        </div>
+        <div className="p-3 space-y-2">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-2" style={{ paddingLeft: `${(i % 3) * 16}px` }}>
+              <div className="w-4 h-4 bg-slate-700 rounded animate-pulse" />
+              <div className="h-3.5 bg-slate-700 rounded animate-pulse" style={{ width: `${60 + (i * 7) % 40}%` }} />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -267,16 +272,21 @@ export function FileTree() {
   // Error state
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-3 text-red-400 p-4">
-        <AlertCircle className="w-8 h-8" />
-        <p className="text-sm text-center">Failed to load workspace files</p>
-        <p className="text-xs text-muted-foreground text-center">{String(error)}</p>
-        <button
-          onClick={() => refetch()}
-          className="px-4 py-2 bg-accent hover:bg-accent/80 rounded text-sm text-foreground"
-        >
-          Retry
-        </button>
+      <div className="flex flex-col h-full bg-background">
+        <div className="flex items-center justify-between px-4 py-2 bg-secondary/50">
+          <h2 className="text-lg font-semibold">Workspace</h2>
+        </div>
+        <div className="flex flex-col items-center justify-center flex-1 gap-3 text-red-400 p-4">
+          <AlertCircle className="w-8 h-8" />
+          <p className="text-sm text-center">Failed to load workspace files</p>
+          <p className="text-xs text-muted-foreground text-center">{String(error)}</p>
+          <button
+            onClick={() => refetch()}
+            className="px-4 py-2 bg-accent hover:bg-accent/80 rounded text-sm text-foreground"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -284,8 +294,13 @@ export function FileTree() {
   // Empty state
   if (tree.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-sm text-muted-foreground">No files in workspace</p>
+      <div className="flex flex-col h-full bg-background">
+        <div className="flex items-center justify-between px-4 py-2 bg-secondary/50">
+          <h2 className="text-lg font-semibold">Workspace</h2>
+        </div>
+        <div className="flex items-center justify-center flex-1">
+          <p className="text-sm text-muted-foreground">No files in workspace</p>
+        </div>
       </div>
     );
   }
@@ -295,25 +310,30 @@ export function FileTree() {
     <div
       ref={containerRef}
       className={cn(
-        "h-full w-full bg-background tree-container",
+        "h-full w-full bg-background tree-container flex flex-col",
         isActive && "bg-blue-950/20"
       )}
       data-testid="file-tree"
     >
-      <Tree
-        data={enhancedTree(filteredTree)}
-        idAccessor="id"
-        indent={16}
-        rowHeight={28}
-        height={containerHeight}
-        overscanCount={10}
-        disableDrag
-        disableDrop
-        disableEdit
-        dndManager={dndManager}
-      >
-        {FileNode}
-      </Tree>
+      <div className="flex items-center justify-between px-4 py-2 bg-secondary/50">
+        <h2 className="text-lg font-semibold">Local</h2>
+      </div>
+      <div className="flex-1 overflow-hidden">
+        <Tree
+          data={enhancedTree(filteredTree)}
+          idAccessor="id"
+          indent={16}
+          rowHeight={32}
+          height={containerHeight}
+          overscanCount={10}
+          disableDrag
+          disableDrop
+          disableEdit
+          dndManager={dndManager}
+        >
+          {FileNode}
+        </Tree>
+      </div>
 
       {/* Context menu */}
       {contextMenu && (
