@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 Milestone: v3.0 Daily Driver
 Phase: 14 of 15 (Depot Browser)
-Plan: 1 of 5 in current phase
+Plan: 2 of 3 in current phase
 Status: In progress
-Last activity: 2026-02-01 — Completed 14-01 (Backend Commands)
+Last activity: 2026-02-01 — Completed 14-02 (Depot Browser UI)
 
-Progress: [█████░░░░░] 60% (24 of ~40 estimated plans for v3.0)
+Progress: [█████░░░░░] 63% (25 of ~40 estimated plans for v3.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 55 (14 v1.0 + 17 v2.0 + 24 v3.0)
+- Total plans completed: 56 (14 v1.0 + 17 v2.0 + 25 v3.0)
 - Quick tasks completed: 6
 - Average duration: 6 min
-- Total execution time: ~362 min (104 v1.0 + ~112 v2.0 + 146 v3.0)
+- Total execution time: ~366 min (104 v1.0 + ~112 v2.0 + 150 v3.0)
 
 **By Phase (v3.0):**
 
@@ -35,12 +35,12 @@ Progress: [█████░░░░░] 60% (24 of ~40 estimated plans for v3
 | 11.1 | 5 | 44 min | 9 min |
 | 12 | 4 | 38 min | 10 min |
 | 13 | 5 | 25 min | 5 min |
-| 14 | 1 | 3 min | 3 min |
+| 14 | 2 | 7 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 6 min (13-03), 8 min (13-04), 5 min (13-05), 3 min (14-01)
-- Trend: Phase 14 started with fast backend implementation
-- Phase 14-01: Backend commands for depot browsing (3 min)
+- Last 5 plans: 8 min (13-04), 5 min (13-05), 3 min (14-01), 4 min (14-02)
+- Trend: Phase 14 maintaining fast pace with UI integration
+- Phase 14-02: Depot browser UI with accordion layout (4 min)
 
 *Updated after each plan completion*
 
@@ -107,6 +107,9 @@ Recent decisions affecting v3.0 work:
 - Graceful degradation for disconnected states (v3.0/13-05) — Header components show static fallback text when server unavailable instead of hiding or null
 - p4_dirs empty result handling (v3.0/14-01) — "no such file(s)" errors return empty array for graceful UI handling
 - depot_type field naming (v3.0/14-01) — Use depot_type instead of type to avoid reserved keyword conflicts
+- Accordion persistence (v3.0/14-02) — Store accordion section open/closed state in localStorage for UI state persistence across sessions
+- Lazy loading on toggle (v3.0/14-02) — Load depot subdirectories only when user expands folder to prevent memory exhaustion with large depots
+- Local tree state for depot (v3.0/14-02) — Use local useState for tree data instead of TanStack Query cache, query cache used only for directory listings
 
 ### Roadmap Evolution
 
@@ -158,15 +161,15 @@ Recent decisions affecting v3.0 work:
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Completed 14-01 (Backend Commands)
+Stopped at: Completed 14-02 (Depot Browser UI)
 Resume file: None
 
 **Recent completed plans:**
-- 13-02: Workspace switcher UI with dropdown and query invalidation (3 min)
 - 13-03: Stream switcher with shelve confirmation dialog (6 min)
 - 13-04: Client spec viewer dialog with copy functionality (8 min)
 - 13-05: Integration polish with graceful degradation (5 min)
 - 14-01: Backend commands for depot browsing (3 min)
+- 14-02: Depot browser UI with accordion layout (4 min)
 
 ---
-**Next step:** Continue Phase 14: Plan 14-02 (Depot Browser UI)
+**Next step:** Continue Phase 14: Plan 14-03 (Context Menus & Detail Integration)
