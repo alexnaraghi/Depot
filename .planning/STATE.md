@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 Milestone: v3.0 Daily Driver
 Phase: 13 of 15 (Workspace & Stream Switching)
-Plan: 4 of 5 in current phase
-Status: In progress
-Last activity: 2026-02-01 — Completed 13-04 (Client Spec Viewer Dialog)
+Plan: 5 of 5 in current phase
+Status: Phase complete
+Last activity: 2026-02-01 — Completed 13-05 (Integration Polish)
 
-Progress: [█████░░░░░] 55% (22 of ~40 estimated plans for v3.0)
+Progress: [█████░░░░░] 58% (23 of ~40 estimated plans for v3.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 53 (14 v1.0 + 17 v2.0 + 22 v3.0)
+- Total plans completed: 54 (14 v1.0 + 17 v2.0 + 23 v3.0)
 - Quick tasks completed: 6
 - Average duration: 6 min
-- Total execution time: ~354 min (104 v1.0 + ~112 v2.0 + 138 v3.0)
+- Total execution time: ~359 min (104 v1.0 + ~112 v2.0 + 143 v3.0)
 
 **By Phase (v3.0):**
 
@@ -34,12 +34,12 @@ Progress: [█████░░░░░] 55% (22 of ~40 estimated plans for v3
 | 11 | 2 | 9 min | 5 min |
 | 11.1 | 5 | 44 min | 9 min |
 | 12 | 4 | 38 min | 10 min |
-| 13 | 4 | 20 min | 5 min |
+| 13 | 5 | 25 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 3 min (13-01), 3 min (13-02), 6 min (13-03), 8 min (13-04)
-- Trend: Phase 13 maintaining fast execution with UI and backend work
-- Phase 13-04: Client spec viewer dialog with copy functionality (8 min)
+- Last 5 plans: 3 min (13-02), 6 min (13-03), 8 min (13-04), 5 min (13-05)
+- Trend: Phase 13 complete with consistent fast execution
+- Phase 13-05: Integration polish with graceful disconnected state (5 min)
 
 *Updated after each plan completion*
 
@@ -103,6 +103,7 @@ Recent decisions affecting v3.0 work:
 - Workspace switcher in header (v3.0/13-02) — Radix Select dropdown with root path metadata, invalidates all queries and resets detail pane on switch
 - Auto-shelve for default CL (v3.0/13-03) — Stream switching shelves default CL files by creating new numbered CL, reopening files, then shelving
 - Pre-switch file confirmation (v3.0/13-03) — ShelveConfirmDialog shows grouped file list before stream switch with open files
+- Graceful degradation for disconnected states (v3.0/13-05) — Header components show static fallback text when server unavailable instead of hiding or null
 
 ### Roadmap Evolution
 
@@ -154,7 +155,7 @@ Recent decisions affecting v3.0 work:
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Completed 13-04 (Client Spec Viewer Dialog)
+Stopped at: Completed 13-05 (Integration Polish) - Phase 13 complete
 Resume file: None
 
 **Recent completed plans:**
@@ -162,6 +163,7 @@ Resume file: None
 - 13-02: Workspace switcher UI with dropdown and query invalidation (3 min)
 - 13-03: Stream switcher with shelve confirmation dialog (6 min)
 - 13-04: Client spec viewer dialog with copy functionality (8 min)
+- 13-05: Integration polish with graceful degradation (5 min)
 
 ---
-**Next step:** Continue Phase 13: Plan 05 (Workspace Switching with Open Files)
+**Next step:** Begin Phase 14: Depot Browser
