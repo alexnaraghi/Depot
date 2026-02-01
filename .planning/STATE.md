@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 Milestone: v3.0 Daily Driver
 Phase: 11 of 15 (Auto-Refresh Settings)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-01-31 — Completed 11-01-PLAN.md
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-01 — Completed 11-02-PLAN.md
 
-Progress: [██░░░░░░░░] 15% (6 of ~40 estimated plans for v3.0)
+Progress: [██░░░░░░░░] 18% (7 of ~40 estimated plans for v3.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 37 (14 v1.0 + 17 v2.0 + 6 v3.0)
+- Total plans completed: 38 (14 v1.0 + 17 v2.0 + 7 v3.0)
 - Quick tasks completed: 5
 - Average duration: 5 min
-- Total execution time: ~245 min (104 v1.0 + ~112 v2.0 + 29 v3.0)
+- Total execution time: ~250 min (104 v1.0 + ~112 v2.0 + 34 v3.0)
 
 **By Phase (v3.0):**
 
@@ -31,10 +31,10 @@ Progress: [██░░░░░░░░] 15% (6 of ~40 estimated plans for v3.
 |-------|-------|-------|----------|
 | 09 | 3 | 16 min | 5 min |
 | 10 | 2 | 9 min | 5 min |
-| 11 | 1 | 4 min | 4 min |
+| 11 | 2 | 9 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 4 min (10-01), 5 min (10-02), 4 min (11-01)
+- Last 5 plans: 5 min (10-02), 4 min (11-01), 5 min (11-02)
 - Trend: Consistent ~4-5 min average per plan, efficient execution
 
 *Updated after each plan completion*
@@ -65,6 +65,8 @@ Recent decisions affecting v3.0 work:
 - Pause auto-refresh during operations (v3.0/11-01) — Check useOperationStore.currentOperation to prevent query invalidation mid-operation
 - Default 5-minute auto-refresh (v3.0/11-01) — 300000ms default with 0 = disabled, max 10 minutes
 - Window focus tracking via Tauri events (v3.0/11-01) — Use tauri://focus and tauri://blur events to pause auto-refresh when window is inactive
+- Native file picker for path selection (v3.0/11-02) — Use tauri-plugin-dialog's open() instead of manual path entry for better UX
+- Preset dropdown for intervals (v3.0/11-02) — Select component with preset options prevents invalid configuration values
 
 ### Pending Todos
 
@@ -87,9 +89,10 @@ Recent decisions affecting v3.0 work:
 - Settings auto-seeding enables P4 auto-connect (09-03)
 - E2E tests require P4E2E_PORT, P4E2E_USER, P4E2E_CLIENT env vars
 
-**Phase 11 (Auto-Refresh):**
+**Phase 11 (Auto-Refresh):** COMPLETE
 - Query invalidation race conditions → RESOLVED (11-01: auto-refresh pauses when currentOperation exists)
 - Optimal intervals depend on server performance → RESOLVED (11-01: configurable interval with 5-minute default, 0 = disabled)
+- Settings UI implementation → COMPLETE (11-02: editor path and auto-refresh interval controls in settings dialog)
 
 **Phase 13 (Workspace/Stream Switching):**
 - Numbered CL files block stream switching (need pre-flight validation + shelve workflow)
@@ -104,9 +107,9 @@ Recent decisions affecting v3.0 work:
 
 ## Session Continuity
 
-Last session: 2026-01-31
-Stopped at: Completed 11-01-PLAN.md
+Last session: 2026-02-01
+Stopped at: Completed 11-02-PLAN.md (Phase 11 complete)
 Resume file: None
 
 ---
-**Next step:** Continue Phase 11 with 11-02 (Settings UI) or begin Phase 12 (Diff Viewer)
+**Next step:** Begin Phase 12 (Diff Viewer) or Phase 13 (Workspace/Stream Switching)
