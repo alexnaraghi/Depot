@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
 import { Tree } from 'react-arborist';
-import { useDepotTree, DepotNodeData } from './useDepotTree';
+import { useDepotTree } from './useDepotTree';
 import { DepotNode } from './DepotNode';
 import { DepotContextMenu } from './DepotContextMenu';
 import { AlertCircle } from 'lucide-react';
@@ -42,33 +42,10 @@ export function DepotBrowser() {
     };
   }, []);
 
-  // Handle node toggle - load children if not yet loaded
+  // Handle node toggle - load children on expand
   const handleToggle = useCallback((nodeId: string) => {
-    // Find the node in tree data
-    const findNode = (nodes: typeof treeData, id: string): typeof treeData[0] | null => {
-      for (const node of nodes) {
-        if (node.id === id) return node;
-        if (node.children) {
-          const found = findNode(node.children, id);
-          if (found) return found;
-        }
-      }
-      return null;
-    };
-
-    const node = findNode(treeData, nodeId);
-    if (node && node.children === null) {
-      // Children not yet loaded - trigger load
-      loadChildren(nodeId);
-    }
-  }, [treeData, loadChildren]);
-
-  // Children accessor: return empty array for unloaded folders so react-arborist treats them as branches
-  const childrenAccessor = useCallback((node: DepotNodeData) => {
-    if (!node.isFolder) return null; // Files are leaves
-    if (node.children === null) return []; // Unloaded folder - show as expandable
-    return node.children; // Loaded folder - show actual children
-  }, []);
+    loadChildren(nodeId); // loadChildren already skips if already loaded
+  }, [loadChildren]);
 
   // Handle context menu
   const handleContextMenu = useCallback((menu: { depotPath: string; isFolder: boolean; x: number; y: number }) => {
@@ -121,7 +98,6 @@ export function DepotBrowser() {
       <Tree
         data={treeData}
         idAccessor="id"
-        childrenAccessor={childrenAccessor}
         width="100%"
         indent={16}
         rowHeight={28}
