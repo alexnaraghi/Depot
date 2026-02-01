@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 Milestone: v3.0 Daily Driver
 Phase: 12 of 15 (Search Filtering & Results)
-Plan: 1 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-01 — Completed 12-01-PLAN.md
+Last activity: 2026-02-01 — Completed 12-03-PLAN.md
 
-Progress: [███░░░░░░░] 35% (14 of ~40 estimated plans for v3.0)
+Progress: [████░░░░░░] 40% (16 of ~40 estimated plans for v3.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 46 (14 v1.0 + 17 v2.0 + 15 v3.0)
+- Total plans completed: 48 (14 v1.0 + 17 v2.0 + 17 v3.0)
 - Quick tasks completed: 5
 - Average duration: 5 min
-- Total execution time: ~297 min (104 v1.0 + ~112 v2.0 + 81 v3.0)
+- Total execution time: ~313 min (104 v1.0 + ~112 v2.0 + 97 v3.0)
 
 **By Phase (v3.0):**
 
@@ -33,12 +33,12 @@ Progress: [███░░░░░░░] 35% (14 of ~40 estimated plans for v3
 | 10 | 2 | 9 min | 5 min |
 | 11 | 2 | 9 min | 5 min |
 | 11.1 | 5 | 44 min | 9 min |
-| 12 | 1 | 3 min | 3 min |
+| 12 | 3 | 19 min | 6 min |
 
 **Recent Trend:**
-- Last 5 plans: 5 min (11.1-03), 3 min (11.1-04), 7 min (11.1-05), 3 min (12-01)
-- Trend: Very fast execution for focused infrastructure tasks
-- Phase 12 started: Search filtering foundation in 3 minutes
+- Last 5 plans: 3 min (11.1-04), 7 min (11.1-05), 3 min (12-01), 8 min (12-02), 8 min (12-03)
+- Trend: Consistent mid-tier execution for search features
+- Phase 12 in progress: Search filtering and deep search commands
 
 *Updated after each plan completion*
 
@@ -88,6 +88,10 @@ Recent decisions affecting v3.0 work:
 - No debounce on search input (v3.0/12-01) — Instant filtering on every keystroke, useDeferredValue in consumers (Plan 02) handles performance
 - Event-based search focus (v3.0/12-01) — MainLayout dispatches 'p4now:focus-search' event, SearchBar listens to avoid ref passing
 - Progressive Escape key behavior (v3.0/12-01) — First Escape clears text, second Escape blurs (prevents accidental unfocus)
+- Client-side submitted CL filtering (v3.0/12-03) — Reuses query cache, filters 500 prefetched CLs on keystroke for instant results
+- Search input in view not prompt (v3.0/12-03) — Command palette opens search view with focused input instead of window.prompt
+- Context menus on search results (v3.0/12-03) — Right-click shows Copy/View operations matching FileNode/ChangelistNode patterns
+- Clickable author names for filtering (v3.0/12-03) — Clicking author in submitted CL results filters to that author's changes
 
 ### Roadmap Evolution
 
@@ -133,8 +137,8 @@ Recent decisions affecting v3.0 work:
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Completed 12-01-PLAN.md (Phase 12 in progress)
+Stopped at: Completed 12-03-PLAN.md (Phase 12 in progress)
 Resume file: None
 
 ---
-**Next step:** Continue Phase 12 with Plan 02 (FileTree Filtering)
+**Next step:** Continue Phase 12 with Plan 04 (Phase completion)
