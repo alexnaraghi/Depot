@@ -322,6 +322,7 @@ export function FileTree() {
         <Tree
           data={enhancedTree(filteredTree)}
           idAccessor="id"
+          width="100%"
           indent={16}
           rowHeight={32}
           height={containerHeight}

@@ -68,9 +68,9 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
     return (
       <div
         ref={dragHandle}
-        style={style}
+        style={{ ...style, paddingLeft: (style.paddingLeft as number || 0) + 12 }}
         className={cn(
-          'group flex items-center gap-2 px-2 py-1 text-sm',
+          'group flex items-center gap-2 pr-3 py-1 text-sm overflow-hidden',
           !dimmed && 'cursor-pointer hover:bg-accent',
           !dimmed && isSelected && 'bg-blue-900/50',
           dimmed && 'opacity-30 pointer-events-none'
@@ -189,9 +189,9 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
   return (
     <div
       ref={dragHandle}
-      style={style}
+      style={{ ...style, paddingLeft: (style.paddingLeft as number || 0) + 12 }}
       className={cn(
-        'flex items-center gap-2 px-2 py-1 pl-6 text-sm',
+        'flex items-center gap-2 pr-3 py-1 text-sm overflow-hidden',
         !dimmed && 'cursor-pointer hover:bg-accent',
         !dimmed && isSelected && 'bg-blue-900/50',
         dimmed && 'opacity-30 pointer-events-none'
@@ -265,9 +265,9 @@ function ShelvedFileRow({
 
   return (
     <div
-      style={style}
+      style={{ ...style, paddingLeft: (style.paddingLeft as number || 0) + 12 }}
       className={cn(
-        'group flex items-center gap-2 px-2 py-1 pl-8 text-sm',
+        'group flex items-center gap-2 pr-3 py-1 text-sm overflow-hidden',
         'hover:bg-accent/30'
       )}
     >
@@ -332,9 +332,9 @@ function ShelvedSectionHeader({
 
   return (
     <div
-      style={style}
+      style={{ ...style, paddingLeft: (style.paddingLeft as number || 0) + 12 }}
       className={cn(
-        'group flex items-center gap-2 px-2 py-1 cursor-pointer text-sm',
+        'group flex items-center gap-2 pr-3 py-1 cursor-pointer text-sm overflow-hidden',
         'hover:bg-accent/50'
       )}
       onClick={onToggle}

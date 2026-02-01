@@ -54,9 +54,9 @@ export function FileNode({ node, style, dragHandle }: NodeRendererProps<FileNode
   return (
     <div
       ref={dragHandle}
-      style={style}
+      style={{ ...style, paddingLeft: (style.paddingLeft as number || 0) + 12 }}
       className={cn(
-        'flex items-center gap-2 px-2 py-1 text-sm',
+        'flex items-center gap-2 pr-3 py-1 text-sm overflow-hidden',
         !dimmed && 'cursor-pointer hover:bg-accent',
         !dimmed && isSelected && 'bg-blue-900/50',
         dimmed && 'opacity-30 pointer-events-none'

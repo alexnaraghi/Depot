@@ -75,3 +75,8 @@
 .tree-container {
   min-height: 0;
 }
+
+/* Ensure react-arborist tree rows don't overflow their container */
+[role="treeitem"] > div {
+  max-width: 100%;
+}
