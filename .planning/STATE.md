@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 Milestone: v3.0 Daily Driver
 Phase: 15 of 15 (Resolve Workflow)
-Plan: 1 of 3 in current phase
-Status: In progress
-Last activity: 2026-02-01 — Completed 15-01 (Resolve Backend Commands)
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-01 — Completed 15-02 (Resolve Frontend UI)
 
-Progress: [██████░░░░] 68% (27 of ~40 estimated plans for v3.0)
+Progress: [███████░░░] 70% (28 of ~40 estimated plans for v3.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 57 (14 v1.0 + 17 v2.0 + 26 v3.0)
+- Total plans completed: 58 (14 v1.0 + 17 v2.0 + 27 v3.0)
 - Quick tasks completed: 6
 - Average duration: 6 min
-- Total execution time: ~369 min (104 v1.0 + ~112 v2.0 + 153 v3.0)
+- Total execution time: ~376 min (104 v1.0 + ~112 v2.0 + 160 v3.0)
 
 **By Phase (v3.0):**
 
@@ -36,12 +36,13 @@ Progress: [██████░░░░] 68% (27 of ~40 estimated plans for v3
 | 12 | 4 | 38 min | 10 min |
 | 13 | 5 | 25 min | 5 min |
 | 14 | 3 | 15 min | 5 min |
-| 15 | 1 | 3 min | 3 min |
+| 15 | 2 | 10 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 3 min (14-01), 4 min (14-02), 8 min (14-03), 3 min (15-01)
-- Trend: Phase 15 started, resolve backend commands complete
+- Last 5 plans: 4 min (14-02), 8 min (14-03), 3 min (15-01), 7 min (15-02)
+- Trend: Phase 15 complete, resolve workflow end-to-end functional
 - Phase 15-01: Resolve backend commands (3 min)
+- Phase 15-02: Resolve frontend UI (7 min)
 
 *Updated after each plan completion*
 
@@ -115,6 +116,14 @@ Recent decisions affecting v3.0 work:
 - spawn_blocking for merge tool wait (v3.0/15-01) — Use tokio::task::spawn_blocking to wrap std::process::Command for blocking wait without blocking async runtime
 - Timestamp-based temp file names (v3.0/15-01) — SystemTime UNIX timestamp creates unique temp file names for base/theirs extractions to avoid collisions
 - Best-effort temp cleanup (v3.0/15-01) — Remove temp files after merge tool exits using `let _ = std::fs::remove_file()` pattern (ignore cleanup errors)
+- No auto-refetch for conflicts (v3.0/15-02) — useUnresolvedFiles has no refetchInterval, conflicts detected only on manual refresh/sync/unshelve
+- Conflict banner in FileDetailView (v3.0/15-02) — Yellow banner at top with Launch Merge Tool, Accept Theirs, Accept Yours buttons
+- ResolveBlockingOverlay pattern (v3.0/15-02) — Full-screen modal prevents UI interaction during merge tool execution with preventDefault on escape/outside click
+- Confirmation after merge tool (v3.0/15-02) — Show ResolveConfirmDialog after merge tool exits with code 0 before auto-accepting result (prevents data loss on tool cancel)
+- Destructive styling for Accept Theirs (v3.0/15-02) — Red/destructive button styling with warning message about discarding local changes
+- Soft submit blocking (v3.0/15-02) — Submit shows toast error with unresolved file count instead of disabling button
+- Context menu resolve prominence (v3.0/15-02) — "Resolve..." item at top of menu with yellow text and separator for visual prominence
+- Query invalidation after resolve (v3.0/15-02) — Invalidate opened, changes, unresolved, fileTree queries after any resolve operation
 
 ### Roadmap Evolution
 
@@ -150,12 +159,12 @@ Recent decisions affecting v3.0 work:
 - Numbered CL files block stream switching (need pre-flight validation + shelve workflow)
 - P4CLIENT env var inheritance (must explicitly clear before setting new value)
 
-**Phase 14 (Depot Browser):**
-- Large depot memory exhaustion (lazy load with `p4 dirs <path>/*`, virtualize with react-arborist)
+**Phase 14 (Depot Browser):** COMPLETE
+- Large depot memory exhaustion → RESOLVED (14-02: lazy load with `p4 dirs <path>/*`, virtualize with react-arborist)
 
-**Phase 15 (Resolve Workflow):**
-- External merge tool edge cases (exit codes, timeout handling, tool compatibility)
-- Resolve state sync after tool completes (use `child.wait()`, invalidate queries immediately)
+**Phase 15 (Resolve Workflow):** COMPLETE
+- External merge tool edge cases → RESOLVED (15-01: spawn_blocking with child.wait(), 15-02: confirmation dialog after exit code 0)
+- Resolve state sync after tool completes → RESOLVED (15-02: query invalidation for opened, changes, unresolved, fileTree)
 
 ### Quick Tasks Completed
 
@@ -166,14 +175,14 @@ Recent decisions affecting v3.0 work:
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Completed 15-01 (Resolve Backend Commands) — Phase 15 in progress
+Stopped at: Completed 15-02 (Resolve Frontend UI) — Phase 15 COMPLETE
 Resume file: None
 
 **Recent completed plans:**
-- 14-01: Backend commands for depot browsing (3 min)
 - 14-02: Depot browser UI with accordion layout (4 min)
 - 14-03: Context menu + detail pane integration (8 min)
 - 15-01: Resolve backend commands (3 min)
+- 15-02: Resolve frontend UI (7 min)
 
 ---
-**Next step:** Continue Phase 15 with plan 15-02 (Resolve UI)
+**Next step:** Phase 15 complete. All planned v3.0 phases complete. Ready for v3.0 release or additional feature phases.
