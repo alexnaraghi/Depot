@@ -116,11 +116,11 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
-- [ ] 11.1-01-PLAN.md — Selection store + three-column layout skeleton
-- [ ] 11.1-02-PLAN.md — WorkspaceSummaryView + FileDetailView with inline history
-- [ ] 11.1-03-PLAN.md — ChangelistDetailView + RevisionDetailView
-- [ ] 11.1-04-PLAN.md — Breadcrumb navigation + wire side column selections
-- [ ] 11.1-05-PLAN.md — Column width persistence + cleanup + visual verification
+- [x] 11.1-01-PLAN.md — Selection store + three-column layout skeleton
+- [x] 11.1-02-PLAN.md — WorkspaceSummaryView + FileDetailView with inline history
+- [x] 11.1-03-PLAN.md — ChangelistDetailView + RevisionDetailView
+- [x] 11.1-04-PLAN.md — Breadcrumb navigation + wire side column selections
+- [x] 11.1-05-PLAN.md — Column width persistence + cleanup + visual verification
 
 #### Phase 12: Search Filtering & Results
 **Goal**: In-place search filtering of file tree and changelist columns with command palette for deep searches
@@ -190,7 +190,7 @@ Phases execute in numeric order: 09 → 10 → 11 → 12 → 13 → 14 → 15
 | 09. E2E Testing Foundation | 0/? | Not started | - |
 | 10. Bug Fixes | 2/2 | ✓ Complete | 2026-01-31 |
 | 11. Auto-Refresh + Settings | 2/2 | ✓ Complete | 2026-01-31 |
-| 11.1 Unified Three-Column Layout | 0/? | Not started | - |
+| 11.1 Unified Three-Column Layout | 5/5 | ✓ Complete | 2026-01-31 |
 | 12. Search Filtering & Results | 0/? | Not started | - |
 | 13. Workspace & Stream Switching | 0/? | Not started | - |
 | 14. Depot Browser | 0/? | Not started | - |

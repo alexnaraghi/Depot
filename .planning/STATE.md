@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** The user is never blocked — operations are always cancellable, errors are non-blocking, and the app remains responsive even during network issues or long-running operations.
-**Current focus:** Phase 11 - Auto-Refresh Settings
+**Current focus:** Phase 11.1 complete — Three-Column Layout
 
 ## Current Position
 
