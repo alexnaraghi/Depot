@@ -1,8 +1,10 @@
+import { useEffect } from 'react';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
 import { WorkspaceSummaryView } from './WorkspaceSummaryView';
 import { FileDetailView } from './FileDetailView';
 import { ChangelistDetailView } from './ChangelistDetailView';
 import { RevisionDetailView } from './RevisionDetailView';
+import { DetailBreadcrumb } from './DetailBreadcrumb';
 
 /**
  * DetailPane - Center column that switches views based on selection
@@ -15,15 +17,30 @@ import { RevisionDetailView } from './RevisionDetailView';
  */
 export function DetailPane() {
   const selection = useDetailPaneStore(s => s.selection);
+  const history = useDetailPaneStore(s => s.history);
+  const goBack = useDetailPaneStore(s => s.goBack);
+  const clear = useDetailPaneStore(s => s.clear);
+
+  // Handle Escape key for back navigation
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        if (history.length > 0) {
+          goBack();
+        } else {
+          clear();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [history.length, goBack, clear]);
 
   return (
     <div className="flex flex-col h-full bg-background">
-      {/* Header area for future breadcrumb */}
-      <div className="border-b border-border p-3">
-        <div className="text-sm text-muted-foreground">
-          {/* Breadcrumb will go here */}
-        </div>
-      </div>
+      {/* Breadcrumb navigation */}
+      <DetailBreadcrumb />
 
       {/* Content area */}
       <div className="flex-1 overflow-auto">
