@@ -49,6 +49,7 @@ export function useDepotTree() {
 
   const loadChildren = useCallback(async (depotPath: string) => {
     if (loadedPaths.current.has(depotPath)) return;
+    loadedPaths.current.add(depotPath); // Mark immediately to prevent duplicate calls
 
     setLoadingPaths(prev => new Set(prev).add(depotPath));
 
@@ -79,13 +80,13 @@ export function useDepotTree() {
       const fileNodes: DepotNodeData[] = fileResults
         .filter(f => f.action !== 'delete')
         .map(f => {
-          const segments = f.depot_path.split('/').filter(s => s);
-          const name = segments[segments.length - 1];
-          return { id: f.depot_path, name, isFolder: false };
+          // Tauri serializes Rust snake_case as camelCase
+          const path = (f as any).depotPath ?? (f as any).depot_path ?? '';
+          const segments = path.split('/').filter((s: string) => s);
+          const name = segments[segments.length - 1] || 'unknown';
+          return { id: path, name, isFolder: false };
         });
-
       const children = [...dirNodes, ...fileNodes];
-      loadedPaths.current.add(depotPath);
 
       setTreeData(prevTree => {
         const updateNode = (nodes: DepotNodeData[]): DepotNodeData[] => {
