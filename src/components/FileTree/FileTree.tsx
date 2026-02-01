@@ -3,10 +3,10 @@ import { Tree } from 'react-arborist';
 import { useFileTree } from './useFileTree';
 import { FileNode, FileNodeData } from './FileNode';
 import { FileContextMenu } from './FileContextMenu';
-import { FileHistoryDialog } from '@/components/dialogs/FileHistoryDialog';
 import { useDiff } from '@/hooks/useDiff';
 import { useFileOperations } from '@/hooks/useFileOperations';
 import { useFileTreeStore } from '@/stores/fileTreeStore';
+import { useDetailPaneStore } from '@/stores/detailPaneStore';
 import { P4File } from '@/types/p4';
 import { AlertCircle } from 'lucide-react';
 import { useDndManager } from '@/contexts/DndContext';
@@ -27,10 +27,6 @@ export function FileTree() {
     file: P4File;
     x: number;
     y: number;
-  } | null>(null);
-  const [historyDialog, setHistoryDialog] = useState<{
-    depotPath: string;
-    localPath: string;
   } | null>(null);
   const selectedFile = useFileTreeStore(s => s.selectedFile);
   const setSelectedFile = useFileTreeStore(s => s.setSelectedFile);
@@ -122,7 +118,8 @@ export function FileTree() {
   }
 
   function handleShowHistory(depotPath: string, localPath: string) {
-    setHistoryDialog({ depotPath, localPath });
+    // Navigate to file detail view instead of opening dialog
+    useDetailPaneStore.getState().selectFile(depotPath, localPath);
   }
 
   function handleDiffAgainstHave(depotPath: string, localPath: string) {
@@ -220,16 +217,6 @@ export function FileTree() {
           onClose={closeContextMenu}
           onShowHistory={handleShowHistory}
           onDiffAgainstHave={handleDiffAgainstHave}
-        />
-      )}
-
-      {/* File History Dialog */}
-      {historyDialog && (
-        <FileHistoryDialog
-          open={!!historyDialog}
-          onOpenChange={(open) => !open && setHistoryDialog(null)}
-          depotPath={historyDialog.depotPath}
-          localPath={historyDialog.localPath}
         />
       )}
     </div>

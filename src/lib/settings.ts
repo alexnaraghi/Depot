@@ -47,3 +47,18 @@ export async function getAutoRefreshInterval(): Promise<number> {
   const store = await getStore();
   return (await store.get<number>('autoRefreshInterval')) ?? defaultSettings.autoRefreshInterval;
 }
+
+export async function getColumnWidths(): Promise<{ left: number; right: number }> {
+  const store = await getStore();
+  return {
+    left: (await store.get<number>('layout.leftColumnWidth')) ?? 280,
+    right: (await store.get<number>('layout.rightColumnWidth')) ?? 320,
+  };
+}
+
+export async function saveColumnWidths(left: number, right: number): Promise<void> {
+  const store = await getStore();
+  await store.set('layout.leftColumnWidth', left);
+  await store.set('layout.rightColumnWidth', right);
+  await store.save();
+}

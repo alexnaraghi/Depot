@@ -21,6 +21,7 @@ import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
 import { DndContext } from '@/contexts/DndContext';
 import { SHORTCUTS } from '@/lib/shortcuts';
+import { getColumnWidths, saveColumnWidths } from '@/lib/settings';
 import toast from 'react-hot-toast';
 
 /**
@@ -34,8 +35,8 @@ import toast from 'react-hot-toast';
  *   - Right: Changelist panel (resizable)
  */
 export function MainLayout() {
-  const [leftWidth, setLeftWidth] = useState(280); // Default width for file tree
-  const [rightWidth, setRightWidth] = useState(320); // Default width for changelist panel
+  const [leftWidth, setLeftWidth] = useState(280);
+  const [rightWidth, setRightWidth] = useState(320);
   const [resizingColumn, setResizingColumn] = useState<'left' | 'right' | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
@@ -43,6 +44,14 @@ export function MainLayout() {
   const { workspace, stream } = useConnectionStore();
   const selectedFile = useFileTreeStore(s => s.selectedFile);
   const queryClient = useQueryClient();
+
+  // Load saved column widths on mount
+  useEffect(() => {
+    getColumnWidths().then(({ left, right }) => {
+      setLeftWidth(left);
+      setRightWidth(right);
+    });
+  }, []);
 
   // Sync and file operations
   const { sync, skipConflict, forceSync, conflict, isRunning, isCancelling } = useSync();
@@ -168,6 +177,8 @@ export function MainLayout() {
     };
 
     const handleMouseUp = () => {
+      // Save column widths when resize completes
+      saveColumnWidths(leftWidth, rightWidth);
       setResizingColumn(null);
     };
 
@@ -178,7 +189,7 @@ export function MainLayout() {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [resizingColumn])
+  }, [resizingColumn, leftWidth, rightWidth])
 
   return (
     <DndProvider backend={HTML5Backend}>

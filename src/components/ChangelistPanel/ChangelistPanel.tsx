@@ -6,9 +6,9 @@ import { ChangelistContextMenu } from './ChangelistContextMenu';
 import { SubmitDialog } from './SubmitDialog';
 import { CreateChangelistDialog } from './CreateChangelistDialog';
 import { EditDescriptionDialog } from './EditDescriptionDialog';
-import { FileHistoryDialog } from '@/components/dialogs/FileHistoryDialog';
 import { ChangelistTreeNode } from '@/utils/treeBuilder';
 import { P4Changelist, P4File } from '@/types/p4';
+import { useDetailPaneStore } from '@/stores/detailPaneStore';
 import { invokeP4Reopen, invokeP4DeleteChange } from '@/lib/tauri';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryClient } from '@tanstack/react-query';
@@ -48,10 +48,6 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
     currentClId: number;
     x: number;
     y: number;
-  } | null>(null);
-  const [historyDialog, setHistoryDialog] = useState<{
-    depotPath: string;
-    localPath: string;
   } | null>(null);
   const [headerMenuState, setHeaderMenuState] = useState<{
     changelist: P4Changelist;
@@ -190,9 +186,9 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
     });
   }, []);
 
-  // Handle file history dialog
+  // Handle file history - navigate to file detail view
   const handleShowHistory = useCallback((depotPath: string, localPath: string) => {
-    setHistoryDialog({ depotPath, localPath });
+    useDetailPaneStore.getState().selectFile(depotPath, localPath);
   }, []);
 
   // Handle changelist header context menu
@@ -383,14 +379,6 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
           onClose={() => setContextMenuState(null)}
           onShowHistory={handleShowHistory}
           onDiffAgainstHave={handleDiffAgainstHave}
-        />
-      )}
-      {historyDialog && (
-        <FileHistoryDialog
-          open={!!historyDialog}
-          onOpenChange={(open) => !open && setHistoryDialog(null)}
-          depotPath={historyDialog.depotPath}
-          localPath={historyDialog.localPath}
         />
       )}
       {headerMenuState && (
