@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 Milestone: v3.0 Daily Driver
 Phase: 13 of 15 (Workspace & Stream Switching)
-Plan: 1 of 5 in current phase
+Plan: 2 of 5 in current phase
 Status: In progress
-Last activity: 2026-02-01 — Completed 13-01-PLAN.md
+Last activity: 2026-02-01 — Completed 13-02 (Workspace Switcher UI)
 
-Progress: [█████░░░░░] 48% (19 of ~40 estimated plans for v3.0)
+Progress: [█████░░░░░] 50% (20 of ~40 estimated plans for v3.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 50 (14 v1.0 + 17 v2.0 + 19 v3.0)
+- Total plans completed: 51 (14 v1.0 + 17 v2.0 + 20 v3.0)
 - Quick tasks completed: 6
 - Average duration: 6 min
-- Total execution time: ~337 min (104 v1.0 + ~112 v2.0 + 121 v3.0)
+- Total execution time: ~340 min (104 v1.0 + ~112 v2.0 + 124 v3.0)
 
 **By Phase (v3.0):**
 
@@ -34,12 +34,12 @@ Progress: [█████░░░░░] 48% (19 of ~40 estimated plans for v3
 | 11 | 2 | 9 min | 5 min |
 | 11.1 | 5 | 44 min | 9 min |
 | 12 | 4 | 38 min | 10 min |
-| 13 | 1 | 3 min | 3 min |
+| 13 | 2 | 6 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 12 min (12-02), 8 min (12-03), 15 min (12-04), 3 min (13-01)
-- Trend: Phase 13 started with fast backend implementation
-- Phase 13-01: Backend commands for workspace/stream switching (3 Rust commands + TypeScript wrappers)
+- Last 5 plans: 8 min (12-03), 15 min (12-04), 3 min (13-01), 3 min (13-02)
+- Trend: Phase 13 maintaining fast execution with UI and backend work
+- Phase 13-02: Workspace switcher UI with Radix Select dropdown (3 min)
 
 *Updated after each plan completion*
 
@@ -100,6 +100,7 @@ Recent decisions affecting v3.0 work:
 - Filter-active background tint (v3.0/12-04) — bg-blue-950/20 tint on filtered columns provides visual feedback when searchFilterStore.isActive is true
 - Result-click dismisses filter (v3.0/12-04) — Clicking matching items clears filter after navigation to show full context
 - Toolbar search integration (v3.0/12-04) — Toolbar search bar shows submitted CL results in detail pane, not just column filtering
+- Workspace switcher in header (v3.0/13-02) — Radix Select dropdown with root path metadata, invalidates all queries and resets detail pane on switch
 
 ### Roadmap Evolution
 
@@ -151,11 +152,12 @@ Recent decisions affecting v3.0 work:
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Completed 13-01-PLAN.md
+Stopped at: Completed 13-02 (Workspace Switcher UI)
 Resume file: None
 
 **Recent completed plans:**
 - 13-01: Backend commands for workspace/stream switching (3 min)
+- 13-02: Workspace switcher UI with dropdown and query invalidation (3 min)
 
 ---
-**Next step:** Continue Phase 13: Plan 02 (Workspace Switcher UI)
+**Next step:** Continue Phase 13: Plan 03 (Stream Switcher UI)
