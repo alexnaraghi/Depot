@@ -108,9 +108,9 @@
 | RFSH-01 | Phase 11 | Complete |
 | STNG-01 | Phase 11 | Complete |
 | STNG-02 | Phase 11 | Complete |
-| SRCH-01 | Phase 12 | Pending |
-| SRCH-02 | Phase 12 | Pending |
-| SRCH-03 | Phase 12 | Pending |
+| SRCH-01 | Phase 12 | Complete |
+| SRCH-02 | Phase 12 | Complete |
+| SRCH-03 | Phase 12 | Complete |
 | WKSP-01 | Phase 13 | Pending |
 | WKSP-02 | Phase 13 | Pending |
 | WKSP-03 | Phase 13 | Pending |

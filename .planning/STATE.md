@@ -13,7 +13,7 @@ Milestone: v3.0 Daily Driver
 Phase: 12 of 15 (Search Filtering & Results)
 Plan: 4 of 4 in current phase
 Status: Phase complete
-Last activity: 2026-02-01 — Completed 12-04-PLAN.md
+Last activity: 2026-02-01 — Completed quick-005 (Fix detail pane selection and CL click)
 
 Progress: [████░░░░░░] 45% (18 of ~40 estimated plans for v3.0)
 
@@ -21,9 +21,9 @@ Progress: [████░░░░░░] 45% (18 of ~40 estimated plans for v3
 
 **Velocity:**
 - Total plans completed: 49 (14 v1.0 + 17 v2.0 + 18 v3.0)
-- Quick tasks completed: 5
+- Quick tasks completed: 6
 - Average duration: 6 min
-- Total execution time: ~332 min (104 v1.0 + ~112 v2.0 + 116 v3.0)
+- Total execution time: ~334 min (104 v1.0 + ~112 v2.0 + 118 v3.0)
 
 **By Phase (v3.0):**
 
@@ -144,8 +144,11 @@ Recent decisions affecting v3.0 work:
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Completed 12-04-PLAN.md (Phase 12 complete)
+Stopped at: Completed quick-005 (Fix detail pane selection and CL click)
 Resume file: None
+
+**Recent quick tasks:**
+- quick-005: Fixed filter clear to reset detail pane, CL clicks navigate to detail view (2 min)
 
 ---
 **Next step:** Begin Phase 13: Workspace & Stream Switching

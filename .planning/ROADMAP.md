@@ -134,10 +134,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 12-01-PLAN.md — Search filter store + rewire SearchBar for in-place filtering
-- [ ] 12-02-PLAN.md — Wire fuzzy filtering into FileTree and ChangelistPanel (dim/highlight)
-- [ ] 12-03-PLAN.md — Command palette deep search commands + detail pane search results
-- [ ] 12-04-PLAN.md — Visual polish (tint, result-click dismiss) + verification checkpoint
+- [x] 12-01-PLAN.md — Search filter store + rewire SearchBar for in-place filtering
+- [x] 12-02-PLAN.md — Wire fuzzy filtering into FileTree and ChangelistPanel (dim/highlight)
+- [x] 12-03-PLAN.md — Command palette deep search commands + detail pane search results
+- [x] 12-04-PLAN.md — Visual polish (tint, result-click dismiss) + verification checkpoint
 
 #### Phase 13: Workspace & Stream Switching
 **Goal**: Fast switching between workspaces and streams without modal dialogs
@@ -194,7 +194,7 @@ Phases execute in numeric order: 09 → 10 → 11 → 12 → 13 → 14 → 15
 | 10. Bug Fixes | 2/2 | ✓ Complete | 2026-01-31 |
 | 11. Auto-Refresh + Settings | 2/2 | ✓ Complete | 2026-01-31 |
 | 11.1 Unified Three-Column Layout | 5/5 | ✓ Complete | 2026-01-31 |
-| 12. Search Filtering & Results | 0/? | Not started | - |
+| 12. Search Filtering & Results | 4/4 | ✓ Complete | 2026-02-01 |
 | 13. Workspace & Stream Switching | 0/? | Not started | - |
 | 14. Depot Browser | 0/? | Not started | - |
 | 15. Resolve Workflow | 0/? | Not started | - |
