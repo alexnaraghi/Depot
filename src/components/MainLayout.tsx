@@ -178,7 +178,14 @@ export function MainLayout() {
 
     const handleMouseUp = () => {
       // Save column widths when resize completes
-      saveColumnWidths(leftWidth, rightWidth);
+      // Use setState callbacks to read latest values (avoid stale closure)
+      setLeftWidth(l => {
+        setRightWidth(r => {
+          saveColumnWidths(l, r);
+          return r;
+        });
+        return l;
+      });
       setResizingColumn(null);
     };
 
@@ -333,7 +340,7 @@ export function MainLayout() {
       {/* Main content area - Three-column layout */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left column: File tree */}
-        <div style={{ width: `${leftWidth}px`, minWidth: '200px' }}>
+        <div style={{ width: `${leftWidth}px`, minWidth: '200px', flexShrink: 0 }} className="overflow-hidden">
           <FileTree />
         </div>
 
@@ -355,7 +362,7 @@ export function MainLayout() {
         />
 
         {/* Right column: Changelists */}
-        <div style={{ width: `${rightWidth}px`, minWidth: '200px' }}>
+        <div style={{ width: `${rightWidth}px`, minWidth: '200px', flexShrink: 0 }} className="overflow-hidden">
           <ChangelistPanel className="h-full" />
         </div>
       </div>
