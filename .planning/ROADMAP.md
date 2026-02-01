@@ -199,6 +199,6 @@ Phases execute in numeric order: 09 → 10 → 11 → 12 → 13 → 14 → 15
 | 11. Auto-Refresh + Settings | 2/2 | ✓ Complete | 2026-01-31 |
 | 11.1 Unified Three-Column Layout | 5/5 | ✓ Complete | 2026-01-31 |
 | 12. Search Filtering & Results | 4/4 | ✓ Complete | 2026-02-01 |
-| 13. Workspace & Stream Switching | 0/? | Not started | - |
+| 13. Workspace & Stream Switching | 5/5 | ✓ Complete | 2026-02-01 |
 | 14. Depot Browser | 0/? | Not started | - |
 | 15. Resolve Workflow | 0/? | Not started | - |

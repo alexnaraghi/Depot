@@ -17,14 +17,14 @@
 
 ### Workspace Management
 
-- [ ] **WKSP-01**: User can view list of available workspaces
-- [ ] **WKSP-02**: User can switch to a different workspace
-- [ ] **WKSP-03**: User can view client spec (read-only)
+- [x] **WKSP-01**: User can view list of available workspaces
+- [x] **WKSP-02**: User can switch to a different workspace
+- [x] **WKSP-03**: User can view client spec (read-only)
 
 ### Stream Management
 
-- [ ] **STRM-01**: User can switch to a different stream
-- [ ] **STRM-02**: Default CL files are auto-shelved when switching streams
+- [x] **STRM-01**: User can switch to a different stream
+- [x] **STRM-02**: Default CL files are auto-shelved when switching streams
 
 ### Search
 
@@ -111,11 +111,11 @@
 | SRCH-01 | Phase 12 | Complete |
 | SRCH-02 | Phase 12 | Complete |
 | SRCH-03 | Phase 12 | Complete |
-| WKSP-01 | Phase 13 | Pending |
-| WKSP-02 | Phase 13 | Pending |
-| WKSP-03 | Phase 13 | Pending |
-| STRM-01 | Phase 13 | Pending |
-| STRM-02 | Phase 13 | Pending |
+| WKSP-01 | Phase 13 | Complete |
+| WKSP-02 | Phase 13 | Complete |
+| WKSP-03 | Phase 13 | Complete |
+| STRM-01 | Phase 13 | Complete |
+| STRM-02 | Phase 13 | Complete |
 | DPOT-01 | Phase 14 | Pending |
 | DPOT-02 | Phase 14 | Pending |
 | RSLV-01 | Phase 15 | Pending |
