@@ -81,17 +81,18 @@ Plans:
   3. User can unshelve files to a specific numbered CL (not forced to default)
   4. User sees resolve dialog immediately after unshelving conflicting files
   5. User can manually refresh workspace state via toolbar button
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 10-01: TBD during planning
+- [ ] 10-01-PLAN.md — Fix drag-drop reliability, default CL file movement, refresh button
+- [ ] 10-02-PLAN.md — Fix unshelve target CL + resolve detection after unshelve
 
 #### Phase 11: Auto-Refresh + Settings
 **Goal**: Configurable periodic polling with smart operation gating
 **Depends on**: Phase 10 (relies on stable query infrastructure)
 **Requirements**: RFSH-01, STNG-01, STNG-02
 **Success Criteria** (what must be TRUE):
-  1. Workspace state auto-refreshes at user-configurable interval (default 30s)
+  1. Workspace state auto-refreshes at user-configurable interval (default 5m)
   2. Auto-refresh pauses automatically during active operations (sync, submit, etc.)
   3. Auto-refresh pauses when window is minimized or inactive
   4. User can configure external editor path in settings dialog
