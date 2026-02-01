@@ -11,7 +11,7 @@ import { CommandPalette } from '@/components/CommandPalette';
 import { SyncConflictDialog } from '@/components/dialogs/SyncConflictDialog';
 import { ReconcilePreviewDialog } from '@/components/dialogs/ReconcilePreviewDialog';
 import { WorkspaceSwitcher } from '@/components/Header/WorkspaceSwitcher';
-import { useConnectionStore } from '@/stores/connectionStore';
+import { StreamSwitcher } from '@/components/Header/StreamSwitcher';
 import { useFileTreeStore } from '@/stores/fileTreeStore';
 import { useSync } from '@/hooks/useSync';
 import { useFileOperations } from '@/hooks/useFileOperations';
@@ -42,7 +42,6 @@ export function MainLayout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [reconcileDialogOpen, setReconcileDialogOpen] = useState(false);
-  const { stream } = useConnectionStore();
   const selectedFile = useFileTreeStore(s => s.selectedFile);
   const queryClient = useQueryClient();
 
@@ -215,12 +214,7 @@ export function MainLayout() {
           {/* LEFT: Workspace and Stream info */}
           <div className="flex items-center gap-6">
             <WorkspaceSwitcher />
-            {stream && (
-              <div className="flex flex-col">
-                <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Stream</span>
-                <span className="text-sm font-medium text-foreground">{stream}</span>
-              </div>
-            )}
+            <StreamSwitcher />
           </div>
 
           {/* CENTER: Action buttons - GitKraken style (icon above text, no borders) */}
