@@ -1,4 +1,4 @@
-import { useCallback, useState, useRef, useEffect } from 'react';
+import { useCallback, useState, useRef, useEffect, useDeferredValue, useMemo } from 'react';
 import { Tree, MoveHandler, TreeApi } from 'react-arborist';
 import { useChangelists } from './useChangelists';
 import { ChangelistNode } from './ChangelistNode';
@@ -9,6 +9,7 @@ import { EditDescriptionDialog } from './EditDescriptionDialog';
 import { ChangelistTreeNode } from '@/utils/treeBuilder';
 import { P4Changelist, P4File } from '@/types/p4';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
+import { useSearchFilterStore } from '@/stores/searchFilterStore';
 import { invokeP4Reopen, invokeP4DeleteChange } from '@/lib/tauri';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryClient } from '@tanstack/react-query';
@@ -20,6 +21,7 @@ import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { Plus, Send, Archive, ArrowDownToLine, Pencil, Trash2, Undo2 } from 'lucide-react';
 import { useDndManager } from '@/contexts/DndContext';
+import createFuzzySearch from '@nozbe/microfuzz';
 
 interface ChangelistPanelProps {
   className?: string;
@@ -58,6 +60,114 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
   const { diffAgainstWorkspace } = useDiff();
   const { revert } = useFileOperations();
   const shelve = useShelve();
+
+  // Search filtering
+  const filterTerm = useSearchFilterStore(s => s.filterTerm);
+  const setChangelistMatchCount = useSearchFilterStore(s => s.setChangelistMatchCount);
+  const deferredFilterTerm = useDeferredValue(filterTerm);
+
+  // Apply fuzzy filtering to changelist tree
+  const { filteredTree, matchCount } = useMemo(() => {
+    if (!deferredFilterTerm.trim()) {
+      return { filteredTree: treeData, matchCount: 0 };
+    }
+
+    // Collect searchable items (CL descriptions and files)
+    const searchableItems: Array<{
+      type: 'changelist' | 'file';
+      text: string;
+      node: ChangelistTreeNode;
+      changelistId?: number;
+    }> = [];
+
+    function collectSearchable(nodes: ChangelistTreeNode[], currentClId?: number) {
+      for (const node of nodes) {
+        if (node.type === 'changelist') {
+          const cl = node.data as P4Changelist;
+          searchableItems.push({
+            type: 'changelist',
+            text: cl.description,
+            node,
+            changelistId: cl.id,
+          });
+          if (node.children) {
+            collectSearchable(node.children, cl.id);
+          }
+        } else if (node.type === 'file') {
+          const file = node.data as P4File;
+          const fileName = file.depotPath.split('/').pop() || file.depotPath;
+          searchableItems.push({
+            type: 'file',
+            text: fileName,
+            node,
+            changelistId: currentClId,
+          });
+        }
+        // Skip shelved sections for now
+      }
+    }
+
+    collectSearchable(treeData);
+
+    // Create fuzzy searcher
+    const fuzzySearch = createFuzzySearch(searchableItems, {
+      getText: (item) => [item.text],
+    });
+    const matchResults = fuzzySearch(deferredFilterTerm);
+
+    // Build map of matching nodes with highlight ranges
+    const matchMap = new Map<ChangelistTreeNode, [number, number][]>();
+    const matchingChangelistIds = new Set<number>();
+
+    for (const result of matchResults) {
+      const item = result.item;
+      const highlightRanges = result.matches[0];
+      if (highlightRanges) {
+        matchMap.set(item.node, highlightRanges);
+        if (item.changelistId !== undefined) {
+          matchingChangelistIds.add(item.changelistId);
+        }
+      }
+    }
+
+    // Apply filter to tree
+    function applyFilter(nodes: ChangelistTreeNode[]): ChangelistTreeNode[] {
+      return nodes.map((node) => {
+        if (node.type === 'changelist') {
+          const clMatches = matchMap.has(node);
+          const childrenFiltered = node.children ? applyFilter(node.children) : undefined;
+          const hasMatchingChildren = childrenFiltered?.some((child) => !child.dimmed);
+
+          return {
+            ...node,
+            children: childrenFiltered,
+            dimmed: !clMatches && !hasMatchingChildren,
+            highlightRanges: matchMap.get(node),
+          };
+        } else if (node.type === 'file') {
+          const fileMatches = matchMap.has(node);
+          return {
+            ...node,
+            dimmed: !fileMatches,
+            highlightRanges: matchMap.get(node),
+          };
+        } else {
+          // Shelved sections and files - skip for now
+          return node;
+        }
+      });
+    }
+
+    const filtered = applyFilter(treeData);
+    const count = matchResults.length;
+
+    return { filteredTree: filtered, matchCount: count };
+  }, [treeData, deferredFilterTerm]);
+
+  // Report match count to store
+  useEffect(() => {
+    setChangelistMatchCount(matchCount);
+  }, [matchCount, setChangelistMatchCount]);
 
   // Handle drag-and-drop between changelists
   const handleMove: MoveHandler<ChangelistTreeNode> = useCallback(async ({ dragIds, parentId }) => {
@@ -310,7 +420,7 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
       <div className="flex-1 overflow-hidden">
         <Tree<ChangelistTreeNode>
           ref={treeRef}
-          data={treeData}
+          data={filteredTree}
           width="100%"
           height={400}
           indent={16}

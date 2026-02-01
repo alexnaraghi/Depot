@@ -7,6 +7,7 @@ import { ChangelistTreeNode } from '@/utils/treeBuilder';
 import { useUnshelve, useDeleteShelf } from '@/hooks/useShelvedFiles';
 import { cn } from '@/lib/utils';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
+import Highlighter from 'react-highlight-words';
 
 interface ChangelistNodeProps extends NodeRendererProps<ChangelistTreeNode> {
   onSubmit?: () => void;
@@ -60,17 +61,21 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
   if (nodeData.type === 'changelist') {
     const changelist = nodeData.data as P4Changelist;
     const isDefault = changelist.id === 0;
+    const dimmed = nodeData.dimmed;
+    const highlightRanges = nodeData.highlightRanges;
 
     return (
       <div
         ref={dragHandle}
         style={style}
         className={cn(
-          'group flex items-center gap-2 px-2 py-1 cursor-pointer text-sm',
-          'hover:bg-accent',
-          isSelected && 'bg-blue-900/50'
+          'group flex items-center gap-2 px-2 py-1 text-sm',
+          !dimmed && 'cursor-pointer hover:bg-accent',
+          !dimmed && isSelected && 'bg-blue-900/50',
+          dimmed && 'opacity-30 pointer-events-none'
         )}
         onClick={() => {
+          if (dimmed) return;
           if (node.isInternal) {
             // Toggle expand/collapse
             node.toggle();
@@ -79,9 +84,12 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
           }
         }}
         onContextMenu={(e) => {
+          if (dimmed) return;
           e.preventDefault();
           onHeaderContextMenu?.(e, changelist);
         }}
+        tabIndex={dimmed ? -1 : undefined}
+        aria-hidden={dimmed ? true : undefined}
         data-testid={isDefault ? 'changelist-default' : `changelist-${changelist.id}`}
       >
         {/* List icon */}
@@ -93,7 +101,17 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
           isDefault ? "text-muted-foreground" : "text-foreground"
         )}>
           {!isDefault && `#${changelist.id} — `}
-          {changelist.description || '(no description)'}
+          {!dimmed && highlightRanges && highlightRanges.length > 0 ? (
+            <Highlighter
+              searchWords={[]}
+              autoEscape={true}
+              textToHighlight={changelist.description || '(no description)'}
+              findChunks={() => highlightRanges.map(([start, end]) => ({ start, end }))}
+              highlightClassName="bg-yellow-500/30 text-yellow-200"
+            />
+          ) : (
+            changelist.description || '(no description)'
+          )}
         </span>
 
         {/* Default label */}
@@ -159,31 +177,50 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
   // Get parent changelist ID
   const parentChangelist = node.parent?.data as P4Changelist | undefined;
   const fromClId = parentChangelist?.id;
+  const dimmed = nodeData.dimmed;
+  const highlightRanges = nodeData.highlightRanges;
 
   return (
     <div
       ref={dragHandle}
       style={style}
       className={cn(
-        'flex items-center gap-2 px-2 py-1 pl-6 cursor-pointer text-sm',
-        'hover:bg-accent',
-        isSelected && 'bg-blue-900/50'
+        'flex items-center gap-2 px-2 py-1 pl-6 text-sm',
+        !dimmed && 'cursor-pointer hover:bg-accent',
+        !dimmed && isSelected && 'bg-blue-900/50',
+        dimmed && 'opacity-30 pointer-events-none'
       )}
       onClick={() => {
+        if (dimmed) return;
         // Update detail pane to show file
         useDetailPaneStore.getState().selectFile(file.depotPath, file.localPath, fromClId);
       }}
       onContextMenu={(e) => {
+        if (dimmed) return;
         e.preventDefault();
         onContextMenu?.(e, file);
       }}
+      tabIndex={dimmed ? -1 : undefined}
+      aria-hidden={dimmed ? true : undefined}
       data-testid={`cl-file-${fileName.replace(/[^a-zA-Z0-9]/g, '-')}`}
     >
       {/* Status icon */}
       <FileStatusIcon status={file.status} className="flex-shrink-0" />
 
       {/* File name */}
-      <span className="flex-1 truncate text-foreground">{fileName}</span>
+      <span className="flex-1 truncate text-foreground">
+        {!dimmed && highlightRanges && highlightRanges.length > 0 ? (
+          <Highlighter
+            searchWords={[]}
+            autoEscape={true}
+            textToHighlight={fileName}
+            findChunks={() => highlightRanges.map(([start, end]) => ({ start, end }))}
+            highlightClassName="bg-yellow-500/30 text-yellow-200"
+          />
+        ) : (
+          fileName
+        )}
+      </span>
     </div>
   );
 }

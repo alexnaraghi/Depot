@@ -23,6 +23,8 @@ export interface ChangelistTreeNode {
   type: 'changelist' | 'file' | 'shelved-section' | 'shelved-file';
   data: P4Changelist | P4File | { changelistId: number } | P4ShelvedFile;
   children?: ChangelistTreeNode[];
+  dimmed?: boolean;
+  highlightRanges?: [number, number][];
 }
 
 /**
