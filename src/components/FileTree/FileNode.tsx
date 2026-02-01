@@ -4,6 +4,7 @@ import { P4File } from '@/types/p4';
 import { FileStatusIcon } from './FileStatusIcon';
 import { cn } from '@/lib/utils';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
+import Highlighter from 'react-highlight-words';
 
 export interface FileNodeData {
   id: string;
@@ -12,6 +13,8 @@ export interface FileNodeData {
   file?: P4File;
   children?: FileNodeData[];
   onContextMenu?: (event: React.MouseEvent, file: P4File) => void;
+  dimmed?: boolean;
+  highlightRanges?: [number, number][];
 }
 
 /**
@@ -19,14 +22,26 @@ export interface FileNodeData {
  * Handles both folders and files with status icons
  */
 export function FileNode({ node, style, dragHandle }: NodeRendererProps<FileNodeData>) {
-  const { name, isFolder, file, onContextMenu } = node.data;
+  const { name, isFolder, file, onContextMenu, dimmed, highlightRanges } = node.data;
   const isSelected = node.isSelected;
   const isOpen = node.isOpen;
 
   function handleContextMenu(event: React.MouseEvent) {
+    if (dimmed) return; // Don't allow context menu on dimmed items
     if (!isFolder && file && onContextMenu) {
       event.preventDefault();
       onContextMenu(event, file);
+    }
+  }
+
+  function handleClick() {
+    if (dimmed) return; // Don't allow interaction with dimmed items
+    if (node.isInternal) {
+      // Folders toggle expand/collapse
+      node.toggle();
+    } else if (file) {
+      // Files update detail pane
+      useDetailPaneStore.getState().selectFile(file.depotPath, file.localPath);
     }
   }
 
@@ -35,20 +50,15 @@ export function FileNode({ node, style, dragHandle }: NodeRendererProps<FileNode
       ref={dragHandle}
       style={style}
       className={cn(
-        'flex items-center gap-2 px-2 py-1 cursor-pointer text-sm',
-        'hover:bg-accent',
-        isSelected && 'bg-blue-900/50'
+        'flex items-center gap-2 px-2 py-1 text-sm',
+        !dimmed && 'cursor-pointer hover:bg-accent',
+        !dimmed && isSelected && 'bg-blue-900/50',
+        dimmed && 'opacity-30 pointer-events-none'
       )}
-      onClick={() => {
-        if (node.isInternal) {
-          // Folders toggle expand/collapse
-          node.toggle();
-        } else if (file) {
-          // Files update detail pane
-          useDetailPaneStore.getState().selectFile(file.depotPath, file.localPath);
-        }
-      }}
+      onClick={handleClick}
       onContextMenu={handleContextMenu}
+      tabIndex={dimmed ? -1 : undefined}
+      aria-hidden={dimmed ? true : undefined}
       data-testid={!isFolder && file ? `file-node-${file.depotPath.replace(/[^a-zA-Z0-9]/g, '-')}` : undefined}
     >
       {/* Folder or file icon */}
@@ -68,7 +78,19 @@ export function FileNode({ node, style, dragHandle }: NodeRendererProps<FileNode
       )}
 
       {/* File/folder name */}
-      <span className="flex-1 truncate text-foreground">{name}</span>
+      <span className="flex-1 truncate text-foreground">
+        {!dimmed && highlightRanges && highlightRanges.length > 0 ? (
+          <Highlighter
+            searchWords={[]}
+            autoEscape={true}
+            textToHighlight={name}
+            findChunks={() => highlightRanges.map(([start, end]) => ({ start, end }))}
+            highlightClassName="bg-yellow-500/30 text-yellow-200"
+          />
+        ) : (
+          name
+        )}
+      </span>
 
       {/* Revision number for files */}
       {!isFolder && file && (
