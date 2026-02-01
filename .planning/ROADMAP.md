@@ -184,10 +184,11 @@ Plans:
   3. Merge tool waits for user to complete resolution and closes properly
   4. File automatically marked as resolved server-side after merge tool exits successfully
   5. File status updates immediately in UI after resolution completes
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 15-01: TBD during planning
+- [ ] 15-01-PLAN.md — Rust backend resolve commands (fstat unresolved, resolve accept, launch merge tool)
+- [ ] 15-02-PLAN.md — Frontend resolve UI (conflict banner, blocking overlay, context menus, submit blocking)
 
 ## Progress
 
