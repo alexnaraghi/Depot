@@ -34,13 +34,13 @@
 
 ### Auto-Refresh
 
-- [ ] **RFSH-01**: Workspace state auto-refreshes at a configurable interval
+- [x] **RFSH-01**: Workspace state auto-refreshes at a configurable interval
 - [ ] **RFSH-02**: User can manually refresh via button
 
 ### Settings
 
-- [ ] **STNG-01**: User can configure external editor
-- [ ] **STNG-02**: User can configure auto-refresh interval
+- [x] **STNG-01**: User can configure external editor
+- [x] **STNG-02**: User can configure auto-refresh interval
 
 ### Testing
 
@@ -105,9 +105,9 @@
 | BUGF-03 | Phase 10 | Complete |
 | BUGF-04 | Phase 10 | Complete |
 | RFSH-02 | Phase 10 | Complete |
-| RFSH-01 | Phase 11 | Pending |
-| STNG-01 | Phase 11 | Pending |
-| STNG-02 | Phase 11 | Pending |
+| RFSH-01 | Phase 11 | Complete |
+| STNG-01 | Phase 11 | Complete |
+| STNG-02 | Phase 11 | Complete |
 | SRCH-01 | Phase 12 | Pending |
 | SRCH-02 | Phase 12 | Pending |
 | SRCH-03 | Phase 12 | Pending |

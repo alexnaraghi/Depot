@@ -100,8 +100,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 11-01-PLAN.md — Settings schema extension + useWindowFocus hook + auto-refresh query wiring
-- [ ] 11-02-PLAN.md — Tauri dialog plugin + SettingsDialog UI (editor path, auto-refresh interval)
+- [x] 11-01-PLAN.md — Settings schema extension + useWindowFocus hook + auto-refresh query wiring
+- [x] 11-02-PLAN.md — Tauri dialog plugin + SettingsDialog UI (editor path, auto-refresh interval)
 
 #### Phase 12: Actionable Search
 **Goal**: Search results become interactive entry points for file and changelist operations
@@ -170,7 +170,7 @@ Phases execute in numeric order: 09 → 10 → 11 → 12 → 13 → 14 → 15
 |-------|----------------|--------|-----------|
 | 09. E2E Testing Foundation | 0/? | Not started | - |
 | 10. Bug Fixes | 2/2 | ✓ Complete | 2026-01-31 |
-| 11. Auto-Refresh + Settings | 0/? | Not started | - |
+| 11. Auto-Refresh + Settings | 2/2 | ✓ Complete | 2026-01-31 |
 | 12. Actionable Search | 0/? | Not started | - |
 | 13. Workspace & Stream Switching | 0/? | Not started | - |
 | 14. Depot Browser | 0/? | Not started | - |
