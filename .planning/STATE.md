@@ -10,20 +10,20 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Milestone: v3.0 Daily Driver
-Phase: 14 of 15 (Depot Browser)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-02-01 — Completed 14-03 (Context Menus & Detail Integration)
+Phase: 15 of 15 (Resolve Workflow)
+Plan: 1 of 3 in current phase
+Status: In progress
+Last activity: 2026-02-01 — Completed 15-01 (Resolve Backend Commands)
 
-Progress: [██████░░░░] 67% (26 of ~40 estimated plans for v3.0)
+Progress: [██████░░░░] 68% (27 of ~40 estimated plans for v3.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 56 (14 v1.0 + 17 v2.0 + 25 v3.0)
+- Total plans completed: 57 (14 v1.0 + 17 v2.0 + 26 v3.0)
 - Quick tasks completed: 6
 - Average duration: 6 min
-- Total execution time: ~366 min (104 v1.0 + ~112 v2.0 + 150 v3.0)
+- Total execution time: ~369 min (104 v1.0 + ~112 v2.0 + 153 v3.0)
 
 **By Phase (v3.0):**
 
@@ -36,11 +36,12 @@ Progress: [██████░░░░] 67% (26 of ~40 estimated plans for v3
 | 12 | 4 | 38 min | 10 min |
 | 13 | 5 | 25 min | 5 min |
 | 14 | 3 | 15 min | 5 min |
+| 15 | 1 | 3 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 5 min (13-05), 3 min (14-01), 4 min (14-02), 8 min (14-03)
-- Trend: Phase 14 complete, depot browser fully operational
-- Phase 14-03: Context menu + detail pane integration (8 min)
+- Last 5 plans: 3 min (14-01), 4 min (14-02), 8 min (14-03), 3 min (15-01)
+- Trend: Phase 15 started, resolve backend commands complete
+- Phase 15-01: Resolve backend commands (3 min)
 
 *Updated after each plan completion*
 
@@ -110,6 +111,10 @@ Recent decisions affecting v3.0 work:
 - Accordion persistence (v3.0/14-02) — Store accordion section open/closed state in localStorage for UI state persistence across sessions
 - Lazy loading on toggle (v3.0/14-02) — Load depot subdirectories only when user expands folder to prevent memory exhaustion with large depots
 - Local tree state for depot (v3.0/14-02) — Use local useState for tree data instead of TanStack Query cache, query cache used only for directory listings
+- P4MERGE env var with MERGE fallback (v3.0/15-01) — launch_merge_tool checks P4MERGE first, then MERGE, with descriptive error if neither set
+- spawn_blocking for merge tool wait (v3.0/15-01) — Use tokio::task::spawn_blocking to wrap std::process::Command for blocking wait without blocking async runtime
+- Timestamp-based temp file names (v3.0/15-01) — SystemTime UNIX timestamp creates unique temp file names for base/theirs extractions to avoid collisions
+- Best-effort temp cleanup (v3.0/15-01) — Remove temp files after merge tool exits using `let _ = std::fs::remove_file()` pattern (ignore cleanup errors)
 
 ### Roadmap Evolution
 
@@ -161,14 +166,14 @@ Recent decisions affecting v3.0 work:
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Completed 14-03 (Context Menus & Detail Integration) — Phase 14 complete
+Stopped at: Completed 15-01 (Resolve Backend Commands) — Phase 15 in progress
 Resume file: None
 
 **Recent completed plans:**
-- 13-05: Integration polish with graceful degradation (5 min)
 - 14-01: Backend commands for depot browsing (3 min)
 - 14-02: Depot browser UI with accordion layout (4 min)
 - 14-03: Context menu + detail pane integration (8 min)
+- 15-01: Resolve backend commands (3 min)
 
 ---
-**Next step:** Phase 15: Resolve Workflow (plan phase first)
+**Next step:** Continue Phase 15 with plan 15-02 (Resolve UI)
