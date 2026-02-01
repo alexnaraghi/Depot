@@ -25,9 +25,9 @@ function AppContent() {
   useP4Events();
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col">
+    <div className="h-full bg-slate-900 text-slate-100 flex flex-col">
       {/* Main application layout */}
-      <main className="flex-1 pb-32 overflow-hidden">
+      <main className="flex-1 overflow-hidden">
         <MainLayout />
       </main>
 

@@ -60,6 +60,20 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
   const { diffAgainstWorkspace } = useDiff();
   const { revert } = useFileOperations();
   const shelve = useShelve();
+  const treeContainerRef = useRef<HTMLDivElement>(null);
+  const [containerHeight, setContainerHeight] = useState(400);
+
+  // Measure container height and update on resize
+  useEffect(() => {
+    const updateHeight = () => {
+      if (treeContainerRef.current) {
+        setContainerHeight(treeContainerRef.current.clientHeight);
+      }
+    };
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    return () => window.removeEventListener('resize', updateHeight);
+  }, []);
 
   // Search filtering
   const filterTerm = useSearchFilterStore(s => s.filterTerm);
@@ -425,12 +439,12 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
         </button>
       </div>
 
-      <div className="flex-1 overflow-hidden">
+      <div ref={treeContainerRef} className="flex-1 overflow-hidden">
         <Tree<ChangelistTreeNode>
           ref={treeRef}
           data={filteredTree}
           width="100%"
-          height={400}
+          height={containerHeight}
           indent={16}
           rowHeight={32}
           openByDefault
