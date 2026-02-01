@@ -27,6 +27,37 @@ describe('Changelist Submit Workflow', () => {
     // Wait for file tree to load (P4 connection + fstat query)
     const firstFile = await $('[data-testid^="file-node-"]')
     await firstFile.waitForExist({ timeout: 30000 })
+
+    // Revert any files left checked out from a prior failed run
+    const existingCLFiles = await $$('[data-testid^="cl-file-"]')
+    if (existingCLFiles.length > 0) {
+      await existingCLFiles[0].click({ button: 'right' })
+      const revertMenuItem = await $('[data-testid="context-menu-revert"]')
+      await revertMenuItem.waitForDisplayed({ timeout: 5000 })
+      await revertMenuItem.click()
+      // Wait for changelist to clear
+      await browser.waitUntil(
+        async () => (await $$('[data-testid^="cl-file-"]')).length === 0,
+        { timeout: 10000 }
+      )
+    }
+  })
+
+  after(async () => {
+    // Clean up: revert any files left checked out if the test failed mid-way
+    const remainingFiles = await $$('[data-testid^="cl-file-"]')
+    if (remainingFiles.length > 0) {
+      await remainingFiles[0].click({ button: 'right' })
+      const revertMenuItem = await $('[data-testid="context-menu-revert"]')
+      const isDisplayed = await revertMenuItem.isDisplayed().catch(() => false)
+      if (isDisplayed) {
+        await revertMenuItem.click()
+        await browser.waitUntil(
+          async () => (await $$('[data-testid^="cl-file-"]')).length === 0,
+          { timeout: 10000 }
+        ).catch(() => {}) // best-effort cleanup
+      }
+    }
   })
 
   it('should submit a changelist with description', async () => {
@@ -48,8 +79,9 @@ describe('Changelist Submit Workflow', () => {
     await checkoutMenuItem.waitForDisplayed({ timeout: 5000 })
     await checkoutMenuItem.click()
 
-    // Wait for changelist panel to update
-    await browser.pause(2000)
+    // Wait for file to appear in changelist panel
+    const clFile = await $('[data-testid^="cl-file-"]')
+    await clFile.waitForExist({ timeout: 10000 })
 
     // Wait for default changelist to appear with files
     const defaultChangelist = await $('[data-testid="changelist-default"]')
