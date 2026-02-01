@@ -495,3 +495,34 @@ export async function invokeP4UpdateClientStream(
 ): Promise<string> {
   return invoke<string>('p4_update_client_stream', { workspace, newStream, server, user });
 }
+
+/**
+ * Depot information from p4 depots
+ */
+export interface P4Depot {
+  name: string;
+  depot_type: string;
+}
+
+/**
+ * List all depot roots with name and type.
+ */
+export async function invokeP4Depots(server?: string, user?: string): Promise<P4Depot[]> {
+  return invoke<P4Depot[]>('p4_depots', { server, user });
+}
+
+/**
+ * List immediate subdirectories of a depot path.
+ * @param depotPath - Depot path to query (e.g., "//depot/*")
+ * @param includeDeleted - Whether to include deleted directories (-D flag)
+ * @returns Array of depot directory paths
+ */
+export async function invokeP4Dirs(
+  depotPath: string,
+  includeDeleted: boolean = false,
+  server?: string,
+  user?: string,
+  client?: string
+): Promise<string[]> {
+  return invoke<string[]>('p4_dirs', { depotPath, includeDeleted, server, user, client });
+}
