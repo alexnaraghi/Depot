@@ -4,7 +4,7 @@ import { useConnectionStore } from '@/stores/connectionStore';
 import { useSearchFilterStore } from '@/stores/searchFilterStore';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
 import { invokeP4ChangesSubmitted, invokeP4Files, P4FileResult } from '@/lib/tauri';
-import { Search, List, Loader2, AlertCircle, Copy, FileText } from 'lucide-react';
+import { Search, Triangle, Loader2, AlertCircle, Copy, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
@@ -212,31 +212,25 @@ export function SearchResultsView({ searchType, query, toolbarDriven, minimal }:
                     key={cl.id}
                     onClick={() => handleCLClick(cl)}
                     onContextMenu={(e) => handleContextMenu(e, 'cl', cl)}
-                    className="w-full p-3 text-left border border-border rounded-md hover:border-accent-foreground hover:bg-accent transition-colors"
+                    className="w-full flex items-center gap-2 px-2 py-1 text-left text-sm hover:bg-accent transition-colors rounded-sm"
                   >
-                    <div className="flex items-start gap-2">
-                      <List className="w-4 h-4 mt-1 flex-shrink-0 text-muted-foreground" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-mono text-sm font-semibold">CL {cl.id}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(cl.time * 1000).toLocaleDateString()}
-                          </span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAuthorClick(cl.user);
-                            }}
-                            className="text-xs text-blue-400 hover:underline"
-                          >
-                            {cl.user}
-                          </button>
-                        </div>
-                        <div className="text-sm text-foreground line-clamp-2">
-                          {cl.description.split('\n')[0]}
-                        </div>
-                      </div>
-                    </div>
+                    <span className="flex-shrink-0 flex items-center gap-2">
+                      <Triangle className="w-4 h-4 text-muted-foreground fill-muted-foreground" />
+                      <span className="font-mono text-xs font-semibold">#{cl.id}</span>
+                    </span>
+                    <span className="flex-1 min-w-0 truncate text-foreground">{cl.description.split('\n')[0]}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAuthorClick(cl.user);
+                      }}
+                      className="flex-shrink-0 text-xs text-blue-400 hover:underline"
+                    >
+                      {cl.user}
+                    </button>
+                    <span className="flex-shrink-0 text-xs text-muted-foreground w-16 text-right">
+                      {new Date(cl.time * 1000).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </span>
                   </button>
                 ))}
 

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SubmitDialog } from '@/components/ChangelistPanel/SubmitDialog';
 import { EditDescriptionDialog } from '@/components/ChangelistPanel/EditDescriptionDialog';
+import { Triangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
@@ -107,8 +108,9 @@ export function ChangelistDetailView({ changelist }: ChangelistDetailViewProps) 
       {/* Header */}
       <div>
         <div className="flex items-center gap-2 mb-2">
+          <Triangle className="w-4 h-4 text-muted-foreground fill-muted-foreground flex-shrink-0" />
           <h2 className="text-xl font-semibold">
-            CL {changelist.id === 0 ? 'Default' : changelist.id}
+            #{changelist.id === 0 ? 'Default' : changelist.id}
           </h2>
           <Badge variant={isPending ? 'default' : 'secondary'}>
             {isSubmitted ? 'Submitted' : 'Pending'}

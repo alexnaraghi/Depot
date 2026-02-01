@@ -1,4 +1,4 @@
-import { GitCompare, ExternalLink, FolderOpen, Edit3, Undo2, Loader2 } from 'lucide-react';
+import { GitCompare, ExternalLink, FolderOpen, Edit3, Undo2, Loader2, Triangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFileHistory } from '@/hooks/useFileHistory';
 import { useFileOperations } from '@/hooks/useFileOperations';
@@ -185,6 +185,7 @@ export function FileDetailView({ depotPath, localPath }: FileDetailViewProps) {
                 <thead className="border-b border-border">
                   <tr className="text-left">
                     <th className="px-3 py-2 font-medium text-muted-foreground">Rev</th>
+                    <th className="px-3 py-2 font-medium text-muted-foreground">CL</th>
                     <th className="px-3 py-2 font-medium text-muted-foreground">User</th>
                     <th className="px-3 py-2 font-medium text-muted-foreground">Date</th>
                     <th className="px-3 py-2 font-medium text-muted-foreground">Description</th>
@@ -198,6 +199,12 @@ export function FileDetailView({ depotPath, localPath }: FileDetailViewProps) {
                       onClick={() => handleHistoryRowClick(revision.rev)}
                     >
                       <td className="px-3 py-2 font-mono text-foreground">#{revision.rev}</td>
+                      <td className="px-3 py-2 font-mono text-foreground">
+                        <span className="inline-flex items-center gap-1">
+                          <Triangle className="w-3 h-3 text-muted-foreground fill-muted-foreground" />
+                          {revision.change}
+                        </span>
+                      </td>
                       <td className="px-3 py-2 text-foreground">{revision.user}</td>
                       <td className="px-3 py-2 text-muted-foreground">{formatDate(revision.time)}</td>
                       <td className="px-3 py-2 text-muted-foreground" title={revision.desc}>

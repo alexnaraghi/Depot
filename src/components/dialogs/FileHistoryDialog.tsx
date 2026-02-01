@@ -1,4 +1,4 @@
-import { History, GitCompare, Loader2 } from 'lucide-react';
+import { History, GitCompare, Loader2, Triangle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -111,7 +111,10 @@ export function FileHistoryDialog({
                         #{revision.rev}
                       </td>
                       <td className="px-3 py-2 font-mono text-foreground">
-                        {revision.change}
+                        <span className="inline-flex items-center gap-1">
+                          <Triangle className="w-3 h-3 text-muted-foreground fill-muted-foreground" />
+                          {revision.change}
+                        </span>
                       </td>
                       <td className="px-3 py-2">
                         <span

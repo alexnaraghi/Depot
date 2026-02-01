@@ -1,5 +1,5 @@
 import { NodeRendererProps } from 'react-arborist';
-import { List, Send, Pencil, Trash2, ChevronRight, Archive, ArrowDownToLine } from 'lucide-react';
+import { Triangle, Send, Pencil, Trash2, ChevronRight, Archive, ArrowDownToLine } from 'lucide-react';
 import { P4Changelist, P4File } from '@/types/p4';
 import { P4ShelvedFile } from '@/lib/tauri';
 import { FileStatusIcon } from '@/components/FileTree/FileStatusIcon';
@@ -98,8 +98,8 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
         aria-hidden={dimmed ? true : undefined}
         data-testid={isDefault ? 'changelist-default' : `changelist-${changelist.id}`}
       >
-        {/* List icon */}
-        <List className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+        {/* Changelist icon */}
+        <Triangle className="w-4 h-4 text-muted-foreground fill-muted-foreground flex-shrink-0" />
 
         {/* Changelist number and description */}
         <span className={cn(
