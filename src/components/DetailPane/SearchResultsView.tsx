@@ -207,6 +207,17 @@ export function SearchResultsView({ searchType, query, toolbarDriven, minimal }:
                   </div>
                 )}
 
+                {/* Column headers */}
+                <div className="flex items-center gap-2 px-2 py-0.5 text-[11px] uppercase tracking-wider text-muted-foreground bg-secondary/50">
+                  <span className="flex-shrink-0 flex items-center gap-2">
+                    <span className="w-4" />
+                    <span className="font-mono">CL</span>
+                  </span>
+                  <span className="flex-1 min-w-0">Description</span>
+                  <span className="flex-shrink-0">Author</span>
+                  <span className="flex-shrink-0 w-16 text-right">Date</span>
+                </div>
+
                 {filteredSubmittedCLs.slice(0, displayLimit).map((cl) => (
                   <button
                     key={cl.id}
