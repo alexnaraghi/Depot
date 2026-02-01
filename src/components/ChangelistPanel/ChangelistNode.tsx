@@ -7,6 +7,7 @@ import { ChangelistTreeNode } from '@/utils/treeBuilder';
 import { useUnshelve, useDeleteShelf } from '@/hooks/useShelvedFiles';
 import { cn } from '@/lib/utils';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
+import { useSearchFilterStore } from '@/stores/searchFilterStore';
 import Highlighter from 'react-highlight-words';
 
 interface ChangelistNodeProps extends NodeRendererProps<ChangelistTreeNode> {
@@ -81,6 +82,11 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
             node.toggle();
             // Update detail pane to show CL
             useDetailPaneStore.getState().selectChangelist(changelist);
+            // Clear filter after navigating to changelist
+            const isActive = useSearchFilterStore.getState().isActive;
+            if (isActive) {
+              useSearchFilterStore.getState().clearFilter();
+            }
           }
         }}
         onContextMenu={(e) => {
@@ -194,6 +200,11 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
         if (dimmed) return;
         // Update detail pane to show file
         useDetailPaneStore.getState().selectFile(file.depotPath, file.localPath, fromClId);
+        // Clear filter after navigating to file
+        const isActive = useSearchFilterStore.getState().isActive;
+        if (isActive) {
+          useSearchFilterStore.getState().clearFilter();
+        }
       }}
       onContextMenu={(e) => {
         if (dimmed) return;

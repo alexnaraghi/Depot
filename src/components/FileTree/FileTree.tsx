@@ -12,6 +12,7 @@ import { P4File } from '@/types/p4';
 import { AlertCircle } from 'lucide-react';
 import { useDndManager } from '@/contexts/DndContext';
 import createFuzzySearch from '@nozbe/microfuzz';
+import { cn } from '@/lib/utils';
 
 /**
  * Main file tree component
@@ -39,6 +40,7 @@ export function FileTree() {
 
   // Search filtering
   const filterTerm = useSearchFilterStore(s => s.filterTerm);
+  const isActive = useSearchFilterStore(s => s.isActive);
   const setFileTreeMatchCount = useSearchFilterStore(s => s.setFileTreeMatchCount);
   const deferredFilterTerm = useDeferredValue(filterTerm);
 
@@ -290,7 +292,14 @@ export function FileTree() {
 
   // Tree view
   return (
-    <div ref={containerRef} className="h-full w-full bg-background tree-container" data-testid="file-tree">
+    <div
+      ref={containerRef}
+      className={cn(
+        "h-full w-full bg-background tree-container",
+        isActive && "bg-blue-950/20"
+      )}
+      data-testid="file-tree"
+    >
       <Tree
         data={enhancedTree(filteredTree)}
         idAccessor="id"

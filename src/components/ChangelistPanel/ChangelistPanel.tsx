@@ -63,6 +63,7 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
 
   // Search filtering
   const filterTerm = useSearchFilterStore(s => s.filterTerm);
+  const isActive = useSearchFilterStore(s => s.isActive);
   const setChangelistMatchCount = useSearchFilterStore(s => s.setChangelistMatchCount);
   const deferredFilterTerm = useDeferredValue(filterTerm);
 
@@ -405,7 +406,14 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
   }
 
   return (
-    <div className={cn('flex flex-col h-full', className)} data-testid="changelist-panel">
+    <div
+      className={cn(
+        'flex flex-col h-full',
+        isActive && 'bg-blue-950/20',
+        className
+      )}
+      data-testid="changelist-panel"
+    >
       <div className="flex items-center justify-between p-4 pb-2">
         <h2 className="text-lg font-semibold">Pending Changes</h2>
         <button

@@ -4,6 +4,7 @@ import { P4File } from '@/types/p4';
 import { FileStatusIcon } from './FileStatusIcon';
 import { cn } from '@/lib/utils';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
+import { useSearchFilterStore } from '@/stores/searchFilterStore';
 import Highlighter from 'react-highlight-words';
 
 export interface FileNodeData {
@@ -42,6 +43,11 @@ export function FileNode({ node, style, dragHandle }: NodeRendererProps<FileNode
     } else if (file) {
       // Files update detail pane
       useDetailPaneStore.getState().selectFile(file.depotPath, file.localPath);
+      // Clear filter after navigating to file
+      const isActive = useSearchFilterStore.getState().isActive;
+      if (isActive) {
+        useSearchFilterStore.getState().clearFilter();
+      }
     }
   }
 
