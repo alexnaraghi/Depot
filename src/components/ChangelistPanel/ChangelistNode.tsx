@@ -6,6 +6,7 @@ import { FileStatusIcon } from '@/components/FileTree/FileStatusIcon';
 import { ChangelistTreeNode } from '@/utils/treeBuilder';
 import { useUnshelve, useDeleteShelf } from '@/hooks/useShelvedFiles';
 import { cn } from '@/lib/utils';
+import { useDetailPaneStore } from '@/stores/detailPaneStore';
 
 interface ChangelistNodeProps extends NodeRendererProps<ChangelistTreeNode> {
   onSubmit?: () => void;
@@ -69,7 +70,14 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
           'hover:bg-accent',
           isSelected && 'bg-blue-900/50'
         )}
-        onClick={() => node.isInternal && node.toggle()}
+        onClick={() => {
+          if (node.isInternal) {
+            // Toggle expand/collapse
+            node.toggle();
+            // Update detail pane to show CL
+            useDetailPaneStore.getState().selectChangelist(changelist);
+          }
+        }}
         onContextMenu={(e) => {
           e.preventDefault();
           onHeaderContextMenu?.(e, changelist);
@@ -148,6 +156,9 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
   const file = nodeData.data as P4File;
   // Extract just the filename from the depot path
   const fileName = file.depotPath.split('/').pop() || file.depotPath;
+  // Get parent changelist ID
+  const parentChangelist = node.parent?.data as P4Changelist | undefined;
+  const fromClId = parentChangelist?.id;
 
   return (
     <div
@@ -158,6 +169,10 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
         'hover:bg-accent',
         isSelected && 'bg-blue-900/50'
       )}
+      onClick={() => {
+        // Update detail pane to show file
+        useDetailPaneStore.getState().selectFile(file.depotPath, file.localPath, fromClId);
+      }}
       onContextMenu={(e) => {
         e.preventDefault();
         onContextMenu?.(e, file);

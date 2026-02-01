@@ -3,6 +3,7 @@ import { FolderOpen, Folder, File } from 'lucide-react';
 import { P4File } from '@/types/p4';
 import { FileStatusIcon } from './FileStatusIcon';
 import { cn } from '@/lib/utils';
+import { useDetailPaneStore } from '@/stores/detailPaneStore';
 
 export interface FileNodeData {
   id: string;
@@ -38,7 +39,15 @@ export function FileNode({ node, style, dragHandle }: NodeRendererProps<FileNode
         'hover:bg-accent',
         isSelected && 'bg-blue-900/50'
       )}
-      onClick={() => node.isInternal && node.toggle()}
+      onClick={() => {
+        if (node.isInternal) {
+          // Folders toggle expand/collapse
+          node.toggle();
+        } else if (file) {
+          // Files update detail pane
+          useDetailPaneStore.getState().selectFile(file.depotPath, file.localPath);
+        }
+      }}
       onContextMenu={handleContextMenu}
       data-testid={!isFolder && file ? `file-node-${file.depotPath.replace(/[^a-zA-Z0-9]/g, '-')}` : undefined}
     >
