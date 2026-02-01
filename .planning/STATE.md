@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 Milestone: v3.0 Daily Driver
 Phase: 12 of 15 (Search Filtering & Results)
-Plan: 3 of 4 in current phase
+Plan: 2 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-01 — Completed 12-03-PLAN.md
+Last activity: 2026-02-01 — Completed 12-02-PLAN.md
 
 Progress: [████░░░░░░] 40% (16 of ~40 estimated plans for v3.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 48 (14 v1.0 + 17 v2.0 + 17 v3.0)
+- Total plans completed: 47 (14 v1.0 + 17 v2.0 + 16 v3.0)
 - Quick tasks completed: 5
-- Average duration: 5 min
-- Total execution time: ~313 min (104 v1.0 + ~112 v2.0 + 97 v3.0)
+- Average duration: 6 min
+- Total execution time: ~309 min (104 v1.0 + ~112 v2.0 + 93 v3.0)
 
 **By Phase (v3.0):**
 
@@ -33,12 +33,12 @@ Progress: [████░░░░░░] 40% (16 of ~40 estimated plans for v3
 | 10 | 2 | 9 min | 5 min |
 | 11 | 2 | 9 min | 5 min |
 | 11.1 | 5 | 44 min | 9 min |
-| 12 | 3 | 19 min | 6 min |
+| 12 | 2 | 15 min | 8 min |
 
 **Recent Trend:**
-- Last 5 plans: 3 min (11.1-04), 7 min (11.1-05), 3 min (12-01), 8 min (12-02), 8 min (12-03)
-- Trend: Consistent mid-tier execution for search features
-- Phase 12 in progress: Search filtering and deep search commands
+- Last 5 plans: 7 min (11.1-05), 3 min (12-01), 12 min (12-02)
+- Trend: Moderate execution for search filtering features
+- Phase 12 in progress: Search filtering with in-place dimming pattern
 
 *Updated after each plan completion*
 
@@ -88,6 +88,10 @@ Recent decisions affecting v3.0 work:
 - No debounce on search input (v3.0/12-01) — Instant filtering on every keystroke, useDeferredValue in consumers (Plan 02) handles performance
 - Event-based search focus (v3.0/12-01) — MainLayout dispatches 'p4now:focus-search' event, SearchBar listens to avoid ref passing
 - Progressive Escape key behavior (v3.0/12-01) — First Escape clears text, second Escape blurs (prevents accidental unfocus)
+- useDeferredValue for filter performance (v3.0/12-02) — Wrap filterTerm with useDeferredValue to avoid blocking UI renders during rapid typing
+- Dimming over hiding (v3.0/12-02) — Non-matching items dimmed (opacity-30) instead of removed to preserve tree structure and spatial context
+- Non-interactive dimmed items (v3.0/12-02) — Dimmed items have pointer-events-none, tabIndex=-1, aria-hidden=true for full accessibility
+- Folder/CL header visibility rule (v3.0/12-02) — Headers remain visible if description matches OR any children match (prevents orphaned children)
 - Client-side submitted CL filtering (v3.0/12-03) — Reuses query cache, filters 500 prefetched CLs on keystroke for instant results
 - Search input in view not prompt (v3.0/12-03) — Command palette opens search view with focused input instead of window.prompt
 - Context menus on search results (v3.0/12-03) — Right-click shows Copy/View operations matching FileNode/ChangelistNode patterns
@@ -137,7 +141,7 @@ Recent decisions affecting v3.0 work:
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Completed 12-03-PLAN.md (Phase 12 in progress)
+Stopped at: Completed 12-02-PLAN.md (Phase 12 in progress)
 Resume file: None
 
 ---
