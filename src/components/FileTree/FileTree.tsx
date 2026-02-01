@@ -315,9 +315,6 @@ export function FileTree() {
       )}
       data-testid="file-tree"
     >
-      <div className="flex items-center justify-between px-4 py-2 bg-secondary/50">
-        <h2 className="text-lg font-semibold">Local</h2>
-      </div>
       <div className="flex-1 overflow-hidden">
         <Tree
           data={enhancedTree(filteredTree)}

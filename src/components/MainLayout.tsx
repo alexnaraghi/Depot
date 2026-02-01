@@ -359,11 +359,11 @@ export function MainLayout() {
       {/* Main content area - Three-column layout */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left column: Workspace Files and Depot sections */}
-        <div style={{ width: `${leftWidth}px`, minWidth: '200px', flexShrink: 0 }} className="flex flex-col overflow-hidden">
+        <div style={{ width: `${leftWidth}px`, minWidth: '200px', flexShrink: 0 }} className="flex flex-col overflow-hidden bg-background">
           {/* Workspace Files Section */}
-          <Collapsible open={workspaceOpen} onOpenChange={setWorkspaceOpen}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:bg-accent/50 cursor-pointer select-none">
-              Workspace Files
+          <Collapsible open={workspaceOpen} onOpenChange={setWorkspaceOpen} className="flex flex-col min-h-0" style={{ flex: workspaceOpen ? '1 1 0%' : '0 0 auto' }}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2 bg-secondary/50 cursor-pointer select-none">
+              <span className="text-lg font-semibold">Workspace Files</span>
               <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", workspaceOpen && "rotate-180")} />
             </CollapsibleTrigger>
             <CollapsibleContent className="flex-1 min-h-0 overflow-hidden">
@@ -372,9 +372,9 @@ export function MainLayout() {
           </Collapsible>
 
           {/* Depot Section */}
-          <Collapsible open={depotOpen} onOpenChange={setDepotOpen}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:bg-accent/50 cursor-pointer border-t border-border select-none">
-              Depot
+          <Collapsible open={depotOpen} onOpenChange={setDepotOpen} className="flex flex-col min-h-0" style={{ flex: depotOpen ? '1 1 0%' : '0 0 auto' }}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2 bg-secondary/30 border-t border-border cursor-pointer select-none">
+              <span className="text-lg font-semibold">Depot</span>
               <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", depotOpen && "rotate-180")} />
             </CollapsibleTrigger>
             <CollapsibleContent className="flex-1 min-h-0 overflow-hidden">

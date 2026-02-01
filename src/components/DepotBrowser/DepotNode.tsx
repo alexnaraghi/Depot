@@ -1,5 +1,5 @@
 import { NodeRendererProps } from 'react-arborist';
-import { FolderOpen, Folder, Loader2, FileIcon } from 'lucide-react';
+import { FolderOpen, Folder, Loader2, FileIcon, Database } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DepotNodeData } from './useDepotTree';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
@@ -52,7 +52,9 @@ export function DepotNode({ node, style, loadingPaths, onContextMenu }: DepotNod
       onContextMenu={handleContextMenuEvent}
     >
       {/* Icon */}
-      {isFolder ? (
+      {node.data.isDepotRoot ? (
+        <Database className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+      ) : isFolder ? (
         <>
           {isLoading ? (
             <Loader2 className="w-4 h-4 text-muted-foreground flex-shrink-0 animate-spin" />

@@ -7,6 +7,7 @@ export interface DepotNodeData {
   id: string;           // Depot path (e.g., "//depot/projects")
   name: string;         // Display name (last path segment)
   isFolder: boolean;
+  isDepotRoot?: boolean;
   children?: DepotNodeData[];  // undefined = leaf, [] = folder (empty or unloaded)
 }
 
@@ -35,6 +36,7 @@ export function useDepotTree() {
         id: `//${depot.name}`,
         name: depot.name,
         isFolder: true,
+        isDepotRoot: true,
         children: [], // Empty until expanded
       }));
 
