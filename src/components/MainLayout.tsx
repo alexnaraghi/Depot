@@ -10,6 +10,7 @@ import { SearchBar } from '@/components/SearchBar';
 import { CommandPalette } from '@/components/CommandPalette';
 import { SyncConflictDialog } from '@/components/dialogs/SyncConflictDialog';
 import { ReconcilePreviewDialog } from '@/components/dialogs/ReconcilePreviewDialog';
+import { WorkspaceSwitcher } from '@/components/Header/WorkspaceSwitcher';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useFileTreeStore } from '@/stores/fileTreeStore';
 import { useSync } from '@/hooks/useSync';
@@ -28,7 +29,7 @@ import toast from 'react-hot-toast';
  * Main application layout
  *
  * Layout structure:
- * - Unified header with repository info, action buttons, and utilities
+ * - Unified header with workspace info, action buttons, and utilities
  * - Three-column layout:
  *   - Left: File tree (resizable)
  *   - Center: Detail pane (flexible)
@@ -41,7 +42,7 @@ export function MainLayout() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [reconcileDialogOpen, setReconcileDialogOpen] = useState(false);
-  const { workspace, stream } = useConnectionStore();
+  const { stream } = useConnectionStore();
   const selectedFile = useFileTreeStore(s => s.selectedFile);
   const queryClient = useQueryClient();
 
@@ -211,12 +212,9 @@ export function MainLayout() {
       <header className="bg-background border-b border-border">
         <div className="flex items-center justify-between px-3 py-1.5">
 
-          {/* LEFT: Repository and Stream info */}
+          {/* LEFT: Workspace and Stream info */}
           <div className="flex items-center gap-6">
-            <div className="flex flex-col">
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Repository</span>
-              <span className="text-sm font-medium text-foreground">{workspace || 'No workspace'}</span>
-            </div>
+            <WorkspaceSwitcher />
             {stream && (
               <div className="flex flex-col">
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Stream</span>
