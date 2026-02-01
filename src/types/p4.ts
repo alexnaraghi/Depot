@@ -80,6 +80,23 @@ export interface P4Changelist {
 }
 
 /**
+ * Perforce unresolved file representation
+ * Contains metadata for files needing conflict resolution
+ */
+export interface P4UnresolvedFile {
+  /** Depot path (e.g., //depot/path/to/file.txt) */
+  depotPath: string;
+  /** Absolute local filesystem path */
+  localPath: string;
+  /** Latest revision in the depot (head revision) */
+  headRev: number;
+  /** Revision number the user has synced (have revision) */
+  haveRev: number;
+  /** Type of resolve needed (e.g., "content", "move/delete") */
+  resolveAction: string;
+}
+
+/**
  * Tree node for react-arborist
  * Wraps P4File or P4Changelist for tree display
  */
