@@ -25,3 +25,10 @@ dist-ssr
 .claude/settings.local.json
 .claude/settings.json
 package-lock.json
+
+# Automated testing
+test-client
+test-server
+
+# Local test files
+reports

@@ -64,11 +64,12 @@
   3. Tests validate checkout operation (select file, checkout, verify status change)
   4. Tests validate submit operation (create CL description, submit, verify success)
   5. Tests validate revert operation (revert file, verify status restored)
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
-- [ ] 09-01-PLAN.md — E2E infrastructure setup + data-testid attributes
-- [ ] 09-02-PLAN.md — E2E test specs for all core workflows
+- [x] 09-01-PLAN.md — E2E infrastructure setup + data-testid attributes
+- [x] 09-02-PLAN.md — E2E test specs for all core workflows
+- [x] 09-03-PLAN.md — Pre-seed P4 connection settings for automated test startup
 
 #### Phase 10: Bug Fixes
 **Goal**: Stabilize existing features before adding new complexity
