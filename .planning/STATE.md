@@ -5,35 +5,36 @@
 See: .planning/PROJECT.md (updated 2026-01-29)
 
 **Core value:** The user is never blocked — operations are always cancellable, errors are non-blocking, and the app remains responsive even during network issues or long-running operations.
-**Current focus:** Phase 09 - E2E Testing Foundation
+**Current focus:** Phase 10 - Bug Fixes
 
 ## Current Position
 
 Milestone: v3.0 Daily Driver
-Phase: 09 of 15 (E2E Testing Foundation)
-Plan: 3 of 3 in current phase
-Status: Phase complete
-Last activity: 2026-01-30 — Completed 09-03-PLAN.md
+Phase: 10 of 15 (Bug Fixes)
+Plan: 1 of 2 in current phase
+Status: In progress
+Last activity: 2026-01-31 — Completed 10-01-PLAN.md
 
-Progress: [█░░░░░░░░░] 7.5% (3 of ~40 estimated plans for v3.0)
+Progress: [█░░░░░░░░░] 10% (4 of ~40 estimated plans for v3.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 34 (14 v1.0 + 17 v2.0 + 3 v3.0)
+- Total plans completed: 35 (14 v1.0 + 17 v2.0 + 4 v3.0)
 - Quick tasks completed: 5
 - Average duration: 5 min
-- Total execution time: ~232 min (104 v1.0 + ~112 v2.0 + 16 v3.0)
+- Total execution time: ~236 min (104 v1.0 + ~112 v2.0 + 20 v3.0)
 
 **By Phase (v3.0):**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 09 | 3 | 16 min | 5 min |
+| 10 | 1 | 4 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 9 min (09-01), 5 min (09-02), 2 min (09-03)
-- Trend: Phase 09 complete, E2E testing foundation established
+- Last 5 plans: 5 min (09-02), 2 min (09-03), 4 min (10-01)
+- Trend: Efficient bug fixes, maintaining ~4-5 min average per plan
 
 *Updated after each plan completion*
 
@@ -55,16 +56,18 @@ Recent decisions affecting v3.0 work:
 - Generous E2E timeouts (v3.0/09-02) — 30s for P4 operations, 10s for UI interactions to handle slow servers
 - Pre-seed settings via filesystem (v3.0/09-03) — Direct plugin-store manipulation before app launch, not UI automation
 - P4E2E_ env var prefix (v3.0/09-03) — Test-specific P4 connection configuration separate from user's P4CONFIG
+- Optimistic updates for drag-drop (v3.0/10-01) — cancelQueries + snapshot + rollback pattern prevents UI flicker on error
+- Targeted query invalidation (v3.0/10-01) — Use refetchType: 'all' to force immediate refetch instead of blanket invalidation
 
 ### Pending Todos
 
-7 pending todos (6 addressed in v3.0 roadmap, 1 new):
-1. Fix changelist drag and drop → Phase 10 (BUGF-01)
-2. Move files when editing default CL → Phase 10 (BUGF-02)
+4 pending todos (3 addressed in v3.0 roadmap, 1 new):
+1. ~~Fix changelist drag and drop~~ → COMPLETE (10-01, BUGF-01)
+2. ~~Move files when editing default CL~~ → COMPLETE (10-01, BUGF-02)
 3. Unshelve to same changelist → Phase 10 (BUGF-03)
 4. Resolve dialog after unshelve → Phase 10 (BUGF-04)
-5. E2E testing with WebdriverIO → Phase 09 (TEST-01)
-6. Implement refresh button → Phase 10 (RFSH-02)
+5. ~~E2E testing with WebdriverIO~~ → COMPLETE (09-01, TEST-01)
+6. ~~Implement refresh button~~ → COMPLETE (10-01, RFSH-02)
 7. Separate connection dialog from settings → TBD (new)
 
 ### Blockers/Concerns
@@ -94,9 +97,9 @@ Recent decisions affecting v3.0 work:
 
 ## Session Continuity
 
-Last session: 2026-01-30
-Stopped at: Completed 09-03-PLAN.md
+Last session: 2026-01-31
+Stopped at: Completed 10-01-PLAN.md
 Resume file: None
 
 ---
-**Next step:** Phase 09 complete - proceed to Phase 10 Bug Fixes and Enhancements
+**Next step:** Continue Phase 10 - 10-02 remaining (unshelve/resolve improvements)
