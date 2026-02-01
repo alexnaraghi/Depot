@@ -10,20 +10,20 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Milestone: v3.0 Daily Driver
-Phase: 11.1 of 15 (Unified Three-Column Layout)
-Plan: 5 of 5 in current phase
-Status: Phase complete
-Last activity: 2026-01-31 — Completed 11.1-05-PLAN.md
+Phase: 12 of 15 (Search Filtering & Results)
+Plan: 1 of 4 in current phase
+Status: In progress
+Last activity: 2026-02-01 — Completed 12-01-PLAN.md
 
-Progress: [███░░░░░░░] 33% (13 of ~40 estimated plans for v3.0)
+Progress: [███░░░░░░░] 35% (14 of ~40 estimated plans for v3.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 45 (14 v1.0 + 17 v2.0 + 14 v3.0)
+- Total plans completed: 46 (14 v1.0 + 17 v2.0 + 15 v3.0)
 - Quick tasks completed: 5
 - Average duration: 5 min
-- Total execution time: ~294 min (104 v1.0 + ~112 v2.0 + 78 v3.0)
+- Total execution time: ~297 min (104 v1.0 + ~112 v2.0 + 81 v3.0)
 
 **By Phase (v3.0):**
 
@@ -33,11 +33,12 @@ Progress: [███░░░░░░░] 33% (13 of ~40 estimated plans for v3
 | 10 | 2 | 9 min | 5 min |
 | 11 | 2 | 9 min | 5 min |
 | 11.1 | 5 | 44 min | 9 min |
+| 12 | 1 | 3 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 5 min (11.1-02), 5 min (11.1-03), 3 min (11.1-04), 7 min (11.1-05)
-- Trend: Consistent quick execution, architectural foundation work (11.1-01) took longer, implementation plans very fast
-- Phase 11.1 complete: All 5 plans executed in 44 minutes total
+- Last 5 plans: 5 min (11.1-03), 3 min (11.1-04), 7 min (11.1-05), 3 min (12-01)
+- Trend: Very fast execution for focused infrastructure tasks
+- Phase 12 started: Search filtering foundation in 3 minutes
 
 *Updated after each plan completion*
 
@@ -84,6 +85,9 @@ Recent decisions affecting v3.0 work:
 - Column width persistence (v3.0/11.1-05) — Tauri-plugin-store with layout.leftColumnWidth (280) and layout.rightColumnWidth (320), load on mount and save on mouseup
 - FileHistoryDialog migration (v3.0/11.1-05) — Removed from FileTree and ChangelistPanel, Ctrl+H navigates to inline file detail view instead of opening modal dialog
 - Layout resize fix (v3.0/11.1-05) — Flex columns need flexShrink: 0 to prevent shrinking when explicit widths set
+- No debounce on search input (v3.0/12-01) — Instant filtering on every keystroke, useDeferredValue in consumers (Plan 02) handles performance
+- Event-based search focus (v3.0/12-01) — MainLayout dispatches 'p4now:focus-search' event, SearchBar listens to avoid ref passing
+- Progressive Escape key behavior (v3.0/12-01) — First Escape clears text, second Escape blurs (prevents accidental unfocus)
 
 ### Roadmap Evolution
 
@@ -128,9 +132,9 @@ Recent decisions affecting v3.0 work:
 
 ## Session Continuity
 
-Last session: 2026-01-31
-Stopped at: Completed 11.1-05-PLAN.md (Phase 11.1 complete)
+Last session: 2026-02-01
+Stopped at: Completed 12-01-PLAN.md (Phase 12 in progress)
 Resume file: None
 
 ---
-**Next step:** Begin Phase 12 (Search Filtering & Results)
+**Next step:** Continue Phase 12 with Plan 02 (FileTree Filtering)
