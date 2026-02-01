@@ -2400,4 +2400,145 @@ pub async fn p4_resolve_accept(
     Ok(stdout.to_string())
 }
 
+/// Launch external merge tool with blocking wait
+#[tauri::command]
+pub async fn launch_merge_tool(
+    depot_path: String,
+    local_path: String,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<i32, String> {
+    // Step 1: Check P4MERGE env var, fallback to MERGE
+    let merge_tool = std::env::var("P4MERGE")
+        .or_else(|_| std::env::var("MERGE"))
+        .map_err(|_| {
+            "P4MERGE environment variable not set. Set P4MERGE to your merge tool path (e.g., C:\\Program Files\\Perforce\\p4merge.exe).".to_string()
+        })?;
+
+    // Step 2: Get base and theirs file info via p4 fstat
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+    cmd.args(["-ztag", "fstat", &depot_path]);
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 fstat: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Failed to get file info: {}", stderr));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Parse ztag output to extract resolve file info
+    let mut fields: HashMap<String, String> = HashMap::new();
+    for line in stdout.lines() {
+        let line = line.trim();
+        if let Some(stripped) = line.strip_prefix("... ") {
+            if let Some((key, value)) = stripped.split_once(' ') {
+                fields.insert(key.to_string(), value.to_string());
+            }
+        }
+    }
+
+    // Extract base file and revision
+    let base_file = fields
+        .get("resolveBaseFile")
+        .ok_or("No resolveBaseFile found - file may not need resolution")?;
+    let base_rev = fields
+        .get("resolveBaseRev")
+        .ok_or("No resolveBaseRev found")?;
+
+    // Extract theirs file and revision
+    let theirs_file = fields
+        .get("resolveFromFile0")
+        .ok_or("No resolveFromFile0 found")?;
+    let theirs_rev = fields
+        .get("resolveEndFromRev0")
+        .ok_or("No resolveEndFromRev0 found")?;
+
+    // Step 3: Extract base and theirs to temp files
+    let temp_dir = std::env::temp_dir();
+
+    // Create unique temp file names with timestamp
+    let timestamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+
+    let extension = depot_path
+        .rsplit('.')
+        .next()
+        .filter(|ext| !ext.contains('/'))
+        .map(|ext| format!(".{}", ext))
+        .unwrap_or_else(|| ".txt".to_string());
+
+    let base_temp_path = temp_dir.join(format!("p4merge_base_{}_{}", timestamp, base_file.replace('/', "_").replace('\\', "_") + &extension));
+    let theirs_temp_path = temp_dir.join(format!("p4merge_theirs_{}_{}", timestamp, theirs_file.replace('/', "_").replace('\\', "_") + &extension));
+
+    // Print base file to temp
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+    cmd.args([
+        "print",
+        "-q",
+        "-o",
+        &base_temp_path.to_string_lossy(),
+        &format!("{}#{}", base_file, base_rev),
+    ]);
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to print base file: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Failed to print base file: {}", stderr));
+    }
+
+    // Print theirs file to temp
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+    cmd.args([
+        "print",
+        "-q",
+        "-o",
+        &theirs_temp_path.to_string_lossy(),
+        &format!("{}#{}", theirs_file, theirs_rev),
+    ]);
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to print theirs file: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Failed to print theirs file: {}", stderr));
+    }
+
+    // Step 4: Spawn merge tool with blocking wait
+    let base_temp_str = base_temp_path.to_string_lossy().to_string();
+    let theirs_temp_str = theirs_temp_path.to_string_lossy().to_string();
+    let local_path_clone = local_path.clone();
+    let merge_tool_clone = merge_tool.clone();
+
+    let exit_code = tokio::task::spawn_blocking(move || {
+        let status = Command::new(&merge_tool_clone)
+            .args([&base_temp_str, &theirs_temp_str, &local_path_clone, &local_path_clone])
+            .status()
+            .map_err(|e| format!("Failed to launch merge tool: {}", e))?;
+        Ok::<i32, String>(status.code().unwrap_or(-1))
+    })
+    .await
+    .map_err(|e| format!("Task failed: {}", e))??;
+
+    // Step 5: Clean up temp files (best effort, ignore cleanup errors)
+    let _ = std::fs::remove_file(&base_temp_path);
+    let _ = std::fs::remove_file(&theirs_temp_path);
+
+    Ok(exit_code)
+}
+
 
