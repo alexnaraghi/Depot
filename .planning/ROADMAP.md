@@ -103,15 +103,34 @@ Plans:
 - [x] 11-01-PLAN.md — Settings schema extension + useWindowFocus hook + auto-refresh query wiring
 - [x] 11-02-PLAN.md — Tauri dialog plugin + SettingsDialog UI (editor path, auto-refresh interval)
 
-#### Phase 12: Actionable Search
-**Goal**: Search results become interactive entry points for file and changelist operations
-**Depends on**: Phase 10 (relies on existing search and changelist views)
+#### Phase 11.1: Unified Three-Column Layout (INSERTED)
+**Goal**: Revamp main window to three-column layout (file tree | detail pane | changelists) with selection-driven detail views
+**Depends on**: Phase 11 (needs stable auto-refresh and settings infrastructure)
+**Requirements**: Design doc: `.planning/design/unified-column-layout.md`
+**Success Criteria** (what must be TRUE):
+  1. Main window uses three-column layout: file tree (left), detail pane (center), changelists (right)
+  2. Detail pane shows contextual content based on selection (file detail, CL detail, revision detail, workspace summary)
+  3. Breadcrumb navigation in detail pane with back stack (max ~3 levels)
+  4. File history displays inline in file detail view (replaces FileHistoryDialog)
+  5. Column widths are resizable and persist across sessions
+**Plans**: 5 plans
+
+Plans:
+- [ ] 11.1-01-PLAN.md — Selection store + three-column layout skeleton
+- [ ] 11.1-02-PLAN.md — WorkspaceSummaryView + FileDetailView with inline history
+- [ ] 11.1-03-PLAN.md — ChangelistDetailView + RevisionDetailView
+- [ ] 11.1-04-PLAN.md — Breadcrumb navigation + wire side column selections
+- [ ] 11.1-05-PLAN.md — Column width persistence + cleanup + visual verification
+
+#### Phase 12: Search Filtering & Results
+**Goal**: In-place search filtering of file tree and changelist columns with command palette for deep searches
+**Depends on**: Phase 11.1 (relies on three-column layout with detail pane)
 **Requirements**: SRCH-01, SRCH-02, SRCH-03
 **Success Criteria** (what must be TRUE):
-  1. User can right-click search result file to access context menu (diff, history, checkout)
-  2. User can click a submitted CL number to expand its details panel with file list
-  3. User can click an author name to filter search results to that author's recent changes
-  4. Clicking a search result scrolls the main changelist view to show that file/CL
+  1. Typing in toolbar search filters file tree (left column) and changelists (right column) in-place
+  2. Filtered columns show match count badges and subtle background tint
+  3. Pressing Escape or clearing search restores unfiltered state
+  4. Command palette provides "Search submitted changelists" and "Search depot" for deep searches
 **Plans**: TBD
 
 Plans:
@@ -171,7 +190,8 @@ Phases execute in numeric order: 09 → 10 → 11 → 12 → 13 → 14 → 15
 | 09. E2E Testing Foundation | 0/? | Not started | - |
 | 10. Bug Fixes | 2/2 | ✓ Complete | 2026-01-31 |
 | 11. Auto-Refresh + Settings | 2/2 | ✓ Complete | 2026-01-31 |
-| 12. Actionable Search | 0/? | Not started | - |
+| 11.1 Unified Three-Column Layout | 0/? | Not started | - |
+| 12. Search Filtering & Results | 0/? | Not started | - |
 | 13. Workspace & Stream Switching | 0/? | Not started | - |
 | 14. Depot Browser | 0/? | Not started | - |
 | 15. Resolve Workflow | 0/? | Not started | - |
