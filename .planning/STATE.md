@@ -11,30 +11,30 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 Milestone: v3.0 Daily Driver
 Phase: 10 of 15 (Bug Fixes)
-Plan: 1 of 2 in current phase
-Status: In progress
-Last activity: 2026-01-31 — Completed 10-01-PLAN.md
+Plan: 2 of 2 in current phase
+Status: Phase complete
+Last activity: 2026-02-01 — Completed 10-02-PLAN.md
 
-Progress: [█░░░░░░░░░] 10% (4 of ~40 estimated plans for v3.0)
+Progress: [█░░░░░░░░░] 13% (5 of ~40 estimated plans for v3.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 35 (14 v1.0 + 17 v2.0 + 4 v3.0)
+- Total plans completed: 36 (14 v1.0 + 17 v2.0 + 5 v3.0)
 - Quick tasks completed: 5
 - Average duration: 5 min
-- Total execution time: ~236 min (104 v1.0 + ~112 v2.0 + 20 v3.0)
+- Total execution time: ~241 min (104 v1.0 + ~112 v2.0 + 25 v3.0)
 
 **By Phase (v3.0):**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 09 | 3 | 16 min | 5 min |
-| 10 | 1 | 4 min | 4 min |
+| 10 | 2 | 9 min | 5 min |
 
 **Recent Trend:**
-- Last 5 plans: 5 min (09-02), 2 min (09-03), 4 min (10-01)
-- Trend: Efficient bug fixes, maintaining ~4-5 min average per plan
+- Last 5 plans: 2 min (09-03), 4 min (10-01), 5 min (10-02)
+- Trend: Consistent ~5 min average per plan, efficient execution
 
 *Updated after each plan completion*
 
@@ -58,14 +58,16 @@ Recent decisions affecting v3.0 work:
 - P4E2E_ env var prefix (v3.0/09-03) — Test-specific P4 connection configuration separate from user's P4CONFIG
 - Optimistic updates for drag-drop (v3.0/10-01) — cancelQueries + snapshot + rollback pattern prevents UI flicker on error
 - Targeted query invalidation (v3.0/10-01) — Use refetchType: 'all' to force immediate refetch instead of blanket invalidation
+- Separate source/target CL params (v3.0/10-02) — Enables future unshelve-to-different-CL UI while maintaining backward compatibility
+- Post-operation conflict detection (v3.0/10-02) — Non-blocking async checks in onSuccess callbacks with graceful error handling
 
 ### Pending Todos
 
-4 pending todos (3 addressed in v3.0 roadmap, 1 new):
+1 pending todo (Phase 10 bug fixes complete):
 1. ~~Fix changelist drag and drop~~ → COMPLETE (10-01, BUGF-01)
 2. ~~Move files when editing default CL~~ → COMPLETE (10-01, BUGF-02)
-3. Unshelve to same changelist → Phase 10 (BUGF-03)
-4. Resolve dialog after unshelve → Phase 10 (BUGF-04)
+3. ~~Unshelve to same changelist~~ → COMPLETE (10-02, BUGF-03)
+4. ~~Resolve dialog after unshelve~~ → COMPLETE (10-02, BUGF-04) - informational only, full UI in Phase 15
 5. ~~E2E testing with WebdriverIO~~ → COMPLETE (09-01, TEST-01)
 6. ~~Implement refresh button~~ → COMPLETE (10-01, RFSH-02)
 7. Separate connection dialog from settings → TBD (new)
@@ -97,9 +99,9 @@ Recent decisions affecting v3.0 work:
 
 ## Session Continuity
 
-Last session: 2026-01-31
-Stopped at: Completed 10-01-PLAN.md
+Last session: 2026-02-01
+Stopped at: Completed 10-02-PLAN.md
 Resume file: None
 
 ---
-**Next step:** Continue Phase 10 - 10-02 remaining (unshelve/resolve improvements)
+**Next step:** Phase 10 complete. Begin Phase 11 (Auto-Refresh) or Phase 12 (Diff Viewer)
