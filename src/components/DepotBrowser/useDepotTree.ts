@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useConnectionStore } from '@/stores/connectionStore';
-import { invokeP4Depots, invokeP4Dirs } from '@/lib/tauri';
+import { invokeP4Depots, invokeP4Dirs, invokeP4Files } from '@/lib/tauri';
 
 export interface DepotNodeData {
   id: string;           // Depot path (e.g., "//depot/projects")
@@ -59,21 +59,28 @@ export function useDepotTree() {
     setLoadingPaths(prev => new Set(prev).add(depotPath));
 
     try {
-      // Query subdirectories
-      const dirs = await invokeP4Dirs(
-        `${depotPath}/*`,
-        false,
-        p4port ?? undefined,
-        p4user ?? undefined,
-        p4client ?? undefined
-      );
+      // Query subdirectories and files in parallel
+      const [dirs, fileResults] = await Promise.all([
+        invokeP4Dirs(
+          `${depotPath}/*`,
+          false,
+          p4port ?? undefined,
+          p4user ?? undefined,
+          p4client ?? undefined
+        ),
+        invokeP4Files(
+          `${depotPath}/*`,
+          1000,
+          p4port ?? undefined,
+          p4user ?? undefined,
+          p4client ?? undefined
+        ),
+      ]);
 
-      // Transform to DepotNodeData
-      const children: DepotNodeData[] = dirs.map(dirPath => {
-        // Extract last path segment for display name
+      // Transform dirs to DepotNodeData
+      const dirNodes: DepotNodeData[] = dirs.map(dirPath => {
         const segments = dirPath.split('/').filter(s => s);
         const name = segments[segments.length - 1];
-
         return {
           id: dirPath,
           name,
@@ -81,6 +88,23 @@ export function useDepotTree() {
           children: null, // Not yet loaded
         };
       });
+
+      // Transform files to DepotNodeData (filter out deleted files)
+      const fileNodes: DepotNodeData[] = fileResults
+        .filter(f => f.action !== 'delete')
+        .map(f => {
+          const segments = f.depot_path.split('/').filter(s => s);
+          const name = segments[segments.length - 1];
+          return {
+            id: f.depot_path,
+            name,
+            isFolder: false,
+            children: null,
+          };
+        });
+
+      // Folders first, then files
+      const children = [...dirNodes, ...fileNodes];
 
       // Update tree data - find the parent node and set its children
       setTreeData(prevTree => {
