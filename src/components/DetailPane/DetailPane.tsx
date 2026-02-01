@@ -1,13 +1,17 @@
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
+import { WorkspaceSummaryView } from './WorkspaceSummaryView';
+import { FileDetailView } from './FileDetailView';
+import { ChangelistDetailView } from './ChangelistDetailView';
+import { RevisionDetailView } from './RevisionDetailView';
 
 /**
  * DetailPane - Center column that switches views based on selection
  *
- * Displays placeholder content based on selection type:
- * - 'none': Workspace Summary
- * - 'file': File detail with depot path
- * - 'changelist': Changelist detail with ID
- * - 'revision': Revision detail with revision number
+ * Routes selection to appropriate detail view:
+ * - 'none': WorkspaceSummaryView
+ * - 'file': FileDetailView with depot path and local path
+ * - 'changelist': ChangelistDetailView with changelist object
+ * - 'revision': RevisionDetailView with depot path, local path, and revision
  */
 export function DetailPane() {
   const selection = useDetailPaneStore(s => s.selection);
@@ -22,39 +26,26 @@ export function DetailPane() {
       </div>
 
       {/* Content area */}
-      <div className="flex-1 overflow-auto p-4">
-        {selection.type === 'none' && (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center text-muted-foreground">
-              <h2 className="text-2xl font-semibold mb-2">Workspace Summary</h2>
-              <p className="text-sm">Select a file or changelist to view details</p>
-            </div>
-          </div>
-        )}
+      <div className="flex-1 overflow-auto">
+        {selection.type === 'none' && <WorkspaceSummaryView />}
 
         {selection.type === 'file' && (
-          <div>
-            <h2 className="text-xl font-semibold mb-2">File</h2>
-            <p className="text-sm text-muted-foreground font-mono">{selection.depotPath}</p>
-            {selection.fromCl !== undefined && (
-              <p className="text-xs text-muted-foreground mt-1">From changelist: {selection.fromCl}</p>
-            )}
-          </div>
+          <FileDetailView depotPath={selection.depotPath} localPath={selection.localPath} />
         )}
 
         {selection.type === 'changelist' && (
-          <div>
-            <h2 className="text-xl font-semibold mb-2">Changelist</h2>
-            <p className="text-sm text-muted-foreground">#{selection.changelist.id}</p>
-            <p className="text-sm mt-2">{selection.changelist.description}</p>
+          <div className="p-4">
+            <ChangelistDetailView changelist={selection.changelist} />
           </div>
         )}
 
         {selection.type === 'revision' && (
-          <div>
-            <h2 className="text-xl font-semibold mb-2">Revision</h2>
-            <p className="text-sm text-muted-foreground">#{selection.revision.rev}</p>
-            <p className="text-sm text-muted-foreground font-mono">{selection.depotPath}</p>
+          <div className="p-4">
+            <RevisionDetailView
+              depotPath={selection.depotPath}
+              localPath={selection.localPath}
+              revision={selection.revision}
+            />
           </div>
         )}
       </div>
