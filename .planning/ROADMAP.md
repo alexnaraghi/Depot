@@ -97,10 +97,11 @@ Plans:
   3. Auto-refresh pauses when window is minimized or inactive
   4. User can configure external editor path in settings dialog
   5. User can configure auto-refresh interval in settings dialog (or disable entirely)
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 11-01: TBD during planning
+- [ ] 11-01-PLAN.md — Settings schema extension + useWindowFocus hook + auto-refresh query wiring
+- [ ] 11-02-PLAN.md — Tauri dialog plugin + SettingsDialog UI (editor path, auto-refresh interval)
 
 #### Phase 12: Actionable Search
 **Goal**: Search results become interactive entry points for file and changelist operations
