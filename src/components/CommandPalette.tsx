@@ -10,6 +10,7 @@ import {
 import { SHORTCUTS } from '@/lib/shortcuts';
 import { useFileTreeStore } from '@/stores/fileTreeStore';
 import { useChangelistStore } from '@/stores/changelistStore';
+import { useDetailPaneStore } from '@/stores/detailPaneStore';
 import {
   RefreshCw,
   Download,
@@ -21,6 +22,8 @@ import {
   History,
   Edit3,
   Settings,
+  Search,
+  FolderSearch,
 } from 'lucide-react';
 
 interface CommandPaletteProps {
@@ -181,6 +184,31 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             <span>File History</span>
             {!hasFileSelected && <span className="ml-1 text-xs text-muted-foreground">(select a file)</span>}
             <CommandShortcut>{SHORTCUTS.HISTORY.label}</CommandShortcut>
+          </CommandItem>
+        </CommandGroup>
+
+        {/* Search Commands */}
+        <CommandGroup heading="Search">
+          <CommandItem
+            onSelect={() =>
+              executeCommand(() => {
+                useDetailPaneStore.getState().navigateToSearch('submitted', '');
+              })
+            }
+          >
+            <Search className="w-4 h-4" />
+            <span>Search Submitted Changelists</span>
+          </CommandItem>
+
+          <CommandItem
+            onSelect={() =>
+              executeCommand(() => {
+                useDetailPaneStore.getState().navigateToSearch('depot', '');
+              })
+            }
+          >
+            <FolderSearch className="w-4 h-4" />
+            <span>Search Depot Paths</span>
           </CommandItem>
         </CommandGroup>
 
