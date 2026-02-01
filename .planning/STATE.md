@@ -58,13 +58,14 @@ Recent decisions affecting v3.0 work:
 
 ### Pending Todos
 
-6 pending todos (all addressed in v3.0 roadmap):
+7 pending todos (6 addressed in v3.0 roadmap, 1 new):
 1. Fix changelist drag and drop → Phase 10 (BUGF-01)
 2. Move files when editing default CL → Phase 10 (BUGF-02)
 3. Unshelve to same changelist → Phase 10 (BUGF-03)
 4. Resolve dialog after unshelve → Phase 10 (BUGF-04)
 5. E2E testing with WebdriverIO → Phase 09 (TEST-01)
 6. Implement refresh button → Phase 10 (RFSH-02)
+7. Separate connection dialog from settings → TBD (new)
 
 ### Blockers/Concerns
 
