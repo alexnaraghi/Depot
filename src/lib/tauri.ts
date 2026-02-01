@@ -434,3 +434,64 @@ export async function invokeP4Files(
 ): Promise<P4FileResult[]> {
   return invoke<P4FileResult[]>('p4_files', { pattern, maxResults, server, user, client });
 }
+
+/**
+ * Stream information from p4 streams
+ */
+export interface P4Stream {
+  stream: string;       // Full path: //depot/main
+  name: string;         // Display name
+  parent: string | null;
+  stream_type: string;  // mainline, development, release
+  description: string;
+}
+
+/**
+ * Client spec information from p4 client -o
+ */
+export interface P4ClientSpec {
+  client: string;
+  root: string;
+  stream: string | null;
+  owner: string;
+  description: string;
+  view: string[];
+  options: string;
+  host: string;
+  submit_options: string;
+}
+
+/**
+ * List available streams for the depot.
+ */
+export async function invokeP4ListStreams(
+  server?: string,
+  user?: string,
+  client?: string
+): Promise<P4Stream[]> {
+  return invoke<P4Stream[]>('p4_list_streams', { server, user, client });
+}
+
+/**
+ * Get client spec for a specific workspace.
+ */
+export async function invokeP4GetClientSpec(
+  workspace: string,
+  server?: string,
+  user?: string
+): Promise<P4ClientSpec> {
+  return invoke<P4ClientSpec>('p4_get_client_spec', { workspace, server, user });
+}
+
+/**
+ * Update client spec's Stream field (for stream switching).
+ * Returns success message from P4.
+ */
+export async function invokeP4UpdateClientStream(
+  workspace: string,
+  newStream: string,
+  server?: string,
+  user?: string
+): Promise<string> {
+  return invoke<string>('p4_update_client_stream', { workspace, newStream, server, user });
+}
