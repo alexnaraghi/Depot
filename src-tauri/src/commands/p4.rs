@@ -2125,3 +2125,130 @@ pub async fn p4_update_client_stream(
     let stdout = String::from_utf8_lossy(&result.stdout);
     Ok(stdout.to_string())
 }
+
+/// Depot information from p4 depots
+#[derive(Debug, Clone, Serialize)]
+pub struct P4Depot {
+    pub name: String,
+    pub depot_type: String,
+}
+
+/// List all depot roots
+#[tauri::command]
+pub async fn p4_depots(
+    server: Option<String>,
+    user: Option<String>,
+) -> Result<Vec<P4Depot>, String> {
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &None);
+    cmd.args(["-ztag", "depots"]);
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 depots: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    parse_ztag_depots(&stdout)
+}
+
+/// Parse p4 -ztag depots output into P4Depot structs
+fn parse_ztag_depots(output: &str) -> Result<Vec<P4Depot>, String> {
+    let mut depots = Vec::new();
+    let mut current: HashMap<String, String> = HashMap::new();
+
+    for line in output.lines() {
+        let line = line.trim();
+
+        if line.is_empty() {
+            if !current.is_empty() {
+                if let Some(depot) = build_depot(&current) {
+                    depots.push(depot);
+                }
+                current.clear();
+            }
+            continue;
+        }
+
+        if let Some(stripped) = line.strip_prefix("... ") {
+            if let Some((key, value)) = stripped.split_once(' ') {
+                current.insert(key.to_string(), value.to_string());
+            }
+        }
+    }
+
+    // Handle last record if no trailing empty line
+    if !current.is_empty() {
+        if let Some(depot) = build_depot(&current) {
+            depots.push(depot);
+        }
+    }
+
+    Ok(depots)
+}
+
+/// Build P4Depot from parsed ztag fields
+fn build_depot(fields: &HashMap<String, String>) -> Option<P4Depot> {
+    let name = fields.get("name")?.clone();
+    let depot_type = fields.get("Type")?.clone();
+
+    Some(P4Depot { name, depot_type })
+}
+
+/// List immediate subdirectories of a depot path
+#[tauri::command]
+pub async fn p4_dirs(
+    depot_path: String,
+    include_deleted: bool,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<Vec<String>, String> {
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+    cmd.arg("-ztag");
+
+    if include_deleted {
+        cmd.arg("dirs");
+        cmd.arg("-D");
+        cmd.arg(&depot_path);
+    } else {
+        cmd.args(["dirs", &depot_path]);
+    }
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 dirs: {}", e))?;
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    // Handle "no such file(s)" as empty result, not error
+    if stderr.contains("no such file(s)") || stderr.contains("must refer to client") {
+        return Ok(Vec::new());
+    }
+
+    if !output.status.success() {
+        return Err(stderr.to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    parse_ztag_dirs(&stdout)
+}
+
+/// Parse p4 -ztag dirs output into directory paths
+fn parse_ztag_dirs(output: &str) -> Result<Vec<String>, String> {
+    let mut dirs = Vec::new();
+
+    for line in output.lines() {
+        let line = line.trim();
+        if let Some(stripped) = line.strip_prefix("... dir ") {
+            dirs.push(stripped.to_string());
+        }
+    }
+
+    Ok(dirs)
+}
