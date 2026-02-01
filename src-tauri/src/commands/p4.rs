@@ -2253,4 +2253,151 @@ fn parse_ztag_dirs(output: &str) -> Result<Vec<String>, String> {
     Ok(dirs)
 }
 
+/// Unresolved file information from p4 fstat -Ru -Or
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct P4UnresolvedFile {
+    pub depot_path: String,
+    pub local_path: String,
+    pub head_rev: i32,
+    pub have_rev: i32,
+    pub resolve_action: String,
+}
+
+/// Detect files needing resolution
+#[tauri::command]
+pub async fn p4_fstat_unresolved(
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<Vec<P4UnresolvedFile>, String> {
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+    cmd.args(["-ztag", "fstat", "-Ru", "-Or", "//..."]);
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 fstat -Ru -Or: {}", e))?;
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    // Handle "no such file(s)" as empty result, not error
+    if stderr.contains("no such file(s)") {
+        return Ok(Vec::new());
+    }
+
+    // If stderr has error text but stdout has data, still parse stdout
+    // (p4 fstat may emit warnings alongside results)
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Parse -ztag format
+    let files = parse_ztag_fstat_unresolved(&stdout)?;
+
+    Ok(files)
+}
+
+/// Parse p4 -ztag fstat -Ru -Or output into P4UnresolvedFile structs
+fn parse_ztag_fstat_unresolved(output: &str) -> Result<Vec<P4UnresolvedFile>, String> {
+    let mut files = Vec::new();
+    let mut current_file: HashMap<String, String> = HashMap::new();
+
+    for line in output.lines() {
+        let line = line.trim();
+
+        // Empty line or end of record
+        if line.is_empty() {
+            if !current_file.is_empty() {
+                if let Some(file_info) = build_unresolved_file_info(&current_file) {
+                    files.push(file_info);
+                }
+                current_file.clear();
+            }
+            continue;
+        }
+
+        // Parse "... fieldName value" format
+        if let Some(stripped) = line.strip_prefix("... ") {
+            if let Some((key, value)) = stripped.split_once(' ') {
+                current_file.insert(key.to_string(), value.to_string());
+            }
+        }
+    }
+
+    // Handle last record if no trailing empty line
+    if !current_file.is_empty() {
+        if let Some(file_info) = build_unresolved_file_info(&current_file) {
+            files.push(file_info);
+        }
+    }
+
+    Ok(files)
+}
+
+/// Build P4UnresolvedFile from parsed ztag fields
+fn build_unresolved_file_info(fields: &HashMap<String, String>) -> Option<P4UnresolvedFile> {
+    let depot_path = fields.get("depotFile")?.clone();
+    let local_path = fields
+        .get("path")
+        .or_else(|| fields.get("clientFile"))?
+        .clone();
+
+    let head_rev = fields
+        .get("headRev")
+        .and_then(|s| s.parse::<i32>().ok())
+        .unwrap_or(0);
+
+    let have_rev = fields
+        .get("haveRev")
+        .and_then(|s| s.parse::<i32>().ok())
+        .unwrap_or(0);
+
+    // Extract resolve action from resolveAction0 field
+    let resolve_action = fields
+        .get("resolveAction0")
+        .cloned()
+        .unwrap_or_else(|| "merge".to_string());
+
+    Some(P4UnresolvedFile {
+        depot_path,
+        local_path,
+        head_rev,
+        have_rev,
+        resolve_action,
+    })
+}
+
+/// Execute quick resolve with theirs/yours/merge modes
+#[tauri::command]
+pub async fn p4_resolve_accept(
+    file_path: String,
+    mode: String,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<String, String> {
+    // Map mode to p4 flag
+    let flag = match mode.as_str() {
+        "theirs" => "-at",
+        "yours" => "-ay",
+        "merge" => "-am",
+        _ => return Err(format!("Invalid mode: {}. Must be 'theirs', 'yours', or 'merge'", mode)),
+    };
+
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+    cmd.args(["resolve", flag, &file_path]);
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 resolve: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(stdout.to_string())
+}
+
 
