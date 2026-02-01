@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { loadSettings, saveSettings } from '@/lib/settings';
 import { invokeListWorkspaces, invokeTestConnection } from '@/lib/tauri';
 import { settingsSchema, type P4Settings } from '@/types/settings';
@@ -52,7 +53,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       p4client: '',
       diffToolPath: '',
       diffToolArgs: '',
+      editorPath: '',
       verboseLogging: false,
+      autoRefreshInterval: 300000,
     },
     mode: 'onSubmit',
   });
@@ -69,7 +72,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           const settings = await loadSettings();
           // Only reset form if there are actual saved settings
           // Prevents wiping user-typed values with empty defaults
-          if (settings.p4port || settings.p4user || settings.p4client || settings.diffToolPath) {
+          if (settings.p4port || settings.p4user || settings.p4client || settings.diffToolPath || settings.editorPath || settings.autoRefreshInterval) {
             form.reset(settings);
           }
         } catch (error) {
@@ -291,6 +294,81 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                         Log read-only P4 commands to the output panel
                       </p>
                     </div>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="border-t border-border pt-4 mt-2">
+              <h3 className="text-sm font-medium text-foreground mb-3">External Editor</h3>
+              <FormField
+                control={form.control}
+                name="editorPath"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Editor Path</FormLabel>
+                    <div className="flex gap-2">
+                      <FormControl>
+                        <Input
+                          placeholder="code, notepad++, /path/to/editor"
+                          {...field}
+                          className="flex-1"
+                        />
+                      </FormControl>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={async () => {
+                          const selected = await openDialog({
+                            multiple: false,
+                            directory: false,
+                            filters: [{ name: 'Executable', extensions: ['exe'] }]
+                          });
+                          if (selected) field.onChange(selected as string);
+                        }}
+                      >
+                        Browse
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Path to external text editor (e.g., code, notepad++, or full path)
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="border-t border-border pt-4 mt-2">
+              <h3 className="text-sm font-medium text-foreground mb-3">Auto-Refresh</h3>
+              <FormField
+                control={form.control}
+                name="autoRefreshInterval"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Refresh Interval</FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(parseInt(value, 10))}
+                      value={field.value.toString()}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select refresh interval" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="0">Disabled</SelectItem>
+                        <SelectItem value="30000">30 seconds</SelectItem>
+                        <SelectItem value="60000">1 minute</SelectItem>
+                        <SelectItem value="120000">2 minutes</SelectItem>
+                        <SelectItem value="300000">5 minutes</SelectItem>
+                        <SelectItem value="600000">10 minutes</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Automatically refresh workspace state. Pauses during operations and when window is minimized.
+                    </p>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
