@@ -151,29 +151,13 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
 
   return (
     <div
-      ref={(el) => {
-        console.log('[DnD Debug] dragHandle ref called', { el: !!el, dragHandle: typeof dragHandle, isDraggable: node.isDraggable });
-        if (dragHandle) dragHandle(el);
-        if (el) {
-          console.log('[DnD Debug] element draggable attr:', el.getAttribute('draggable'));
-          // Check again after a tick (after react-dnd connects)
-          setTimeout(() => {
-            console.log('[DnD Debug] element draggable attr (after tick):', el.getAttribute('draggable'));
-          }, 100);
-        }
-      }}
+      ref={dragHandle}
       style={style}
       className={cn(
         'flex items-center gap-2 px-2 py-1 pl-6 cursor-pointer text-sm',
         'hover:bg-accent',
         isSelected && 'bg-blue-900/50'
       )}
-      onDragStart={(e) => {
-        console.log('[DnD Debug] native onDragStart fired!', e);
-      }}
-      onMouseDown={(e) => {
-        console.log('[DnD Debug] mouseDown on file row', { button: e.button, target: (e.target as HTMLElement).tagName });
-      }}
       onContextMenu={(e) => {
         e.preventDefault();
         onContextMenu?.(e, file);

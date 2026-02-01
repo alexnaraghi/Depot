@@ -797,7 +797,8 @@ pub async fn p4_reopen(paths: Vec<String>, changelist: i32, server: Option<Strin
     // Execute: p4 reopen -c <changelist> <paths>
     let mut cmd = Command::new("p4");
     apply_connection_args(&mut cmd, &server, &user, &client);
-    cmd.args(["reopen", "-c", &changelist.to_string()]);
+    let cl_str = if changelist == 0 { "default".to_string() } else { changelist.to_string() };
+    cmd.args(["reopen", "-c", &cl_str]);
     cmd.args(&paths);
 
     let output = cmd
