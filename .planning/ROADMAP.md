@@ -149,10 +149,14 @@ Plans:
   3. User can view client spec (read-only) in a dialog
   4. User can switch to different stream via header dropdown
   5. Default CL files are automatically shelved when switching streams (prevents work loss)
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 13-01: TBD during planning
+- [ ] 13-01-PLAN.md — Rust backend commands (list streams, get client spec, update client stream)
+- [ ] 13-02-PLAN.md — WorkspaceSwitcher component + header label fix
+- [ ] 13-03-PLAN.md — StreamSwitcher with shelve confirmation dialog
+- [ ] 13-04-PLAN.md — ClientSpecDialog (read-only viewer)
+- [ ] 13-05-PLAN.md — Integration polish + verification checkpoint
 
 #### Phase 14: Depot Browser
 **Goal**: Full depot hierarchy with lazy loading and file operations
