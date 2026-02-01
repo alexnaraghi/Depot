@@ -3,6 +3,7 @@ import { useHotkeys } from 'react-hotkeys-hook';
 import { useQueryClient } from '@tanstack/react-query';
 import { FileTree } from '@/components/FileTree/FileTree';
 import { ChangelistPanel } from '@/components/ChangelistPanel/ChangelistPanel';
+import { DetailPane } from '@/components/DetailPane/DetailPane';
 import { ConnectionStatus } from '@/components/ConnectionStatus';
 import { SettingsDialog } from '@/components/SettingsDialog';
 import { SearchBar } from '@/components/SearchBar';
@@ -14,7 +15,7 @@ import { useFileTreeStore } from '@/stores/fileTreeStore';
 import { useSync } from '@/hooks/useSync';
 import { useFileOperations } from '@/hooks/useFileOperations';
 import { useDiff } from '@/hooks/useDiff';
-import { ChevronLeft, ChevronRight, Settings, RefreshCw, Download, FolderSync, Plus, FileEdit, Undo2, GitCompare } from 'lucide-react';
+import { Settings, RefreshCw, Download, FolderSync, Plus, FileEdit, Undo2, GitCompare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
@@ -27,14 +28,15 @@ import toast from 'react-hot-toast';
  *
  * Layout structure:
  * - Unified header with repository info, action buttons, and utilities
- * - Main area: file tree (flexible width)
- * - Resizable sidebar: changelist panel
- * - Sidebar can be collapsed/expanded
+ * - Three-column layout:
+ *   - Left: File tree (resizable)
+ *   - Center: Detail pane (flexible)
+ *   - Right: Changelist panel (resizable)
  */
 export function MainLayout() {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState(320); // Default width in pixels
-  const [isResizing, setIsResizing] = useState(false);
+  const [leftWidth, setLeftWidth] = useState(280); // Default width for file tree
+  const [rightWidth, setRightWidth] = useState(320); // Default width for changelist panel
+  const [resizingColumn, setResizingColumn] = useState<'left' | 'right' | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [reconcileDialogOpen, setReconcileDialogOpen] = useState(false);
@@ -139,28 +141,34 @@ export function MainLayout() {
     return () => window.removeEventListener('p4now:open-settings', handleOpenSettings);
   }, []);
 
-  const handleMouseDown = () => {
-    setIsResizing(true);
+  const handleLeftResize = () => {
+    setResizingColumn('left');
+  };
+
+  const handleRightResize = () => {
+    setResizingColumn('right');
   };
 
   // Add/remove mouse event listeners for resize
   useEffect(() => {
-    if (!isResizing) return;
+    if (!resizingColumn) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      // Calculate new sidebar width from right edge
-      const newWidth = window.innerWidth - e.clientX;
-
-      // Constrain between min (200px) and max (50% of window)
-      const minWidth = 200;
-      const maxWidth = window.innerWidth * 0.5;
-      const constrainedWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
-
-      setSidebarWidth(constrainedWidth);
+      if (resizingColumn === 'left') {
+        // Left resize: set width based on mouse X position
+        const newWidth = e.clientX;
+        const constrainedWidth = Math.max(150, Math.min(500, newWidth));
+        setLeftWidth(constrainedWidth);
+      } else if (resizingColumn === 'right') {
+        // Right resize: calculate width from right edge
+        const newWidth = window.innerWidth - e.clientX;
+        const constrainedWidth = Math.max(200, Math.min(500, newWidth));
+        setRightWidth(constrainedWidth);
+      }
     };
 
     const handleMouseUp = () => {
-      setIsResizing(false);
+      setResizingColumn(null);
     };
 
     document.addEventListener('mousemove', handleMouseMove);
@@ -170,7 +178,7 @@ export function MainLayout() {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isResizing])
+  }, [resizingColumn])
 
   return (
     <DndProvider backend={HTML5Backend}>
@@ -311,61 +319,34 @@ export function MainLayout() {
         onOpenChange={setReconcileDialogOpen}
       />
 
-      {/* Main content area */}
+      {/* Main content area - Three-column layout */}
       <div className="flex-1 flex overflow-hidden">
-        {/* File tree - takes remaining space */}
-        <main className="flex-1 overflow-hidden bg-background">
+        {/* Left column: File tree */}
+        <div style={{ width: `${leftWidth}px`, minWidth: '200px' }}>
           <FileTree />
-        </main>
+        </div>
 
-        {/* Resize handle */}
-        {!sidebarCollapsed && (
-          <div
-            onMouseDown={handleMouseDown}
-            className="w-1 bg-border hover:bg-primary cursor-col-resize active:bg-primary"
-          />
-        )}
+        {/* Left resize handle */}
+        <div
+          onMouseDown={handleLeftResize}
+          className="w-1 bg-border hover:bg-primary cursor-col-resize"
+        />
 
-        {/* Sidebar */}
-        <aside
-          className="bg-background border-l border-border flex flex-col"
-          style={{
-            width: sidebarCollapsed ? 0 : `${sidebarWidth}px`,
-            minWidth: sidebarCollapsed ? 0 : '200px',
-            maxWidth: sidebarCollapsed ? 0 : '50vw',
-          }}
-        >
-          {!sidebarCollapsed && (
-            <>
-              {/* Collapse button */}
-              <div className="flex justify-end p-2 border-b border-border">
-                <button
-                  onClick={() => setSidebarCollapsed(true)}
-                  className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
-                  title="Collapse sidebar"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
+        {/* Center column: Detail pane */}
+        <div className="flex-1 overflow-hidden">
+          <DetailPane />
+        </div>
 
-              {/* Changelist panel */}
-              <ChangelistPanel className="flex-1 overflow-hidden" />
-            </>
-          )}
-        </aside>
+        {/* Right resize handle */}
+        <div
+          onMouseDown={handleRightResize}
+          className="w-1 bg-border hover:bg-primary cursor-col-resize"
+        />
 
-        {/* Expand button when sidebar is collapsed */}
-        {sidebarCollapsed && (
-          <div className="bg-background border-l border-border w-8 flex items-center justify-center">
-            <button
-              onClick={() => setSidebarCollapsed(false)}
-              className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
-              title="Expand sidebar"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-          </div>
-        )}
+        {/* Right column: Changelists */}
+        <div style={{ width: `${rightWidth}px`, minWidth: '200px' }}>
+          <ChangelistPanel className="h-full" />
+        </div>
       </div>
     </div>
     </DndContext>
