@@ -10,20 +10,20 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Milestone: v3.0 Daily Driver
-Phase: 11 of 15 (Auto-Refresh Settings)
-Plan: 2 of 2 in current phase
-Status: Phase complete
-Last activity: 2026-02-01 — Completed 11-02-PLAN.md
+Phase: 11.1 of 15 (Unified Three-Column Layout)
+Plan: 1 of 5 in current phase
+Status: In progress
+Last activity: 2026-02-01 — Completed 11.1-01-PLAN.md
 
-Progress: [██░░░░░░░░] 18% (7 of ~40 estimated plans for v3.0)
+Progress: [██░░░░░░░░] 20% (8 of ~40 estimated plans for v3.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 38 (14 v1.0 + 17 v2.0 + 7 v3.0)
+- Total plans completed: 39 (14 v1.0 + 17 v2.0 + 8 v3.0)
 - Quick tasks completed: 5
 - Average duration: 5 min
-- Total execution time: ~250 min (104 v1.0 + ~112 v2.0 + 34 v3.0)
+- Total execution time: ~265 min (104 v1.0 + ~112 v2.0 + 49 v3.0)
 
 **By Phase (v3.0):**
 
@@ -32,10 +32,11 @@ Progress: [██░░░░░░░░] 18% (7 of ~40 estimated plans for v3.
 | 09 | 3 | 16 min | 5 min |
 | 10 | 2 | 9 min | 5 min |
 | 11 | 2 | 9 min | 5 min |
+| 11.1 | 1 | 15 min | 15 min |
 
 **Recent Trend:**
-- Last 5 plans: 5 min (10-02), 4 min (11-01), 5 min (11-02)
-- Trend: Consistent ~4-5 min average per plan, efficient execution
+- Last 5 plans: 4 min (11-01), 5 min (11-02), 15 min (11.1-01)
+- Trend: Consistent execution, larger architectural changes take longer
 
 *Updated after each plan completion*
 
@@ -67,6 +68,14 @@ Recent decisions affecting v3.0 work:
 - Window focus tracking via Tauri events (v3.0/11-01) — Use tauri://focus and tauri://blur events to pause auto-refresh when window is inactive
 - Native file picker for path selection (v3.0/11-02) — Use tauri-plugin-dialog's open() instead of manual path entry for better UX
 - Preset dropdown for intervals (v3.0/11-02) — Select component with preset options prevents invalid configuration values
+- DetailSelection discriminated union (v3.0/11.1-01) — Type-safe selection handling with none, file, changelist, revision types
+- Navigation history depth limiting (v3.0/11.1-01) — Max 3 items in back stack prevents memory bloat during deep navigation
+- Separate select vs drill actions (v3.0/11.1-01) — Side column clicks reset history (selectFile/selectChangelist), detail pane clicks preserve history (drillToFile/drillToRevision)
+- Three-column layout always visible (v3.0/11.1-01) — Removed sidebar collapse functionality, all columns always shown with independent resize handles
+
+### Roadmap Evolution
+
+- Phase 11.1 inserted after Phase 11: Unified Three-Column Layout (INSERTED) — Revamp main window to three-column layout before search filtering work. Phase 12 renamed from "Actionable Search" to "Search Filtering & Results" and updated to depend on 11.1.
 
 ### Pending Todos
 
@@ -108,8 +117,8 @@ Recent decisions affecting v3.0 work:
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Completed 11-02-PLAN.md (Phase 11 complete)
+Stopped at: Completed 11.1-01-PLAN.md (Phase 11.1 in progress - 1 of 5 plans complete)
 Resume file: None
 
 ---
-**Next step:** Begin Phase 12 (Diff Viewer) or Phase 13 (Workspace/Stream Switching)
+**Next step:** Continue Phase 11.1 with plan 02 (Wire FileTree clicks to selection store)
