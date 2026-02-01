@@ -19,7 +19,9 @@ export async function loadSettings(): Promise<P4Settings> {
     p4client: (await store.get<string>('p4client')) || defaultSettings.p4client,
     diffToolPath: (await store.get<string>('diffToolPath')) || defaultSettings.diffToolPath,
     diffToolArgs: (await store.get<string>('diffToolArgs')) || defaultSettings.diffToolArgs,
+    editorPath: (await store.get<string>('editorPath')) || defaultSettings.editorPath,
     verboseLogging: (await store.get<boolean>('verboseLogging')) ?? defaultSettings.verboseLogging,
+    autoRefreshInterval: (await store.get<number>('autoRefreshInterval')) ?? defaultSettings.autoRefreshInterval,
   };
 }
 
@@ -30,11 +32,18 @@ export async function saveSettings(settings: P4Settings): Promise<void> {
   await store.set('p4client', settings.p4client);
   await store.set('diffToolPath', settings.diffToolPath);
   await store.set('diffToolArgs', settings.diffToolArgs);
+  await store.set('editorPath', settings.editorPath);
   await store.set('verboseLogging', settings.verboseLogging);
+  await store.set('autoRefreshInterval', settings.autoRefreshInterval);
   await store.save();
 }
 
 export async function getVerboseLogging(): Promise<boolean> {
   const store = await getStore();
   return (await store.get<boolean>('verboseLogging')) ?? false;
+}
+
+export async function getAutoRefreshInterval(): Promise<number> {
+  const store = await getStore();
+  return (await store.get<number>('autoRefreshInterval')) ?? defaultSettings.autoRefreshInterval;
 }
