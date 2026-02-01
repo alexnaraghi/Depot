@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 Milestone: v3.0 Daily Driver
 Phase: 12 of 15 (Search Filtering & Results)
-Plan: 2 of 4 in current phase
-Status: In progress
-Last activity: 2026-02-01 — Completed 12-02-PLAN.md
+Plan: 4 of 4 in current phase
+Status: Phase complete
+Last activity: 2026-02-01 — Completed 12-04-PLAN.md
 
-Progress: [████░░░░░░] 40% (16 of ~40 estimated plans for v3.0)
+Progress: [████░░░░░░] 45% (18 of ~40 estimated plans for v3.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 47 (14 v1.0 + 17 v2.0 + 16 v3.0)
+- Total plans completed: 49 (14 v1.0 + 17 v2.0 + 18 v3.0)
 - Quick tasks completed: 5
 - Average duration: 6 min
-- Total execution time: ~309 min (104 v1.0 + ~112 v2.0 + 93 v3.0)
+- Total execution time: ~332 min (104 v1.0 + ~112 v2.0 + 116 v3.0)
 
 **By Phase (v3.0):**
 
@@ -33,12 +33,12 @@ Progress: [████░░░░░░] 40% (16 of ~40 estimated plans for v3
 | 10 | 2 | 9 min | 5 min |
 | 11 | 2 | 9 min | 5 min |
 | 11.1 | 5 | 44 min | 9 min |
-| 12 | 2 | 15 min | 8 min |
+| 12 | 4 | 38 min | 10 min |
 
 **Recent Trend:**
-- Last 5 plans: 7 min (11.1-05), 3 min (12-01), 12 min (12-02)
-- Trend: Moderate execution for search filtering features
-- Phase 12 in progress: Search filtering with in-place dimming pattern
+- Last 5 plans: 3 min (12-01), 12 min (12-02), 8 min (12-03), 15 min (12-04)
+- Trend: Phase 12 complete with moderate execution times
+- Phase 12 complete: Search filtering with in-place dimming, deep search commands, and visual polish
 
 *Updated after each plan completion*
 
@@ -96,6 +96,9 @@ Recent decisions affecting v3.0 work:
 - Search input in view not prompt (v3.0/12-03) — Command palette opens search view with focused input instead of window.prompt
 - Context menus on search results (v3.0/12-03) — Right-click shows Copy/View operations matching FileNode/ChangelistNode patterns
 - Clickable author names for filtering (v3.0/12-03) — Clicking author in submitted CL results filters to that author's changes
+- Filter-active background tint (v3.0/12-04) — bg-blue-950/20 tint on filtered columns provides visual feedback when searchFilterStore.isActive is true
+- Result-click dismisses filter (v3.0/12-04) — Clicking matching items clears filter after navigation to show full context
+- Toolbar search integration (v3.0/12-04) — Toolbar search bar shows submitted CL results in detail pane, not just column filtering
 
 ### Roadmap Evolution
 
@@ -141,8 +144,8 @@ Recent decisions affecting v3.0 work:
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Completed 12-02-PLAN.md (Phase 12 in progress)
+Stopped at: Completed 12-04-PLAN.md (Phase 12 complete)
 Resume file: None
 
 ---
-**Next step:** Continue Phase 12 with Plan 04 (Phase completion)
+**Next step:** Begin Phase 13: Workspace & Stream Switching
