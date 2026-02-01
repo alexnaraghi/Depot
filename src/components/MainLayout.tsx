@@ -125,6 +125,11 @@ export function MainLayout() {
     setCommandPaletteOpen(true);
   }, { enableOnFormTags: false, preventDefault: true });
 
+  // Search shortcuts
+  useHotkeys(SHORTCUTS.SEARCH.keys, () => {
+    window.dispatchEvent(new CustomEvent('p4now:focus-search'));
+  }, { enableOnFormTags: true, preventDefault: true });
+
   // Context-sensitive shortcuts - still dispatch events for FileTree/ChangelistPanel to handle
   // (they have access to more context like local paths)
   useHotkeys(SHORTCUTS.DIFF.keys, () => {

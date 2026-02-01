@@ -14,6 +14,7 @@ export const SHORTCUTS = {
   HISTORY: { keys: 'ctrl+h', label: 'Ctrl+H' },
   NEW_CHANGELIST: { keys: 'ctrl+shift+n', label: 'Ctrl+Shift+N' },
   COMMAND_PALETTE: { keys: 'ctrl+shift+p,ctrl+comma', label: 'Ctrl+Shift+P' },
+  SEARCH: { keys: 'ctrl+f', label: 'Ctrl+F' },
 } as const;
 
 /**
