@@ -1,8 +1,8 @@
+use serde::Serialize;
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio};
-use serde::Serialize;
-use tauri::{AppHandle, Emitter, ipc::Channel, State};
+use tauri::{ipc::Channel, AppHandle, Emitter, State};
 use tempfile::Builder;
 
 use crate::state::ProcessManager;
@@ -10,7 +10,12 @@ use crate::state::ProcessManager;
 /// Apply optional connection args to a p4 Command.
 /// When explicit args are provided, overrides P4 environment variables
 /// and clears P4CONFIG to ensure complete isolation from DVCS/local config.
-fn apply_connection_args(cmd: &mut Command, server: &Option<String>, user: &Option<String>, client: &Option<String>) {
+fn apply_connection_args(
+    cmd: &mut Command,
+    server: &Option<String>,
+    user: &Option<String>,
+    client: &Option<String>,
+) {
     let has_explicit = server.as_ref().is_some_and(|s| !s.is_empty())
         || user.as_ref().is_some_and(|s| !s.is_empty())
         || client.as_ref().is_some_and(|s| !s.is_empty());
@@ -41,7 +46,7 @@ fn apply_connection_args(cmd: &mut Command, server: &Option<String>, user: &Opti
 pub struct P4FileInfo {
     pub depot_path: String,
     pub local_path: String,
-    pub status: String,        // synced, checkedOut, added, deleted, modified, outOfDate
+    pub status: String, // synced, checkedOut, added, deleted, modified, outOfDate
     pub action: Option<String>, // edit, add, delete, etc. (if opened)
     pub revision: i32,
     pub head_revision: i32,
@@ -131,7 +136,11 @@ fn parse_ztag_info(output: &str) -> Result<P4ClientInfo, String> {
 
 /// Get P4 client info (client root, user, server)
 #[tauri::command]
-pub async fn p4_info(server: Option<String>, user: Option<String>, client: Option<String>) -> Result<P4ClientInfo, String> {
+pub async fn p4_info(
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<P4ClientInfo, String> {
     let mut cmd = Command::new("p4");
     apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args(["-ztag", "info"]);
@@ -154,7 +163,13 @@ pub async fn p4_info(server: Option<String>, user: Option<String>, client: Optio
 /// When paths is empty, uses depot_path if provided (e.g., "//stream/main/...")
 /// to query all files in the workspace. This avoids issues with -d flag in DVCS setups.
 #[tauri::command]
-pub async fn p4_fstat(paths: Vec<String>, depot_path: Option<String>, server: Option<String>, user: Option<String>, client: Option<String>) -> Result<Vec<P4FileInfo>, String> {
+pub async fn p4_fstat(
+    paths: Vec<String>,
+    depot_path: Option<String>,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<Vec<P4FileInfo>, String> {
     // Build command: p4 -ztag fstat <paths>
     let mut cmd = Command::new("p4");
     apply_connection_args(&mut cmd, &server, &user, &client);
@@ -228,27 +243,31 @@ fn build_file_info(fields: &HashMap<String, String>) -> Option<P4FileInfo> {
     // Prefer "path" (local filesystem path from fstat) over "clientFile" (client-spec path).
     // p4 opened only provides "clientFile" as local path, while p4 fstat provides both
     // "clientFile" (//client/...) and "path" (C:\workspace\...).
-    let local_path = fields.get("path")
-        .or_else(|| fields.get("clientFile"))?.clone();
+    let local_path = fields
+        .get("path")
+        .or_else(|| fields.get("clientFile"))?
+        .clone();
 
     // Parse revisions (default to 0 if not present)
-    let head_revision = fields.get("headRev")
+    let head_revision = fields
+        .get("headRev")
         .and_then(|s| s.parse::<i32>().ok())
         .unwrap_or(0);
 
-    let revision = fields.get("haveRev")
+    let revision = fields
+        .get("haveRev")
         .and_then(|s| s.parse::<i32>().ok())
         .unwrap_or(0);
 
     // Optional fields
     let action = fields.get("action").cloned();
-    let file_type = fields.get("headType")
+    let file_type = fields
+        .get("headType")
         .or_else(|| fields.get("type"))
         .cloned()
         .unwrap_or_else(|| "text".to_string());
 
-    let changelist = fields.get("change")
-        .and_then(|s| s.parse::<i32>().ok());
+    let changelist = fields.get("change").and_then(|s| s.parse::<i32>().ok());
 
     // Derive status from fields
     let status = derive_file_status(&action, revision, head_revision);
@@ -289,7 +308,11 @@ fn derive_file_status(action: &Option<String>, have_rev: i32, head_rev: i32) -> 
 
 /// Get all files opened by current user
 #[tauri::command]
-pub async fn p4_opened(server: Option<String>, user: Option<String>, client: Option<String>) -> Result<Vec<P4FileInfo>, String> {
+pub async fn p4_opened(
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<Vec<P4FileInfo>, String> {
     // Execute: p4 -ztag fstat -Ro //...
     // Uses fstat instead of opened to get the "path" field (local filesystem path).
     // p4 opened only returns "clientFile" which is the client-spec path (//client/...),
@@ -317,7 +340,12 @@ pub async fn p4_opened(server: Option<String>, user: Option<String>, client: Opt
 
 /// Get changelists for current user
 #[tauri::command]
-pub async fn p4_changes(status: Option<String>, server: Option<String>, user: Option<String>, client: Option<String>) -> Result<Vec<P4Changelist>, String> {
+pub async fn p4_changes(
+    status: Option<String>,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<Vec<P4Changelist>, String> {
     // Build command: p4 -ztag changes -s <status> -u <user> -c <client>
     let mut cmd = Command::new("p4");
     apply_connection_args(&mut cmd, &server, &user, &client);
@@ -397,7 +425,10 @@ fn build_changelist(fields: &HashMap<String, String>) -> Option<P4Changelist> {
     let user = fields.get("user")?.clone();
     let client = fields.get("client")?.clone();
     let status = fields.get("status")?.clone();
-    let description = fields.get("desc").cloned().unwrap_or_else(|| "".to_string());
+    let description = fields
+        .get("desc")
+        .cloned()
+        .unwrap_or_else(|| "".to_string());
     let time = fields.get("time")?.parse::<i64>().ok()?;
 
     // File count is not provided by p4 changes, will need separate query
@@ -527,10 +558,13 @@ pub async fn p4_revert(
     // Emit file-status-changed event for each reverted file
     // Note: Files are now back to "synced" status
     for depot_path in &reverted_files {
-        let _ = app.emit("file-status-changed", serde_json::json!({
-            "depot_path": depot_path,
-            "status": "synced"
-        }));
+        let _ = app.emit(
+            "file-status-changed",
+            serde_json::json!({
+                "depot_path": depot_path,
+                "status": "synced"
+            }),
+        );
     }
 
     // Check for errors
@@ -558,21 +592,39 @@ pub async fn p4_submit(
         // Default changelist: must use -d flag with description
         let desc = description.unwrap_or_else(|| "Submitted from P4Now".to_string());
         let mut cmd = Command::new("p4");
-        if let Some(s) = &server { cmd.args(["-p", s]); }
-        if let Some(u) = &user { cmd.args(["-u", u]); }
-        if let Some(c) = &client { cmd.args(["-c", c]); }
+        if let Some(s) = &server {
+            cmd.args(["-p", s]);
+        }
+        if let Some(u) = &user {
+            cmd.args(["-u", u]);
+        }
+        if let Some(c) = &client {
+            cmd.args(["-c", c]);
+        }
         cmd.args(["submit", "-d", &desc]);
         cmd.output()
             .map_err(|e| format!("Failed to execute p4 submit: {}", e))?
     } else {
         // Named changelist: update description if provided, then submit with -c
         if let Some(ref desc) = description {
-            update_changelist_description(changelist, desc, server.clone(), user.clone(), client.clone())?;
+            update_changelist_description(
+                changelist,
+                desc,
+                server.clone(),
+                user.clone(),
+                client.clone(),
+            )?;
         }
         let mut cmd = Command::new("p4");
-        if let Some(s) = &server { cmd.args(["-p", s]); }
-        if let Some(u) = &user { cmd.args(["-u", u]); }
-        if let Some(c) = &client { cmd.args(["-c", c]); }
+        if let Some(s) = &server {
+            cmd.args(["-p", s]);
+        }
+        if let Some(u) = &user {
+            cmd.args(["-u", u]);
+        }
+        if let Some(c) = &client {
+            cmd.args(["-c", c]);
+        }
         cmd.args(["submit", "-c", &changelist.to_string()]);
         cmd.output()
             .map_err(|e| format!("Failed to execute p4 submit: {}", e))?
@@ -599,15 +651,24 @@ pub async fn p4_submit(
         .unwrap_or(changelist);
 
     // Emit changelist-submitted event
-    let _ = app.emit("changelist-submitted", serde_json::json!({
-        "changelist": submitted_cl
-    }));
+    let _ = app.emit(
+        "changelist-submitted",
+        serde_json::json!({
+            "changelist": submitted_cl
+        }),
+    );
 
     Ok(submitted_cl)
 }
 
 /// Update changelist description
-fn update_changelist_description(changelist: i32, description: &str, server: Option<String>, user: Option<String>, client: Option<String>) -> Result<(), String> {
+fn update_changelist_description(
+    changelist: i32,
+    description: &str,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<(), String> {
     // Get current changelist form
     let mut cmd = Command::new("p4");
     apply_connection_args(&mut cmd, &server, &user, &client);
@@ -659,7 +720,8 @@ fn update_changelist_description(changelist: i32, description: &str, server: Opt
         .map_err(|e| format!("Failed to spawn p4 change: {}", e))?;
 
     if let Some(mut stdin) = child.stdin.take() {
-        stdin.write_all(new_form.as_bytes())
+        stdin
+            .write_all(new_form.as_bytes())
             .map_err(|e| format!("Failed to write changelist form: {}", e))?;
     }
 
@@ -677,7 +739,12 @@ fn update_changelist_description(changelist: i32, description: &str, server: Opt
 
 /// Create a new changelist
 #[tauri::command]
-pub async fn p4_create_change(description: String, server: Option<String>, user: Option<String>, client: Option<String>) -> Result<i32, String> {
+pub async fn p4_create_change(
+    description: String,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<i32, String> {
     // Get template: p4 change -o
     let mut cmd = Command::new("p4");
     apply_connection_args(&mut cmd, &server, &user, &client);
@@ -739,7 +806,8 @@ pub async fn p4_create_change(description: String, server: Option<String>, user:
         .map_err(|e| format!("Failed to spawn p4 change: {}", e))?;
 
     if let Some(mut stdin) = child.stdin.take() {
-        stdin.write_all(new_form.as_bytes())
+        stdin
+            .write_all(new_form.as_bytes())
             .map_err(|e| format!("Failed to write changelist form: {}", e))?;
     }
 
@@ -769,7 +837,12 @@ pub async fn p4_create_change(description: String, server: Option<String>, user:
 
 /// Delete a changelist
 #[tauri::command]
-pub async fn p4_delete_change(changelist: i32, server: Option<String>, user: Option<String>, client: Option<String>) -> Result<(), String> {
+pub async fn p4_delete_change(
+    changelist: i32,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<(), String> {
     // Execute: p4 change -d <changelist>
     let mut cmd = Command::new("p4");
     apply_connection_args(&mut cmd, &server, &user, &client);
@@ -789,7 +862,13 @@ pub async fn p4_delete_change(changelist: i32, server: Option<String>, user: Opt
 
 /// Reopen files to a different changelist
 #[tauri::command]
-pub async fn p4_reopen(paths: Vec<String>, changelist: i32, server: Option<String>, user: Option<String>, client: Option<String>) -> Result<Vec<String>, String> {
+pub async fn p4_reopen(
+    paths: Vec<String>,
+    changelist: i32,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<Vec<String>, String> {
     if paths.is_empty() {
         return Err("No paths provided".to_string());
     }
@@ -797,7 +876,11 @@ pub async fn p4_reopen(paths: Vec<String>, changelist: i32, server: Option<Strin
     // Execute: p4 reopen -c <changelist> <paths>
     let mut cmd = Command::new("p4");
     apply_connection_args(&mut cmd, &server, &user, &client);
-    let cl_str = if changelist == 0 { "default".to_string() } else { changelist.to_string() };
+    let cl_str = if changelist == 0 {
+        "default".to_string()
+    } else {
+        changelist.to_string()
+    };
     cmd.args(["reopen", "-c", &cl_str]);
     cmd.args(&paths);
 
@@ -829,7 +912,13 @@ pub async fn p4_reopen(paths: Vec<String>, changelist: i32, server: Option<Strin
 
 /// Edit changelist description
 #[tauri::command]
-pub async fn p4_edit_change_description(changelist: i32, description: String, server: Option<String>, user: Option<String>, client: Option<String>) -> Result<(), String> {
+pub async fn p4_edit_change_description(
+    changelist: i32,
+    description: String,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<(), String> {
     update_changelist_description(changelist, &description, server, user, client)
 }
 
@@ -837,7 +926,7 @@ pub async fn p4_edit_change_description(changelist: i32, description: String, se
 #[derive(Clone, Serialize)]
 pub struct SyncProgress {
     pub depot_path: String,
-    pub action: String,  // updating, adding, deleting, can't clobber
+    pub action: String, // updating, adding, deleting, can't clobber
     pub revision: i32,
     pub is_conflict: bool,
 }
@@ -912,7 +1001,8 @@ pub async fn p4_sync(
                 }
 
                 // Only emit actual errors/conflicts
-                let is_conflict = line.contains("can't clobber") || line.contains("can't overwrite");
+                let is_conflict =
+                    line.contains("can't clobber") || line.contains("can't overwrite");
                 let _ = on_progress.send(SyncProgress {
                     depot_path: line.clone(),
                     action: if is_conflict { "conflict" } else { "error" }.to_string(),
@@ -1035,7 +1125,10 @@ fn build_workspace(fields: &HashMap<String, String>) -> Option<P4Workspace> {
     let name = fields.get("client")?.clone();
     let root = fields.get("Root")?.clone();
     let stream = fields.get("Stream").cloned();
-    let description = fields.get("Description").cloned().unwrap_or_else(|| "".to_string());
+    let description = fields
+        .get("Description")
+        .cloned()
+        .unwrap_or_else(|| "".to_string());
 
     Some(P4Workspace {
         name,
@@ -1047,7 +1140,11 @@ fn build_workspace(fields: &HashMap<String, String>) -> Option<P4Workspace> {
 
 /// Test connection to P4 server with given credentials
 #[tauri::command]
-pub async fn p4_test_connection(server: String, user: String, client: String) -> Result<P4ClientInfo, String> {
+pub async fn p4_test_connection(
+    server: String,
+    user: String,
+    client: String,
+) -> Result<P4ClientInfo, String> {
     let mut cmd = Command::new("p4");
     // Override all P4 env vars to ensure complete isolation from DVCS/local config
     cmd.env("P4CONFIG", "");
@@ -1102,12 +1199,17 @@ fn parse_ztag_filelog(output: &str) -> Result<Vec<P4Revision>, String> {
         // Check if this index exists
         if let Some(rev_str) = fields.get(&rev_key) {
             let rev = rev_str.parse::<i32>().unwrap_or(0);
-            let change = fields.get(&change_key)
+            let change = fields
+                .get(&change_key)
                 .and_then(|s| s.parse::<i32>().ok())
                 .unwrap_or(0);
             let action = fields.get(&action_key).cloned().unwrap_or_default();
-            let file_type = fields.get(&type_key).cloned().unwrap_or_else(|| "text".to_string());
-            let time = fields.get(&time_key)
+            let file_type = fields
+                .get(&type_key)
+                .cloned()
+                .unwrap_or_else(|| "text".to_string());
+            let time = fields
+                .get(&time_key)
                 .and_then(|s| s.parse::<i64>().ok())
                 .unwrap_or(0);
             let user = fields.get(&user_key).cloned().unwrap_or_default();
@@ -1179,7 +1281,9 @@ pub async fn p4_print_to_file(
     client: Option<String>,
 ) -> Result<String, String> {
     // Extract file extension from depot path
-    let extension = depot_path.rsplit('.').next()
+    let extension = depot_path
+        .rsplit('.')
+        .next()
         .filter(|ext| !ext.contains('/'))
         .map(|ext| format!(".{}", ext))
         .unwrap_or_else(|| ".txt".to_string());
@@ -1209,7 +1313,8 @@ pub async fn p4_print_to_file(
     }
 
     // Persist the temp file so it doesn't get deleted
-    let (_, persistent_path) = temp_file.keep()
+    let (_, persistent_path) = temp_file
+        .keep()
         .map_err(|e| format!("Failed to persist temp file: {}", e))?;
 
     Ok(persistent_path.to_string_lossy().to_string())
@@ -1229,8 +1334,10 @@ pub async fn launch_diff_tool(
     // Parse and apply arguments
     if let Some(args_str) = diff_tool_args.filter(|s| !s.is_empty()) {
         // Check for placeholders
-        if args_str.contains("{left}") || args_str.contains("{right}")
-            || args_str.contains("$LOCAL") || args_str.contains("$REMOTE")
+        if args_str.contains("{left}")
+            || args_str.contains("{right}")
+            || args_str.contains("$LOCAL")
+            || args_str.contains("$REMOTE")
         {
             // Parse args and substitute placeholders
             // Supports {left}/{right} and P4-style $LOCAL/$REMOTE
@@ -1238,9 +1345,9 @@ pub async fn launch_diff_tool(
                 .split_whitespace()
                 .map(|arg| {
                     arg.replace("{left}", &left_path)
-                       .replace("{right}", &right_path)
-                       .replace("$LOCAL", &left_path)
-                       .replace("$REMOTE", &right_path)
+                        .replace("{right}", &right_path)
+                        .replace("$LOCAL", &left_path)
+                        .replace("$REMOTE", &right_path)
                 })
                 .collect();
             cmd.args(args);
@@ -1276,7 +1383,7 @@ pub async fn p4_changes_submitted(
 
     cmd.arg("-ztag");
     cmd.arg("changes");
-    cmd.arg("-l");  // Long output to get full descriptions
+    cmd.arg("-l"); // Long output to get full descriptions
     cmd.arg("-s");
     cmd.arg("submitted");
     cmd.arg("-m");
@@ -1405,8 +1512,12 @@ fn parse_ztag_describe_shelved(output: &str) -> Result<Vec<P4ShelvedFile>, Strin
         // Check if this index exists
         if let Some(depot_path) = fields.get(&depot_file_key) {
             let action = fields.get(&action_key).cloned().unwrap_or_default();
-            let file_type = fields.get(&type_key).cloned().unwrap_or_else(|| "text".to_string());
-            let revision = fields.get(&rev_key)
+            let file_type = fields
+                .get(&type_key)
+                .cloned()
+                .unwrap_or_else(|| "text".to_string());
+            let revision = fields
+                .get(&rev_key)
                 .and_then(|s| s.parse::<i32>().ok())
                 .unwrap_or(0);
 
@@ -1518,7 +1629,7 @@ pub async fn p4_reconcile_preview(
     apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.arg("reconcile");
-    cmd.arg("-n");  // Dry run
+    cmd.arg("-n"); // Dry run
 
     // Add path argument (defaults to "//..." if not provided)
     let path = depot_path.unwrap_or_else(|| "//...".to_string());
@@ -1568,7 +1679,7 @@ fn parse_reconcile_output(output: &str) -> Result<Vec<ReconcilePreview>, String>
 
             previews.push(ReconcilePreview {
                 depot_path: path,
-                local_path: String::new(),  // UI will handle display
+                local_path: String::new(), // UI will handle display
                 action,
             });
         }
@@ -1622,14 +1733,20 @@ pub async fn p4_reconcile_apply(
     let stderr = String::from_utf8_lossy(&output.stderr);
 
     if !output.status.success() {
-        let err = if stderr.is_empty() { stdout.to_string() } else { stderr.to_string() };
+        let err = if stderr.is_empty() {
+            stdout.to_string()
+        } else {
+            stderr.to_string()
+        };
         return Err(err);
     }
 
     // Check if p4 actually reconciled anything
     let trimmed = stdout.trim();
     if trimmed.is_empty() {
-        return Err("No files were reconciled. The files may already be open or unchanged.".to_string());
+        return Err(
+            "No files were reconciled. The files may already be open or unchanged.".to_string(),
+        );
     }
 
     Ok(stdout.to_string())
@@ -1646,7 +1763,8 @@ pub async fn p4_resolve_preview(
     apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args(["resolve", "-n"]);
 
-    let output = cmd.output()
+    let output = cmd
+        .output()
         .map_err(|e| format!("Failed to execute p4 resolve -n: {}", e))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
