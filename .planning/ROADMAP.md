@@ -170,9 +170,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 14-01-PLAN.md — Rust backend commands (p4_dirs, p4_depots) + TypeScript invoke wrappers
-- [ ] 14-02-PLAN.md — DepotBrowser component + accordion left column layout
-- [ ] 14-03-PLAN.md — Context menu operations + detail pane integration + visual verification
+- [x] 14-01-PLAN.md — Rust backend commands (p4_dirs, p4_depots) + TypeScript invoke wrappers
+- [x] 14-02-PLAN.md — DepotBrowser component + accordion left column layout
+- [x] 14-03-PLAN.md — Context menu operations + detail pane integration + visual verification
 
 #### Phase 15: Resolve Workflow
 **Goal**: Conflict detection and external merge tool integration
@@ -202,5 +202,5 @@ Phases execute in numeric order: 09 → 10 → 11 → 12 → 13 → 14 → 15
 | 11.1 Unified Three-Column Layout | 5/5 | ✓ Complete | 2026-01-31 |
 | 12. Search Filtering & Results | 4/4 | ✓ Complete | 2026-02-01 |
 | 13. Workspace & Stream Switching | 5/5 | ✓ Complete | 2026-02-01 |
-| 14. Depot Browser | 0/? | Not started | - |
+| 14. Depot Browser | 3/3 | ✓ Complete | 2026-02-01 |
 | 15. Resolve Workflow | 0/? | Not started | - |
