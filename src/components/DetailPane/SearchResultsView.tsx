@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useConnectionStore } from '@/stores/connectionStore';
+import { useSearchFilterStore } from '@/stores/searchFilterStore';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
 import { invokeP4ChangesSubmitted, invokeP4Files, P4FileResult } from '@/lib/tauri';
 import { Search, ChevronDown, ChevronRight, Loader2, AlertCircle, Copy, FileText } from 'lucide-react';
@@ -10,25 +11,35 @@ import toast from 'react-hot-toast';
 interface SearchResultsViewProps {
   searchType: 'submitted' | 'depot';
   query: string;
+  /** When true, the search is driven by the toolbar search bar (no local input shown) */
+  toolbarDriven?: boolean;
 }
 
 /**
  * SearchResultsView - Display search results in the detail pane
  *
+ * Two modes:
+ * - toolbarDriven: query comes from the global search filter store (no local input)
+ * - standalone: has its own search input (used by command palette depot search)
+ *
  * Two search types:
  * - submitted: Client-side filter of prefetched submitted CLs
  * - depot: Backend p4 files command for depot path search
  */
-export function SearchResultsView({ searchType, query: initialQuery }: SearchResultsViewProps) {
+export function SearchResultsView({ searchType, query, toolbarDriven }: SearchResultsViewProps) {
   const { p4port, p4user, p4client } = useConnectionStore();
   const drillToFile = useDetailPaneStore(s => s.drillToFile);
   const navigate = useDetailPaneStore(s => s.navigate);
+  const clearFilter = useSearchFilterStore(s => s.clearFilter);
 
-  // Local state for search input and filters
-  const [searchInput, setSearchInput] = useState(initialQuery);
+  // Local state for standalone search input (only used when not toolbar-driven)
+  const [searchInput, setSearchInput] = useState(query);
   const [displayLimit, setDisplayLimit] = useState(50);
   const [expandedCL, setExpandedCL] = useState<number | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; type: 'cl' | 'file'; data: any } | null>(null);
+
+  // The effective search term: toolbar filter or local input
+  const effectiveQuery = toolbarDriven ? query : searchInput;
 
   // Submitted CL search
   const { data: submittedCLs, isLoading: submittedLoading } = useQuery({
@@ -39,21 +50,20 @@ export function SearchResultsView({ searchType, query: initialQuery }: SearchRes
 
   // Filter submitted CLs client-side
   const filteredSubmittedCLs = useMemo(() => {
-    if (!submittedCLs || !searchInput) return submittedCLs || [];
+    if (!submittedCLs || !effectiveQuery) return submittedCLs || [];
 
-    const lowerQuery = searchInput.toLowerCase();
+    const lowerQuery = effectiveQuery.toLowerCase();
     return submittedCLs.filter(cl => {
-      // Search in CL number, description, user
       return (
         cl.id.toString().includes(lowerQuery) ||
         cl.description.toLowerCase().includes(lowerQuery) ||
         cl.user.toLowerCase().includes(lowerQuery)
       );
     });
-  }, [submittedCLs, searchInput]);
+  }, [submittedCLs, effectiveQuery]);
 
   // Depot path search
-  const [depotPattern, setDepotPattern] = useState(searchInput || '//...');
+  const [depotPattern, setDepotPattern] = useState(query || '//...');
   const { data: depotFiles, isLoading: depotLoading, error: depotError, refetch: refetchDepot } = useQuery({
     queryKey: ['p4', 'files', depotPattern],
     queryFn: () => invokeP4Files(depotPattern, 100, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined),
@@ -79,8 +89,12 @@ export function SearchResultsView({ searchType, query: initialQuery }: SearchRes
   }
 
   function handleAuthorClick(author: string) {
-    // Filter by author
-    setSearchInput(author);
+    if (toolbarDriven) {
+      // Update the toolbar search bar
+      useSearchFilterStore.getState().setFilterTerm(author);
+    } else {
+      setSearchInput(author);
+    }
   }
 
   function handleContextMenu(e: React.MouseEvent, type: 'cl' | 'file', data: any) {
@@ -101,7 +115,10 @@ export function SearchResultsView({ searchType, query: initialQuery }: SearchRes
   }
 
   function handleViewCLDetail(cl: any) {
-    // Navigate to CL detail view
+    // Clear filter first if toolbar-driven, then navigate
+    if (toolbarDriven) {
+      clearFilter();
+    }
     navigate({
       type: 'changelist',
       changelist: {
@@ -132,34 +149,45 @@ export function SearchResultsView({ searchType, query: initialQuery }: SearchRes
 
   return (
     <div className="flex flex-col h-full">
-      {/* Search input */}
-      <div className="p-4 border-b border-border">
-        <form onSubmit={handleDepotSearch} className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder={
-                searchType === 'submitted'
-                  ? 'Search submitted CLs (number, description, author)...'
-                  : 'Enter depot path pattern (e.g., //depot/.../*.cpp)'
-              }
-              className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              autoFocus
-            />
-          </div>
-          {searchType === 'depot' && (
-            <button
-              type="submit"
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90"
-            >
-              Search
-            </button>
-          )}
-        </form>
-      </div>
+      {/* Search input - only shown for standalone (non-toolbar) mode */}
+      {!toolbarDriven && (
+        <div className="p-4 border-b border-border">
+          <form onSubmit={handleDepotSearch} className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder={
+                  searchType === 'submitted'
+                    ? 'Search submitted CLs (number, description, author)...'
+                    : 'Enter depot path pattern (e.g., //depot/.../*.cpp)'
+                }
+                className="w-full pl-10 pr-4 py-2 bg-background border border-border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                autoFocus
+              />
+            </div>
+            {searchType === 'depot' && (
+              <button
+                type="submit"
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-md text-sm hover:bg-primary/90"
+              >
+                Search
+              </button>
+            )}
+          </form>
+        </div>
+      )}
+
+      {/* Toolbar-driven header */}
+      {toolbarDriven && (
+        <div className="px-4 pt-4 pb-2 border-b border-border">
+          <h3 className="text-sm font-medium text-muted-foreground">
+            Submitted Changelists matching "{effectiveQuery}"
+          </h3>
+        </div>
+      )}
 
       {/* Results */}
       <div className="flex-1 overflow-auto p-4">
@@ -176,7 +204,7 @@ export function SearchResultsView({ searchType, query: initialQuery }: SearchRes
               <>
                 <div className="text-sm text-muted-foreground mb-4">
                   {filteredSubmittedCLs.length} {filteredSubmittedCLs.length === 1 ? 'result' : 'results'}
-                  {searchInput && ` matching "${searchInput}"`}
+                  {effectiveQuery && !toolbarDriven && ` matching "${effectiveQuery}"`}
                 </div>
 
                 {filteredSubmittedCLs.slice(0, displayLimit).map((cl) => (
@@ -225,9 +253,6 @@ export function SearchResultsView({ searchType, query: initialQuery }: SearchRes
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                           <span>{cl.file_count} {cl.file_count === 1 ? 'file' : 'files'}</span>
                           <span>Client: {cl.client}</span>
-                        </div>
-                        <div className="mt-3 text-xs text-muted-foreground italic">
-                          Note: File list requires p4 describe backend support (planned for Phase 14)
                         </div>
                       </div>
                     )}
