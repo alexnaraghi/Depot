@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 
 Milestone: v3.0 Daily Driver
 Phase: 11.1 of 15 (Unified Three-Column Layout)
-Plan: 3 of 5 in current phase
+Plan: 2 of 5 in current phase
 Status: In progress
-Last activity: 2026-01-31 — Completed 11.1-03-PLAN.md
+Last activity: 2026-02-01 — Completed 11.1-02-PLAN.md
 
 Progress: [██░░░░░░░░] 25% (10 of ~40 estimated plans for v3.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 41 (14 v1.0 + 17 v2.0 + 10 v3.0)
+- Total plans completed: 42 (14 v1.0 + 17 v2.0 + 11 v3.0)
 - Quick tasks completed: 5
 - Average duration: 5 min
-- Total execution time: ~274 min (104 v1.0 + ~112 v2.0 + 58 v3.0)
+- Total execution time: ~279 min (104 v1.0 + ~112 v2.0 + 63 v3.0)
 
 **By Phase (v3.0):**
 
@@ -32,10 +32,10 @@ Progress: [██░░░░░░░░] 25% (10 of ~40 estimated plans for v3
 | 09 | 3 | 16 min | 5 min |
 | 10 | 2 | 9 min | 5 min |
 | 11 | 2 | 9 min | 5 min |
-| 11.1 | 3 | 24 min | 8 min |
+| 11.1 | 4 | 29 min | 7 min |
 
 **Recent Trend:**
-- Last 5 plans: 5 min (11-02), 15 min (11.1-01), 4 min (11.1-02), 5 min (11.1-03)
+- Last 5 plans: 15 min (11.1-01), 4 min (11.1-02), 5 min (11.1-03), 5 min (11.1-02)
 - Trend: Consistent 5-min execution, architectural foundation work takes longer (11.1-01)
 
 *Updated after each plan completion*
@@ -72,6 +72,9 @@ Recent decisions affecting v3.0 work:
 - Navigation history depth limiting (v3.0/11.1-01) — Max 3 items in back stack prevents memory bloat during deep navigation
 - Separate select vs drill actions (v3.0/11.1-01) — Side column clicks reset history (selectFile/selectChangelist), detail pane clicks preserve history (drillToFile/drillToRevision)
 - Three-column layout always visible (v3.0/11.1-01) — Removed sidebar collapse functionality, all columns always shown with independent resize handles
+- Query cache reads for dashboard stats (v3.0/11.1-02) — WorkspaceSummaryView uses queryClient.getQueryData() to read from existing cache instead of making new queries
+- Inline file history (v3.0/11.1-02) — History embedded directly in FileDetailView instead of separate dialog, clickable rows drill into revision detail
+- Conditional action buttons (v3.0/11.1-02) — File action buttons shown/hidden based on file status from fileTreeStore for better UX
 - Reuse existing dialogs for detail views (v3.0/11.1-03) — SubmitDialog and EditDescriptionDialog imported from ChangelistPanel directory to maintain consistency
 - Revision sibling files placeholder (v3.0/11.1-03) — Backend lacks p4_describe for submitted CLs, placeholder with TODO for future backend enhancement
 
@@ -118,9 +121,9 @@ Recent decisions affecting v3.0 work:
 
 ## Session Continuity
 
-Last session: 2026-01-31
-Stopped at: Completed 11.1-03-PLAN.md (Phase 11.1 in progress - 3 of 5 plans complete)
+Last session: 2026-02-01
+Stopped at: Completed 11.1-02-PLAN.md (Phase 11.1 in progress - 2 of 5 plans complete)
 Resume file: None
 
 ---
-**Next step:** Continue Phase 11.1 with plan 04 (Wire FileTree and ChangelistPanel clicks to selection store)
+**Next step:** Continue Phase 11.1 with plan 03 or 04 (Detail views and click wiring)
