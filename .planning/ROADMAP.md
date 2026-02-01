@@ -167,10 +167,12 @@ Plans:
   2. User can expand depot folders without UI freezing (virtualized tree handles 10,000+ files)
   3. User can sync files or folders from depot browser via context menu
   4. User can right-click depot files to access operations (checkout, history, diff)
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 14-01: TBD during planning
+- [ ] 14-01-PLAN.md — Rust backend commands (p4_dirs, p4_depots) + TypeScript invoke wrappers
+- [ ] 14-02-PLAN.md — DepotBrowser component + accordion left column layout
+- [ ] 14-03-PLAN.md — Context menu operations + detail pane integration + visual verification
 
 #### Phase 15: Resolve Workflow
 **Goal**: Conflict detection and external merge tool integration
