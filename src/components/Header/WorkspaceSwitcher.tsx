@@ -77,9 +77,18 @@ export function WorkspaceSwitcher() {
     }
   };
 
-  // Don't render if not connected
+  // Show disconnected state
   if (status !== 'connected') {
-    return null;
+    return (
+      <div className="flex flex-col">
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          Workspace
+        </span>
+        <span className="text-sm font-medium text-muted-foreground">
+          No workspace
+        </span>
+      </div>
+    );
   }
 
   return (
