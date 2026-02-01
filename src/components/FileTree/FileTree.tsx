@@ -222,6 +222,11 @@ export function FileTree() {
     useDetailPaneStore.getState().selectFile(depotPath, localPath);
   }
 
+  function handleResolve(depotPath: string, localPath: string) {
+    // Navigate to file detail view to show conflict banner
+    useDetailPaneStore.getState().selectFile(depotPath, localPath);
+  }
+
   function handleDiffAgainstHave(depotPath: string, localPath: string) {
     // For "Diff against Have", we need to get the have revision from the file
     // The "have" revision is the file's current revision (what's on disk)
@@ -342,6 +347,7 @@ export function FileTree() {
           onClose={closeContextMenu}
           onShowHistory={handleShowHistory}
           onDiffAgainstHave={handleDiffAgainstHave}
+          onResolve={handleResolve}
         />
       )}
     </div>

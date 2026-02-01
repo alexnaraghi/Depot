@@ -15,6 +15,7 @@ interface FileContextMenuProps {
   onClose: () => void;
   onShowHistory?: (depotPath: string, localPath: string) => void;
   onDiffAgainstHave?: (depotPath: string, localPath: string) => void;
+  onResolve?: (depotPath: string, localPath: string) => void;
 }
 
 /**
@@ -29,7 +30,7 @@ interface FileContextMenuProps {
  *
  * Closes on click outside or Escape key
  */
-export function FileContextMenu({ file, x, y, onClose, onShowHistory, onDiffAgainstHave }: FileContextMenuProps) {
+export function FileContextMenu({ file, x, y, onClose, onShowHistory, onDiffAgainstHave, onResolve }: FileContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const { p4port, p4user, p4client } = useConnectionStore();
   const queryClient = useQueryClient();
@@ -121,6 +122,7 @@ export function FileContextMenu({ file, x, y, onClose, onShowHistory, onDiffAgai
         onClose={onClose}
         onShowHistory={onShowHistory}
         onDiffAgainstHave={onDiffAgainstHave}
+        onResolve={onResolve}
       />
 
       {/* Workspace-specific operations */}

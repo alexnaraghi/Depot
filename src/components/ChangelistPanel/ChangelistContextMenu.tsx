@@ -19,6 +19,7 @@ interface ChangelistContextMenuProps {
   onClose: () => void;
   onShowHistory?: (depotPath: string, localPath: string) => void;
   onDiffAgainstHave?: (depotPath: string, localPath: string) => void;
+  onResolve?: (depotPath: string, localPath: string) => void;
 }
 
 /**
@@ -38,6 +39,7 @@ export function ChangelistContextMenu({
   onClose,
   onShowHistory,
   onDiffAgainstHave,
+  onResolve,
 }: ChangelistContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const submenuRef = useRef<HTMLDivElement>(null);
@@ -169,6 +171,7 @@ export function ChangelistContextMenu({
               onClose={onClose}
               onShowHistory={onShowHistory}
               onDiffAgainstHave={onDiffAgainstHave}
+              onResolve={onResolve}
             />
           </>
         )}

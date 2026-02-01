@@ -17,6 +17,7 @@ import { useOperationStore } from '@/store/operation';
 import { useDiff } from '@/hooks/useDiff';
 import { useFileOperations } from '@/hooks/useFileOperations';
 import { useShelve } from '@/hooks/useShelvedFiles';
+import { useUnresolvedFiles } from '@/hooks/useResolve';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 import { Plus, Send, Archive, ArrowDownToLine, Pencil, Trash2, Undo2 } from 'lucide-react';
@@ -40,6 +41,7 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
   const dndManager = useDndManager();
   const { p4port, p4user, p4client } = useConnectionStore();
   const queryClient = useQueryClient();
+  const { data: unresolvedFiles = [] } = useUnresolvedFiles();
   const treeRef = useRef<TreeApi<ChangelistTreeNode>>(null);
   const [selectedChangelist, setSelectedChangelist] = useState<P4Changelist | null>(null);
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
@@ -242,9 +244,19 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
 
   // Handle submit button click on changelist
   const handleSubmitClick = useCallback((cl: P4Changelist) => {
+    // Check for unresolved files in this changelist
+    const unresolvedInChangelist = cl.files.filter(file =>
+      unresolvedFiles.some(unresolved => unresolved.depotPath === file.depotPath)
+    );
+
+    if (unresolvedInChangelist.length > 0) {
+      toast.error(`Cannot submit: ${unresolvedInChangelist.length} file(s) have unresolved conflicts`);
+      return;
+    }
+
     setSelectedChangelist(cl);
     setSubmitDialogOpen(true);
-  }, []);
+  }, [unresolvedFiles]);
 
   // Handle edit button click on changelist
   const handleEditClick = useCallback((cl: P4Changelist) => {
@@ -313,6 +325,11 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
 
   // Handle file history - navigate to file detail view
   const handleShowHistory = useCallback((depotPath: string, localPath: string) => {
+    useDetailPaneStore.getState().selectFile(depotPath, localPath);
+  }, []);
+
+  // Handle resolve - navigate to file detail view to show conflict banner
+  const handleResolve = useCallback((depotPath: string, localPath: string) => {
     useDetailPaneStore.getState().selectFile(depotPath, localPath);
   }, []);
 
@@ -511,6 +528,7 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
           onClose={() => setContextMenuState(null)}
           onShowHistory={handleShowHistory}
           onDiffAgainstHave={handleDiffAgainstHave}
+          onResolve={handleResolve}
         />
       )}
       {headerMenuState && (

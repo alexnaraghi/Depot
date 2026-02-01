@@ -1,14 +1,18 @@
-import { GitCompare, ExternalLink, FolderOpen, Edit3, Undo2, Loader2, Triangle } from 'lucide-react';
+import { GitCompare, ExternalLink, FolderOpen, Edit3, Undo2, Loader2, Triangle, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFileHistory } from '@/hooks/useFileHistory';
 import { useFileOperations } from '@/hooks/useFileOperations';
 import { useDiff } from '@/hooks/useDiff';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
 import { useFileTreeStore } from '@/stores/fileTreeStore';
+import { useUnresolvedFiles, useResolve } from '@/hooks/useResolve';
+import { ResolveBlockingOverlay } from '@/components/dialogs/ResolveBlockingOverlay';
+import { ResolveConfirmDialog } from '@/components/dialogs/ResolveConfirmDialog';
 import { FileStatus } from '@/types/p4';
 import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
+import { useState } from 'react';
 
 interface FileDetailViewProps {
   depotPath: string;
@@ -32,6 +36,12 @@ export function FileDetailView({ depotPath, localPath }: FileDetailViewProps) {
   const { diffAgainstWorkspace } = useDiff();
   const { drillToRevision } = useDetailPaneStore();
   const { getFileByPath } = useFileTreeStore();
+  const { isFileUnresolved } = useUnresolvedFiles();
+  const { resolveAccept, launchMergeTool } = useResolve();
+
+  // Resolve state
+  const [isLaunching, setIsLaunching] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<'theirs' | 'yours' | 'merge' | null>(null);
 
   // Extract filename
   const fileName = depotPath.split('/').pop() || depotPath;
@@ -93,6 +103,38 @@ export function FileDetailView({ depotPath, localPath }: FileDetailViewProps) {
     }
   };
 
+  // Resolve handlers
+  const handleLaunchMergeTool = async () => {
+    setIsLaunching(true);
+    try {
+      const exitCode = await launchMergeTool(depotPath, localPath);
+      if (exitCode === 0) {
+        // Show confirmation dialog to accept merged result
+        setConfirmAction('merge');
+      } else {
+        toast.error(`Merge tool exited with code ${exitCode}`);
+      }
+    } catch (error) {
+      // Error already handled by useResolve with toast
+    } finally {
+      setIsLaunching(false);
+    }
+  };
+
+  const handleResolveConfirm = async () => {
+    if (!confirmAction) return;
+
+    try {
+      await resolveAccept(depotPath, confirmAction);
+      setConfirmAction(null);
+    } catch (error) {
+      // Error already handled by useResolve with toast
+    }
+  };
+
+  // Check if file is conflicted
+  const isConflicted = isFileUnresolved(depotPath) || fileInfo?.status === FileStatus.Conflict;
+
   const formatDate = (epoch: number) => {
     return new Date(epoch * 1000).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -136,6 +178,47 @@ export function FileDetailView({ depotPath, localPath }: FileDetailViewProps) {
           )}
         </div>
       </div>
+
+      {/* Conflict banner */}
+      {isConflicted && (
+        <div className="bg-yellow-900/30 border-l-4 border-yellow-500 p-4 mb-4 rounded-r mx-4 mt-4">
+          <div className="flex items-center gap-2 mb-3">
+            <AlertTriangle className="w-5 h-5 text-yellow-500" />
+            <span className="text-sm font-semibold text-yellow-400">
+              This file has unresolved conflicts
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLaunchMergeTool}
+              disabled={isLaunching}
+              className="border-yellow-500/50 hover:bg-yellow-500/10"
+            >
+              Launch Merge Tool
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmAction('theirs')}
+              disabled={isLaunching}
+              className="border-yellow-500/50 hover:bg-yellow-500/10"
+            >
+              Accept Theirs
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmAction('yours')}
+              disabled={isLaunching}
+              className="border-yellow-500/50 hover:bg-yellow-500/10"
+            >
+              Accept Yours
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Action buttons */}
       <div className="border-b border-border p-4">
@@ -241,6 +324,34 @@ export function FileDetailView({ depotPath, localPath }: FileDetailViewProps) {
           </div>
         </div>
       </div>
+
+      {/* Resolve dialogs */}
+      <ResolveBlockingOverlay isOpen={isLaunching} filePath={depotPath} />
+      <ResolveConfirmDialog
+        open={confirmAction === 'theirs'}
+        title="Accept Theirs?"
+        description="This will discard your local changes and use the depot version."
+        onConfirm={handleResolveConfirm}
+        onCancel={() => setConfirmAction(null)}
+        confirmLabel="Accept Theirs"
+        isDestructive={true}
+      />
+      <ResolveConfirmDialog
+        open={confirmAction === 'yours'}
+        title="Accept Yours?"
+        description="This will keep your local changes and discard the depot changes."
+        onConfirm={handleResolveConfirm}
+        onCancel={() => setConfirmAction(null)}
+        confirmLabel="Accept Yours"
+      />
+      <ResolveConfirmDialog
+        open={confirmAction === 'merge'}
+        title="Accept Merged Result?"
+        description="Merge tool completed. Accept the merged result?"
+        onConfirm={handleResolveConfirm}
+        onCancel={() => setConfirmAction(null)}
+        confirmLabel="Accept Merge"
+      />
     </div>
   );
 }

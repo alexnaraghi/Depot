@@ -1,7 +1,8 @@
 import { NodeRendererProps } from 'react-arborist';
-import { FolderOpen, Folder, File } from 'lucide-react';
-import { P4File } from '@/types/p4';
+import { FolderOpen, Folder, File, AlertTriangle } from 'lucide-react';
+import { P4File, FileStatus } from '@/types/p4';
 import { FileStatusIcon } from './FileStatusIcon';
+import { useUnresolvedFiles } from '@/hooks/useResolve';
 import { cn } from '@/lib/utils';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
 import { useSearchFilterStore } from '@/stores/searchFilterStore';
@@ -26,6 +27,10 @@ export function FileNode({ node, style, dragHandle }: NodeRendererProps<FileNode
   const { name, isFolder, file, onContextMenu, dimmed, highlightRanges } = node.data;
   const isSelected = node.isSelected;
   const isOpen = node.isOpen;
+  const { isFileUnresolved } = useUnresolvedFiles();
+
+  // Check if this file has unresolved conflicts
+  const isConflicted = file && (isFileUnresolved(file.depotPath) || file.status === FileStatus.Conflict);
 
   function handleContextMenu(event: React.MouseEvent) {
     if (dimmed) return; // Don't allow context menu on dimmed items
@@ -75,7 +80,13 @@ export function FileNode({ node, style, dragHandle }: NodeRendererProps<FileNode
           <Folder className="w-4 h-4 text-muted-foreground flex-shrink-0" />
         )
       ) : (
-        <File className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+        <div className="relative flex-shrink-0">
+          <File className="w-4 h-4 text-muted-foreground" />
+          {/* Conflict overlay icon */}
+          {isConflicted && (
+            <AlertTriangle className="w-3 h-3 text-yellow-500 absolute -bottom-1 -right-1" />
+          )}
+        </div>
       )}
 
       {/* Status icon for files */}

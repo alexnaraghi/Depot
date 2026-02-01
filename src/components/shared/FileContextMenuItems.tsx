@@ -1,6 +1,7 @@
-import { Edit3, Undo2, Copy, History, GitCompare, FolderOpen, ExternalLink } from 'lucide-react';
+import { Edit3, Undo2, Copy, History, GitCompare, FolderOpen, ExternalLink, AlertTriangle } from 'lucide-react';
 import { P4File, FileStatus } from '@/types/p4';
 import { useFileOperations } from '@/hooks/useFileOperations';
+import { useUnresolvedFiles } from '@/hooks/useResolve';
 import { openPath, revealItemInDir } from '@tauri-apps/plugin-opener';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
@@ -11,6 +12,7 @@ interface FileContextMenuItemsProps {
   onClose: () => void;
   onShowHistory?: (depotPath: string, localPath: string) => void;
   onDiffAgainstHave?: (depotPath: string, localPath: string) => void;
+  onResolve?: (depotPath: string, localPath: string) => void;
 }
 
 /**
@@ -31,14 +33,17 @@ export function FileContextMenuItems({
   onClose,
   onShowHistory,
   onDiffAgainstHave,
+  onResolve,
 }: FileContextMenuItemsProps) {
   const { checkout, revert } = useFileOperations();
+  const { isFileUnresolved } = useUnresolvedFiles();
 
   // Determine available actions based on file status
   const canCheckout = file.status === FileStatus.Synced || file.status === FileStatus.OutOfDate;
   const canRevert = file.status === FileStatus.CheckedOut ||
                     file.status === FileStatus.Added ||
                     file.status === FileStatus.Deleted;
+  const isConflicted = isFileUnresolved(file.depotPath) || file.status === FileStatus.Conflict;
 
   async function handleCheckout() {
     try {
@@ -104,8 +109,35 @@ export function FileContextMenuItems({
     }
   }
 
+  function handleResolve() {
+    if (onResolve) {
+      onResolve(file.depotPath, file.localPath);
+    }
+    onClose();
+  }
+
   return (
     <>
+      {isConflicted && (
+        <>
+          <button
+            onClick={handleResolve}
+            className={cn(
+              'w-full px-4 py-2 text-left text-sm text-yellow-400',
+              'hover:bg-accent',
+              'flex items-center justify-between gap-6'
+            )}
+            data-testid="context-menu-resolve"
+          >
+            <span className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4" />
+              Resolve...
+            </span>
+          </button>
+          <div className="h-px bg-border my-1" />
+        </>
+      )}
+
       {canCheckout && (
         <>
           <button
