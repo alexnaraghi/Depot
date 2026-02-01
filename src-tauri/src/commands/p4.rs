@@ -1428,7 +1428,8 @@ fn parse_ztag_describe_shelved(output: &str) -> Result<Vec<P4ShelvedFile>, Strin
 /// Unshelve files from a changelist
 #[tauri::command]
 pub async fn p4_unshelve(
-    changelist_id: i32,
+    source_changelist_id: i32,
+    target_changelist_id: i32,
     file_paths: Option<Vec<String>>,
     server: Option<String>,
     user: Option<String>,
@@ -1439,9 +1440,9 @@ pub async fn p4_unshelve(
 
     cmd.arg("unshelve");
     cmd.arg("-s");
-    cmd.arg(changelist_id.to_string());
+    cmd.arg(source_changelist_id.to_string());
     cmd.arg("-c");
-    cmd.arg(changelist_id.to_string());
+    cmd.arg(target_changelist_id.to_string());
 
     // Add file paths if specified (for per-file unshelving)
     if let Some(paths) = file_paths {
@@ -1631,4 +1632,33 @@ pub async fn p4_reconcile_apply(
     }
 
     Ok(stdout.to_string())
+}
+
+/// Preview files needing resolution (without actually resolving)
+#[tauri::command]
+pub async fn p4_resolve_preview(
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<Vec<String>, String> {
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+    cmd.args(["resolve", "-n"]);
+
+    let output = cmd.output()
+        .map_err(|e| format!("Failed to execute p4 resolve -n: {}", e))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Parse output: lines like "//depot/path - merging ..." or "//depot/path - must resolve ..."
+    let files: Vec<String> = stdout
+        .lines()
+        .filter(|line| !line.is_empty())
+        .map(|line| {
+            // Extract depot path (everything before " - ")
+            line.split(" - ").next().unwrap_or(line).trim().to_string()
+        })
+        .collect();
+
+    Ok(files)
 }

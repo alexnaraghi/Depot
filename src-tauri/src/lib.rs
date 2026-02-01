@@ -40,6 +40,7 @@ pub fn run() {
             commands::p4_delete_shelf,
             commands::p4_reconcile_preview,
             commands::p4_reconcile_apply,
+            commands::p4_resolve_preview,
         ])
         .setup(|app| {
             // Get process manager for cleanup
