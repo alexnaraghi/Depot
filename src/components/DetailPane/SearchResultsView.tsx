@@ -13,6 +13,8 @@ interface SearchResultsViewProps {
   query: string;
   /** When true, the search is driven by the toolbar search bar (no local input shown) */
   toolbarDriven?: boolean;
+  /** When true, hides search input and result count (used for default CL listing) */
+  minimal?: boolean;
 }
 
 /**
@@ -26,7 +28,7 @@ interface SearchResultsViewProps {
  * - submitted: Client-side filter of prefetched submitted CLs
  * - depot: Backend p4 files command for depot path search
  */
-export function SearchResultsView({ searchType, query, toolbarDriven }: SearchResultsViewProps) {
+export function SearchResultsView({ searchType, query, toolbarDriven, minimal }: SearchResultsViewProps) {
   const { p4port, p4user, p4client } = useConnectionStore();
   const drillToFile = useDetailPaneStore(s => s.drillToFile);
   const navigate = useDetailPaneStore(s => s.navigate);
@@ -145,7 +147,7 @@ export function SearchResultsView({ searchType, query, toolbarDriven }: SearchRe
   return (
     <div className="flex flex-col h-full">
       {/* Search input - only shown for standalone (non-toolbar) mode */}
-      {!toolbarDriven && (
+      {!toolbarDriven && !minimal && (
         <div className="p-4 border-b border-border">
           <form onSubmit={handleDepotSearch} className="flex items-center gap-2">
             <div className="relative flex-1">
@@ -197,10 +199,13 @@ export function SearchResultsView({ searchType, query, toolbarDriven }: SearchRe
 
             {!submittedLoading && filteredSubmittedCLs && (
               <>
-                <div className="text-sm text-muted-foreground mb-4">
-                  {filteredSubmittedCLs.length} {filteredSubmittedCLs.length === 1 ? 'result' : 'results'}
-                  {effectiveQuery && !toolbarDriven && ` matching "${effectiveQuery}"`}
-                </div>
+                {!minimal && (
+                  <div className="text-sm text-muted-foreground mb-4">
+                    {effectiveQuery
+                      ? `${filteredSubmittedCLs.length} ${filteredSubmittedCLs.length === 1 ? 'result' : 'results'}${!toolbarDriven ? ` matching "${effectiveQuery}"` : ''}`
+                      : `${filteredSubmittedCLs.length} recent changelists`}
+                  </div>
+                )}
 
                 {filteredSubmittedCLs.slice(0, displayLimit).map((cl) => (
                   <button

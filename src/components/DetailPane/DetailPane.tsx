@@ -1,7 +1,6 @@
 import { useEffect, useDeferredValue } from 'react';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
 import { useSearchFilterStore } from '@/stores/searchFilterStore';
-import { WorkspaceSummaryView } from './WorkspaceSummaryView';
 import { FileDetailView } from './FileDetailView';
 import { ChangelistDetailView } from './ChangelistDetailView';
 import { RevisionDetailView } from './RevisionDetailView';
@@ -61,7 +60,7 @@ export function DetailPane() {
         {/* Normal selection routing (hidden when filter active) */}
         {!isFilterActive && (
           <>
-            {selection.type === 'none' && <WorkspaceSummaryView />}
+            {selection.type === 'none' && <SearchResultsView searchType="submitted" query="" minimal />}
 
             {selection.type === 'file' && (
               <FileDetailView depotPath={selection.depotPath} localPath={selection.localPath} />

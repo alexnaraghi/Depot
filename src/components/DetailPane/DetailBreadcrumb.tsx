@@ -1,6 +1,5 @@
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { useDetailPaneStore, DetailSelection } from '@/stores/detailPaneStore';
-import { cn } from '@/lib/utils';
 
 /**
  * Breadcrumb navigation bar for the detail pane
@@ -10,6 +9,7 @@ export function DetailBreadcrumb() {
   const selection = useDetailPaneStore(s => s.selection);
   const history = useDetailPaneStore(s => s.history);
   const goBack = useDetailPaneStore(s => s.goBack);
+  const clear = useDetailPaneStore(s => s.clear);
 
   // Don't render breadcrumb for workspace summary (no navigation)
   if (selection.type === 'none') {
@@ -40,12 +40,8 @@ export function DetailBreadcrumb() {
     <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-background">
       {/* Back button */}
       <button
-        onClick={goBack}
-        disabled={history.length === 0}
-        className={cn(
-          'p-1 rounded hover:bg-accent transition-colors',
-          history.length === 0 && 'opacity-50 cursor-not-allowed'
-        )}
+        onClick={history.length > 0 ? goBack : clear}
+        className="p-1 rounded hover:bg-accent transition-colors"
         title="Go back (Esc)"
         data-testid="breadcrumb-back"
       >
