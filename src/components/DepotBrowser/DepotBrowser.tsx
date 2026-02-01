@@ -2,6 +2,7 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { Tree } from 'react-arborist';
 import { useDepotTree } from './useDepotTree';
 import { DepotNode } from './DepotNode';
+import { DepotContextMenu } from './DepotContextMenu';
 import { AlertCircle } from 'lucide-react';
 import { useDndManager } from '@/contexts/DndContext';
 
@@ -16,6 +17,7 @@ export function DepotBrowser() {
   const dndManager = useDndManager();
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerHeight, setContainerHeight] = useState(400);
+  const [contextMenu, setContextMenu] = useState<{ depotPath: string; isFolder: boolean; x: number; y: number } | null>(null);
 
   // Measure container height and update on resize
   useEffect(() => {
@@ -60,6 +62,11 @@ export function DepotBrowser() {
       loadChildren(nodeId);
     }
   }, [treeData, loadChildren]);
+
+  // Handle context menu
+  const handleContextMenu = useCallback((menu: { depotPath: string; isFolder: boolean; x: number; y: number }) => {
+    setContextMenu(menu);
+  }, []);
 
   // Loading state
   if (isLoading) {
@@ -118,8 +125,19 @@ export function DepotBrowser() {
         dndManager={dndManager}
         onToggle={handleToggle}
       >
-        {(props) => <DepotNode {...props} loadingPaths={loadingPaths} />}
+        {(props) => <DepotNode {...props} loadingPaths={loadingPaths} onContextMenu={handleContextMenu} />}
       </Tree>
+
+      {/* Context menu */}
+      {contextMenu && (
+        <DepotContextMenu
+          depotPath={contextMenu.depotPath}
+          isFolder={contextMenu.isFolder}
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   );
 }
