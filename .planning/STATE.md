@@ -10,20 +10,20 @@ See: .planning/PROJECT.md (updated 2026-01-29)
 ## Current Position
 
 Milestone: v3.0 Daily Driver
-Phase: 13 of 15 (Workspace & Stream Switching)
-Plan: 5 of 5 in current phase
-Status: Phase complete
-Last activity: 2026-02-01 — Completed 13-05 (Integration Polish)
+Phase: 14 of 15 (Depot Browser)
+Plan: 1 of 5 in current phase
+Status: In progress
+Last activity: 2026-02-01 — Completed 14-01 (Backend Commands)
 
-Progress: [█████░░░░░] 58% (23 of ~40 estimated plans for v3.0)
+Progress: [█████░░░░░] 60% (24 of ~40 estimated plans for v3.0)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 54 (14 v1.0 + 17 v2.0 + 23 v3.0)
+- Total plans completed: 55 (14 v1.0 + 17 v2.0 + 24 v3.0)
 - Quick tasks completed: 6
 - Average duration: 6 min
-- Total execution time: ~359 min (104 v1.0 + ~112 v2.0 + 143 v3.0)
+- Total execution time: ~362 min (104 v1.0 + ~112 v2.0 + 146 v3.0)
 
 **By Phase (v3.0):**
 
@@ -35,11 +35,12 @@ Progress: [█████░░░░░] 58% (23 of ~40 estimated plans for v3
 | 11.1 | 5 | 44 min | 9 min |
 | 12 | 4 | 38 min | 10 min |
 | 13 | 5 | 25 min | 5 min |
+| 14 | 1 | 3 min | 3 min |
 
 **Recent Trend:**
-- Last 5 plans: 3 min (13-02), 6 min (13-03), 8 min (13-04), 5 min (13-05)
-- Trend: Phase 13 complete with consistent fast execution
-- Phase 13-05: Integration polish with graceful disconnected state (5 min)
+- Last 5 plans: 6 min (13-03), 8 min (13-04), 5 min (13-05), 3 min (14-01)
+- Trend: Phase 14 started with fast backend implementation
+- Phase 14-01: Backend commands for depot browsing (3 min)
 
 *Updated after each plan completion*
 
@@ -104,6 +105,8 @@ Recent decisions affecting v3.0 work:
 - Auto-shelve for default CL (v3.0/13-03) — Stream switching shelves default CL files by creating new numbered CL, reopening files, then shelving
 - Pre-switch file confirmation (v3.0/13-03) — ShelveConfirmDialog shows grouped file list before stream switch with open files
 - Graceful degradation for disconnected states (v3.0/13-05) — Header components show static fallback text when server unavailable instead of hiding or null
+- p4_dirs empty result handling (v3.0/14-01) — "no such file(s)" errors return empty array for graceful UI handling
+- depot_type field naming (v3.0/14-01) — Use depot_type instead of type to avoid reserved keyword conflicts
 
 ### Roadmap Evolution
 
@@ -155,15 +158,15 @@ Recent decisions affecting v3.0 work:
 ## Session Continuity
 
 Last session: 2026-02-01
-Stopped at: Completed 13-05 (Integration Polish) - Phase 13 complete
+Stopped at: Completed 14-01 (Backend Commands)
 Resume file: None
 
 **Recent completed plans:**
-- 13-01: Backend commands for workspace/stream switching (3 min)
 - 13-02: Workspace switcher UI with dropdown and query invalidation (3 min)
 - 13-03: Stream switcher with shelve confirmation dialog (6 min)
 - 13-04: Client spec viewer dialog with copy functionality (8 min)
 - 13-05: Integration polish with graceful degradation (5 min)
+- 14-01: Backend commands for depot browsing (3 min)
 
 ---
-**Next step:** Begin Phase 14: Depot Browser
+**Next step:** Continue Phase 14: Plan 14-02 (Depot Browser UI)
