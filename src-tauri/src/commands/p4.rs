@@ -1781,3 +1781,96 @@ pub async fn p4_resolve_preview(
 
     Ok(files)
 }
+
+/// File result from p4 files command
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct P4FileResult {
+    pub depot_path: String,
+    pub revision: i32,
+    pub action: String,
+    pub change: i32,
+    pub file_type: String,
+}
+
+/// Search depot for files matching a pattern
+/// Example: p4 files //depot/.../*.cpp
+#[tauri::command]
+pub async fn p4_files(
+    pattern: String,
+    max_results: u32,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<Vec<P4FileResult>, String> {
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+    cmd.arg("files");
+    cmd.arg(&pattern);
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 files: {}", e))?;
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    // Check for errors (but allow "no such file(s)" as valid empty result)
+    if !output.status.success() && !stderr.contains("no such file(s)") {
+        return Err(stderr.to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    // Parse output lines: format is "//depot/path#rev - action change N (type)"
+    // Example: "//depot/main/src/foo.cpp#5 - edit change 12345 (text)"
+    let mut results = Vec::new();
+
+    for line in stdout.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+
+        // Parse: //depot/path#rev - action change N (type)
+        if let Some((path_rev, rest)) = line.split_once(" - ") {
+            // Extract depot path and revision
+            if let Some((depot_path, rev_str)) = path_rev.rsplit_once('#') {
+                let revision = rev_str.parse::<i32>().unwrap_or(0);
+
+                // Parse action, change, and file type
+                let parts: Vec<&str> = rest.split_whitespace().collect();
+                let action = parts.first().unwrap_or(&"").to_string();
+
+                // Find "change" keyword and parse the number after it
+                let change = parts
+                    .iter()
+                    .position(|&s| s == "change")
+                    .and_then(|idx| parts.get(idx + 1))
+                    .and_then(|s| s.parse::<i32>().ok())
+                    .unwrap_or(0);
+
+                // File type is in parentheses at the end
+                let file_type = rest
+                    .rsplit_once('(')
+                    .and_then(|(_, typ)| typ.strip_suffix(')'))
+                    .unwrap_or("text")
+                    .to_string();
+
+                results.push(P4FileResult {
+                    depot_path: depot_path.to_string(),
+                    revision,
+                    action,
+                    change,
+                    file_type,
+                });
+
+                // Limit results
+                if results.len() >= max_results as usize {
+                    break;
+                }
+            }
+        }
+    }
+
+    Ok(results)
+}

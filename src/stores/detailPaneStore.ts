@@ -9,7 +9,8 @@ export type DetailSelection =
   | { type: 'none' }                                           // Workspace summary
   | { type: 'file'; depotPath: string; localPath: string; fromCl?: number }  // File detail
   | { type: 'changelist'; changelist: P4Changelist }           // CL detail
-  | { type: 'revision'; depotPath: string; localPath: string; revision: P4Revision };  // Revision detail
+  | { type: 'revision'; depotPath: string; localPath: string; revision: P4Revision }  // Revision detail
+  | { type: 'search'; searchType: 'submitted' | 'depot'; query: string };  // Search results
 
 interface DetailPaneState {
   // State
@@ -23,6 +24,7 @@ interface DetailPaneState {
   selectChangelist: (changelist: P4Changelist) => void;
   drillToFile: (depotPath: string, localPath: string, fromCl?: number) => void;
   drillToRevision: (depotPath: string, localPath: string, revision: P4Revision) => void;
+  navigateToSearch: (searchType: 'submitted' | 'depot', query: string) => void;
   clear: () => void;
 }
 
@@ -108,6 +110,24 @@ export const useDetailPaneStore = create<DetailPaneState>((set, get) => ({
 
     set({
       selection: { type: 'revision', depotPath, localPath, revision },
+      history: newHistory,
+    });
+  },
+
+  navigateToSearch: (searchType, query) => {
+    // Navigate to search results - preserve full history
+    const current = get().selection;
+    let newHistory = get().history;
+
+    if (current.type !== 'none') {
+      newHistory = [...newHistory, current];
+      if (newHistory.length > 3) {
+        newHistory = newHistory.slice(1);
+      }
+    }
+
+    set({
+      selection: { type: 'search', searchType, query },
       history: newHistory,
     });
   },

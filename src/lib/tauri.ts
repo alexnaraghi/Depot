@@ -409,3 +409,28 @@ export async function invokeP4ResolvePreview(
 ): Promise<string[]> {
   return invoke<string[]>('p4_resolve_preview', { server, user, client });
 }
+
+/**
+ * File result from p4 files command
+ */
+export interface P4FileResult {
+  depot_path: string;
+  revision: number;
+  action: string;
+  change: number;
+  file_type: string;
+}
+
+/**
+ * Search depot for files matching a pattern.
+ * Example: p4 files //depot/.../*.cpp
+ */
+export async function invokeP4Files(
+  pattern: string,
+  maxResults: number = 50,
+  server?: string,
+  user?: string,
+  client?: string
+): Promise<P4FileResult[]> {
+  return invoke<P4FileResult[]>('p4_files', { pattern, maxResults, server, user, client });
+}

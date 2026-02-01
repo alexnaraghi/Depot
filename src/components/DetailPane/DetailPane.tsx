@@ -4,6 +4,7 @@ import { WorkspaceSummaryView } from './WorkspaceSummaryView';
 import { FileDetailView } from './FileDetailView';
 import { ChangelistDetailView } from './ChangelistDetailView';
 import { RevisionDetailView } from './RevisionDetailView';
+import { SearchResultsView } from './SearchResultsView';
 import { DetailBreadcrumb } from './DetailBreadcrumb';
 
 /**
@@ -64,6 +65,10 @@ export function DetailPane() {
               revision={selection.revision}
             />
           </div>
+        )}
+
+        {selection.type === 'search' && (
+          <SearchResultsView searchType={selection.searchType} query={selection.query} />
         )}
       </div>
     </div>

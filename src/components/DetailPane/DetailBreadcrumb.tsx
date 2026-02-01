@@ -102,5 +102,7 @@ function getSegmentLabel(selection: DetailSelection): string {
       return `CL ${selection.changelist.id === 0 ? 'default' : selection.changelist.id}`;
     case 'revision':
       return `#${selection.revision.rev}`;
+    case 'search':
+      return selection.searchType === 'submitted' ? 'Search CLs' : 'Search Depot';
   }
 }
