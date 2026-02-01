@@ -1,10 +1,11 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueries } from '@tanstack/react-query';
 import { useChangelistStore } from '@/stores/changelistStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { invokeP4Changes, invokeP4Opened, invokeP4DescribeShelved, type P4ShelvedFile } from '@/lib/tauri';
 import { useOperationStore } from '@/store/operation';
-import { getVerboseLogging } from '@/lib/settings';
+import { getVerboseLogging, getAutoRefreshInterval } from '@/lib/settings';
+import { useWindowFocus } from '@/hooks/useWindowFocus';
 import { buildChangelistTree, ChangelistTreeNode } from '@/utils/treeBuilder';
 import { P4Changelist, P4File, FileStatus } from '@/types/p4';
 
@@ -23,7 +24,29 @@ export function useChangelists(): {
 } {
   const { changelists, setChangelists } = useChangelistStore();
   const { status, p4port, p4user, p4client } = useConnectionStore();
+  const { currentOperation } = useOperationStore();
+  const isWindowFocused = useWindowFocus();
   const isConnected = status === 'connected';
+
+  // Load auto-refresh interval from settings
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState<number>(0);
+  useEffect(() => {
+    getAutoRefreshInterval().then(setAutoRefreshInterval);
+  }, []);
+
+  // Auto-refresh is active when:
+  // 1. Connected to P4
+  // 2. No active operation
+  // 3. Window is focused
+  // 4. User has enabled auto-refresh (interval > 0)
+  const isAutoRefreshActive =
+    isConnected &&
+    !currentOperation &&
+    isWindowFocused &&
+    autoRefreshInterval > 0;
+
+  // Compute refetch interval value (number | false)
+  const refetchIntervalValue: number | false = isAutoRefreshActive ? autoRefreshInterval : false;
 
   // Load pending changelists (only when connected)
   const { data: clData, isLoading: clLoading } = useQuery({
@@ -39,6 +62,7 @@ export function useChangelists(): {
     refetchOnWindowFocus: false,
     staleTime: 30000,
     enabled: isConnected,
+    refetchInterval: refetchIntervalValue,
   });
 
   // Load opened files (to associate with changelists) (only when connected)
@@ -55,6 +79,7 @@ export function useChangelists(): {
     refetchOnWindowFocus: false,
     staleTime: 30000,
     enabled: isConnected,
+    refetchInterval: refetchIntervalValue,
   });
 
   // Merge changelist data with opened files
@@ -138,6 +163,7 @@ export function useChangelists(): {
       enabled: isConnected,
       staleTime: 30000,
       refetchOnWindowFocus: false,
+      refetchInterval: refetchIntervalValue,
     })),
   });
 
