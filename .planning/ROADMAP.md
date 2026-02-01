@@ -131,10 +131,13 @@ Plans:
   2. Filtered columns show match count badges and subtle background tint
   3. Pressing Escape or clearing search restores unfiltered state
   4. Command palette provides "Search submitted changelists" and "Search depot" for deep searches
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 12-01: TBD during planning
+- [ ] 12-01-PLAN.md — Search filter store + rewire SearchBar for in-place filtering
+- [ ] 12-02-PLAN.md — Wire fuzzy filtering into FileTree and ChangelistPanel (dim/highlight)
+- [ ] 12-03-PLAN.md — Command palette deep search commands + detail pane search results
+- [ ] 12-04-PLAN.md — Visual polish (tint, result-click dismiss) + verification checkpoint
 
 #### Phase 13: Workspace & Stream Switching
 **Goal**: Fast switching between workspaces and streams without modal dialogs
