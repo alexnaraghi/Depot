@@ -46,6 +46,10 @@ Progress: [██████████] 100% (26 of 26 v3.0 plans)
 
 Decisions are logged in PROJECT.md Key Decisions table.
 
+### Pending Todos
+
+3 pending — see `.planning/todos/pending/`
+
 ### Blockers/Concerns
 
 None — all v3.0 phases complete.
