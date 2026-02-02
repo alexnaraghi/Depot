@@ -7,6 +7,7 @@ import {
   CommandList,
   CommandShortcut,
 } from '@/components/ui/command';
+import { useQueryClient } from '@tanstack/react-query';
 import { SHORTCUTS } from '@/lib/shortcuts';
 import { useFileTreeStore } from '@/stores/fileTreeStore';
 import { useChangelistStore } from '@/stores/changelistStore';
@@ -41,6 +42,7 @@ interface CommandPaletteProps {
  * - Custom event dispatch for cross-component communication
  */
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
+  const queryClient = useQueryClient();
   const selectedFile = useFileTreeStore(s => s.selectedFile);
   const hasFileSelected = selectedFile !== null;
   const changelists = useChangelistStore(s => s.changelists);
@@ -64,10 +66,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           <CommandItem
             onSelect={() =>
               executeCommand(() => {
-                const queryClient = (window as any).__queryClient;
-                if (queryClient) {
-                  queryClient.invalidateQueries();
-                }
+                queryClient.invalidateQueries();
               })
             }
           >

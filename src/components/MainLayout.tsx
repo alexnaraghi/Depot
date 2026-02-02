@@ -91,11 +91,6 @@ export function MainLayout() {
   const { checkout, revert } = useFileOperations();
   const { diffAgainstWorkspace } = useDiff();
 
-  // Expose queryClient globally for command palette
-  useEffect(() => {
-    (window as any).__queryClient = queryClient;
-  }, [queryClient]);
-
   // Toolbar action handlers
   const [isRefreshing, setIsRefreshing] = useState(false);
 
