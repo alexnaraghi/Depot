@@ -62,15 +62,13 @@ None — all v3.0 phases complete.
 |---|-------------|------|--------|-----------|
 | 005 | Fix detail pane selection and CL click behavior | 2026-02-01 | 1c7a040 | [005-fix-detail-pane-selection-and-cl-click](./quick/005-fix-detail-pane-selection-and-cl-click/) |
 | 006 | Architecture report short-term fixes | 2026-02-02 | 9b2e63b | [006-architecture-report-short-term-fixes](./quick/006-architecture-report-short-term-fixes/) |
-| 007 | Address "now" architecture improvements (partial) | 2026-02-02 | 8b05c4c | [007-address-now-architecture-improvements](./quick/007-address-now-architecture-improvements/) |
+| 007 | Address "now" architecture improvements | 2026-02-02 | e481331 | [007-address-now-architecture-improvements](./quick/007-address-now-architecture-improvements/) |
 
 ## Session Continuity
 
 Last session: 2026-02-02
-Stopped at: Completed quick task 007 (partial - command store only)
+Stopped at: Completed quick task 007 (all 4 items)
 Resume file: None
-
-**Note:** Quick task 007 revealed larger scope than estimated. Completed commandStore creation (Task 2). Tasks 1, 3, 4 deferred - see 007-SUMMARY.md for remaining work.
 
 ---
 **Next step:** `/gsd:new-milestone` to define next milestone
