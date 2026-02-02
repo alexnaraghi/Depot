@@ -9,6 +9,7 @@ export const settingsSchema = z.object({
   editorPath: z.string(),
   verboseLogging: z.boolean(),
   autoRefreshInterval: z.number().min(0).max(600000),
+  showDeletedDepotFiles: z.boolean(),
 });
 
 export type P4Settings = z.infer<typeof settingsSchema>;
@@ -22,4 +23,5 @@ export const defaultSettings: P4Settings = {
   editorPath: '',
   verboseLogging: false,
   autoRefreshInterval: 300000,
+  showDeletedDepotFiles: false,
 };

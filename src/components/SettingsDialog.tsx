@@ -35,6 +35,7 @@ interface Preferences {
   editorPath: string;
   verboseLogging: boolean;
   autoRefreshInterval: number;
+  showDeletedDepotFiles: boolean;
 }
 
 interface SettingsDialogProps {
@@ -50,6 +51,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       editorPath: '',
       verboseLogging: false,
       autoRefreshInterval: 300000,
+      showDeletedDepotFiles: false,
     },
     mode: 'onSubmit',
   });
@@ -65,6 +67,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             editorPath: settings.editorPath || '',
             verboseLogging: settings.verboseLogging ?? false,
             autoRefreshInterval: settings.autoRefreshInterval ?? 300000,
+            showDeletedDepotFiles: settings.showDeletedDepotFiles ?? false,
           });
         } catch (error) {
           console.error('Failed to load settings:', error);
@@ -238,6 +241,32 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                       Automatically refresh workspace state. Pauses during operations and when window is minimized.
                     </p>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="border-t border-border pt-4 mt-2">
+              <h3 className="text-sm font-medium text-foreground mb-3">Depot Browser</h3>
+              <FormField
+                control={form.control}
+                name="showDeletedDepotFiles"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-3">
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className="h-4 w-4 rounded border-border accent-primary"
+                      />
+                    </FormControl>
+                    <div>
+                      <FormLabel className="text-sm">Show Deleted Files</FormLabel>
+                      <p className="text-xs text-muted-foreground">
+                        Show deleted files and folders in the depot browser
+                      </p>
+                    </div>
                   </FormItem>
                 )}
               />

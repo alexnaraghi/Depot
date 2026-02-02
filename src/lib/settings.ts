@@ -22,6 +22,7 @@ export async function loadSettings(): Promise<P4Settings> {
     editorPath: (await store.get<string>('editorPath')) || defaultSettings.editorPath,
     verboseLogging: (await store.get<boolean>('verboseLogging')) ?? defaultSettings.verboseLogging,
     autoRefreshInterval: (await store.get<number>('autoRefreshInterval')) ?? defaultSettings.autoRefreshInterval,
+    showDeletedDepotFiles: (await store.get<boolean>('showDeletedDepotFiles')) ?? defaultSettings.showDeletedDepotFiles,
   };
 }
 
@@ -35,6 +36,7 @@ export async function saveSettings(settings: P4Settings): Promise<void> {
   await store.set('editorPath', settings.editorPath);
   await store.set('verboseLogging', settings.verboseLogging);
   await store.set('autoRefreshInterval', settings.autoRefreshInterval);
+  await store.set('showDeletedDepotFiles', settings.showDeletedDepotFiles);
   await store.save();
 }
 
@@ -46,6 +48,11 @@ export async function getVerboseLogging(): Promise<boolean> {
 export async function getAutoRefreshInterval(): Promise<number> {
   const store = await getStore();
   return (await store.get<number>('autoRefreshInterval')) ?? defaultSettings.autoRefreshInterval;
+}
+
+export async function getShowDeletedDepotFiles(): Promise<boolean> {
+  const store = await getStore();
+  return (await store.get<boolean>('showDeletedDepotFiles')) ?? false;
 }
 
 export async function getColumnWidths(): Promise<{ left: number; right: number }> {

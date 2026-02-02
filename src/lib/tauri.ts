@@ -21,6 +21,7 @@ export interface P4FileInfo {
   head_revision: number;
   changelist?: number;
   file_type: string;
+  head_action?: string;
 }
 
 export interface P4ChangelistInfo {

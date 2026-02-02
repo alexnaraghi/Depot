@@ -113,7 +113,10 @@ export function useFileTree() {
         // Pass depot path to query files (avoids -d flag issues with DVCS)
         const fileInfos = await invokeP4Fstat([], depotPath, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined);
         if (verbose) addOutputLine(`... returned ${fileInfos.length} items`, false);
-        const mappedFiles = fileInfos.map(mapP4FileInfo);
+        // Filter out files deleted at head (headAction=delete) - they don't exist in the depot
+        const mappedFiles = fileInfos
+          .filter(f => f.head_action !== 'delete')
+          .map(mapP4FileInfo);
         setFiles(mappedFiles);
         return mappedFiles;
       } finally {

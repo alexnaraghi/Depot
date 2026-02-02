@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { invokeP4Depots, invokeP4Dirs, invokeP4Files } from '@/lib/tauri';
+import { getShowDeletedDepotFiles } from '@/lib/settings';
 
 export interface DepotNodeData {
   id: string;           // Depot path (e.g., "//depot/projects")
@@ -64,10 +65,12 @@ export function useDepotTree() {
     setLoadingPaths(prev => new Set(prev).add(depotPath));
 
     try {
+      const showDeleted = await getShowDeletedDepotFiles();
+
       const [dirs, fileResults] = await Promise.all([
         invokeP4Dirs(
           `${depotPath}/*`,
-          false,
+          showDeleted,
           p4port ?? undefined,
           p4user ?? undefined,
           p4client ?? undefined
@@ -88,7 +91,7 @@ export function useDepotTree() {
       });
 
       const fileNodes: DepotNodeData[] = fileResults
-        .filter(f => f.action !== 'delete')
+        .filter(f => showDeleted || f.action !== 'delete')
         .map(f => {
           // Tauri serializes Rust snake_case as camelCase
           const path = (f as any).depotPath ?? (f as any).depot_path ?? '';

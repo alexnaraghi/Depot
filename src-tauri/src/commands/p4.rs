@@ -52,6 +52,7 @@ pub struct P4FileInfo {
     pub head_revision: i32,
     pub changelist: Option<i32>,
     pub file_type: String,
+    pub head_action: Option<String>,
 }
 
 /// Changelist information from p4 changes
@@ -268,6 +269,7 @@ fn build_file_info(fields: &HashMap<String, String>) -> Option<P4FileInfo> {
         .unwrap_or_else(|| "text".to_string());
 
     let changelist = fields.get("change").and_then(|s| s.parse::<i32>().ok());
+    let head_action = fields.get("headAction").cloned();
 
     // Derive status from fields
     let status = derive_file_status(&action, revision, head_revision);
@@ -281,6 +283,7 @@ fn build_file_info(fields: &HashMap<String, String>) -> Option<P4FileInfo> {
         head_revision,
         changelist,
         file_type,
+        head_action,
     })
 }
 
