@@ -4,7 +4,6 @@ import { FileContextMenuItems } from '@/components/shared/FileContextMenuItems';
 import { Download, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { invokeP4Sync, invokeP4ReconcileApply } from '@/lib/tauri';
-import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 
@@ -32,7 +31,6 @@ interface FileContextMenuProps {
  */
 export function FileContextMenu({ file, x, y, onClose, onShowHistory, onDiffAgainstHave, onResolve }: FileContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
-  const { p4port, p4user, p4client } = useConnectionStore();
   const queryClient = useQueryClient();
 
   // Handle click outside to close
@@ -70,9 +68,6 @@ export function FileContextMenu({ file, x, y, onClose, onShowHistory, onDiffAgai
       await invokeP4Sync(
         [file.depotPath],
         undefined,
-        p4port ?? undefined,
-        p4user ?? undefined,
-        p4client ?? undefined,
         () => {} // No progress callback needed for single file
       );
 
@@ -93,10 +88,7 @@ export function FileContextMenu({ file, x, y, onClose, onShowHistory, onDiffAgai
       // Use reconcile to add the file
       await invokeP4ReconcileApply(
         [file.localPath],
-        undefined, // Default changelist
-        p4port ?? undefined,
-        p4user ?? undefined,
-        p4client ?? undefined
+        undefined // Default changelist
       );
 
       // Refresh file tree and opened files

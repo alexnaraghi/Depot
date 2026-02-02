@@ -21,13 +21,7 @@ export function useFileHistory(depotPath: string, enabled: boolean = true) {
       const { addOutputLine } = useOperationStore.getState();
       const verbose = await getVerboseLogging();
       if (verbose) addOutputLine(`p4 filelog ${depotPath}`, false);
-      const result = await invokeP4Filelog(
-        depotPath,
-        maxRevisions,
-        p4port ?? undefined,
-        p4user ?? undefined,
-        p4client ?? undefined
-      );
+      const result = await invokeP4Filelog(depotPath, maxRevisions);
       if (verbose) addOutputLine(`... returned ${result.length} items`, false);
       return result;
     },

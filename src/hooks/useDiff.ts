@@ -1,6 +1,5 @@
 import { useCallback } from 'react';
 import { invokeP4PrintToFile, invokeLaunchDiffTool } from '@/lib/tauri';
-import { useConnectionStore } from '@/stores/connectionStore';
 import { useOperationStore } from '@/store/operation';
 import { loadSettings, getVerboseLogging } from '@/lib/settings';
 import toast from 'react-hot-toast';
@@ -13,8 +12,6 @@ import toast from 'react-hot-toast';
  * - diffAgainstWorkspace: Compare a revision against the local workspace file
  */
 export function useDiff() {
-  const { p4port, p4user, p4client } = useConnectionStore();
-
   /**
    * Diff two revisions of a file.
    */
@@ -34,8 +31,8 @@ export function useDiff() {
         if (verbose) addOutputLine(`p4 print ${depotPath}#${rev1}`, false);
         if (verbose) addOutputLine(`p4 print ${depotPath}#${rev2}`, false);
         const [leftPath, rightPath] = await Promise.all([
-          invokeP4PrintToFile(depotPath, rev1, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined),
-          invokeP4PrintToFile(depotPath, rev2, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined),
+          invokeP4PrintToFile(depotPath, rev1),
+          invokeP4PrintToFile(depotPath, rev2),
         ]);
         if (verbose) addOutputLine('... ok', false);
 
@@ -45,7 +42,7 @@ export function useDiff() {
         toast.error(`Failed to launch diff: ${error}`);
       }
     },
-    [p4port, p4user, p4client]
+    []
   );
 
   /**
@@ -73,13 +70,7 @@ export function useDiff() {
         const { addOutputLine } = useOperationStore.getState();
         const verbose = await getVerboseLogging();
         if (verbose) addOutputLine(`p4 print ${depotPath}#${revision}`, false);
-        const revisionPath = await invokeP4PrintToFile(
-          depotPath,
-          revision,
-          p4port ?? undefined,
-          p4user ?? undefined,
-          p4client ?? undefined
-        );
+        const revisionPath = await invokeP4PrintToFile(depotPath, revision);
 
         if (verbose) addOutputLine('... ok', false);
         // Launch diff tool with revision on left, workspace on right
@@ -88,7 +79,7 @@ export function useDiff() {
         toast.error(`Failed to launch diff: ${error}`);
       }
     },
-    [p4port, p4user, p4client]
+    []
   );
 
   return {

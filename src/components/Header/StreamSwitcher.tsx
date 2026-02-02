@@ -44,7 +44,7 @@ export function StreamSwitcher() {
   // Fetch streams when connection params are available
   useEffect(() => {
     if (status === 'connected' && p4port && p4user && p4client) {
-      invokeP4ListStreams(p4port, p4user, p4client)
+      invokeP4ListStreams()
         .then(setStreams)
         .catch(err => {
           console.error('Failed to list streams:', err);
@@ -84,29 +84,26 @@ export function StreamSwitcher() {
         if (clId === 0) {
           // Default changelist: create new CL, reopen files to it, then shelve
           const newClId = await invokeP4CreateChange(
-            `Auto-shelve before stream switch to ${getStreamShortName(pendingStream)}`,
-            p4port,
-            p4user,
-            p4client
+            `Auto-shelve before stream switch to ${getStreamShortName(pendingStream)}`
           );
 
           // Reopen files to new changelist
           const depotPaths = files.map(f => f.depot_path);
-          await invokeP4Reopen(depotPaths, newClId, p4port, p4user, p4client);
+          await invokeP4Reopen(depotPaths, newClId);
 
           // Shelve the new changelist
-          await invokeP4Shelve(newClId, [], p4port, p4user, p4client);
+          await invokeP4Shelve(newClId, []);
         } else {
           // Numbered changelist: shelve all files in it
-          await invokeP4Shelve(clId, [], p4port, p4user, p4client);
+          await invokeP4Shelve(clId, []);
         }
       }
 
       // All files shelved, now switch stream
-      await invokeP4UpdateClientStream(workspace, pendingStream, p4port, p4user);
+      await invokeP4UpdateClientStream(workspace, pendingStream);
 
       // Get fresh info and update connection store
-      const info = await invokeP4Info(p4port, p4user, p4client);
+      const info = await invokeP4Info();
       setConnected({
         workspace: info.client_name,
         stream: info.client_stream || undefined,
@@ -147,7 +144,7 @@ export function StreamSwitcher() {
 
     try {
       // Check for open files
-      const files = await invokeP4Opened(p4port, p4user, p4client);
+      const files = await invokeP4Opened();
 
       if (files.length > 0) {
         // Have open files - show confirmation dialog
@@ -156,10 +153,10 @@ export function StreamSwitcher() {
         // Don't set isSwitching to false - keeps dropdown disabled until shelve completes or cancels
       } else {
         // No open files - switch directly
-        await invokeP4UpdateClientStream(workspace, newStream, p4port, p4user);
+        await invokeP4UpdateClientStream(workspace, newStream);
 
         // Get fresh info and update connection store
-        const info = await invokeP4Info(p4port, p4user, p4client);
+        const info = await invokeP4Info();
         setConnected({
           workspace: info.client_name,
           stream: info.client_stream || undefined,

@@ -80,7 +80,7 @@ export function useFileTree() {
       const { addOutputLine } = useOperationStore.getState();
       const verbose = await getVerboseLogging();
       if (verbose) addOutputLine('p4 info', false);
-      const result = await invokeP4Info(p4port ?? undefined, p4user ?? undefined, p4client ?? undefined);
+      const result = await invokeP4Info();
       if (verbose) addOutputLine('... ok', false);
       return result;
     },
@@ -111,7 +111,7 @@ export function useFileTree() {
       setLoading(true);
       try {
         // Pass depot path to query files (avoids -d flag issues with DVCS)
-        const fileInfos = await invokeP4Fstat([], depotPath, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined);
+        const fileInfos = await invokeP4Fstat([], depotPath);
         if (verbose) addOutputLine(`... returned ${fileInfos.length} items`, false);
         // Filter out files deleted at head (headAction=delete) - they don't exist in the depot
         const mappedFiles = fileInfos

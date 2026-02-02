@@ -23,7 +23,7 @@ export function useSettings() {
       const { addOutputLine } = useOperationStore.getState();
       const verbose = await getVerboseLogging();
       if (verbose) addOutputLine('p4 info', false);
-      const info = await invokeP4Info(s.p4port, s.p4user, s.p4client);
+      const info = await invokeP4Info();
       if (verbose) addOutputLine('... ok', false);
       setConnected({
         workspace: info.client_name,

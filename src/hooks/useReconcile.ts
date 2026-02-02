@@ -24,7 +24,7 @@ export function useReconcile() {
       const { addOutputLine } = useOperationStore.getState();
       const verbose = await getVerboseLogging();
       if (verbose) addOutputLine('p4 info', false);
-      const result = await invokeP4Info(p4port ?? undefined, p4user ?? undefined, p4client ?? undefined);
+      const result = await invokeP4Info();
       if (verbose) addOutputLine('... ok', false);
       return result;
     },
@@ -47,12 +47,7 @@ export function useReconcile() {
       const { addOutputLine } = useOperationStore.getState();
       const verbose = await getVerboseLogging();
       if (verbose) addOutputLine('p4 reconcile -n', false);
-      const result = await invokeP4ReconcilePreview(
-        depotPath,
-        p4port ?? undefined,
-        p4user ?? undefined,
-        p4client ?? undefined
-      );
+      const result = await invokeP4ReconcilePreview(depotPath);
       if (verbose) addOutputLine(`... returned ${result.length} items`, false);
       return result;
     },
@@ -71,13 +66,7 @@ export function useReconcile() {
     mutationFn: async ({ filePaths, changelistId }) => {
       const { addOutputLine } = useOperationStore.getState();
       addOutputLine(`p4 reconcile ${filePaths.join(' ')}`, false);
-      return invokeP4ReconcileApply(
-        filePaths,
-        changelistId,
-        p4port ?? undefined,
-        p4user ?? undefined,
-        p4client ?? undefined
-      );
+      return invokeP4ReconcileApply(filePaths, changelistId);
     },
     onSuccess: (result, { changelistId }) => {
       const { addOutputLine } = useOperationStore.getState();

@@ -9,7 +9,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useConnectionStore } from '@/stores/connectionStore';
 import { useOperationStore } from '@/store/operation';
 import { invokeP4CreateChange, invokeP4EditChangeDescription, invokeP4Opened, invokeP4Reopen } from '@/lib/tauri';
 import { useQueryClient } from '@tanstack/react-query';
@@ -35,7 +34,6 @@ export function EditDescriptionDialog({
   open,
   onOpenChange,
 }: EditDescriptionDialogProps) {
-  const { p4port, p4user, p4client } = useConnectionStore();
   const { addOutputLine } = useOperationStore();
   const queryClient = useQueryClient();
   const [description, setDescription] = useState('');
@@ -57,29 +55,19 @@ export function EditDescriptionDialog({
       if (changelist.id === 0) {
         addOutputLine('p4 change -o (new changelist)', false);
         const newClId = await invokeP4CreateChange(
-          description,
-          p4port ?? undefined,
-          p4user ?? undefined,
-          p4client ?? undefined
+          description
         );
         addOutputLine(`Change ${newClId} created.`, false);
 
         // Move files from default CL to new numbered CL
-        const openedFiles = await invokeP4Opened(
-          p4port ?? undefined,
-          p4user ?? undefined,
-          p4client ?? undefined
-        );
+        const openedFiles = await invokeP4Opened();
         const defaultClFiles = openedFiles.filter(f => f.changelist === 0);
 
         if (defaultClFiles.length > 0) {
           addOutputLine(`p4 reopen -c ${newClId} (${defaultClFiles.length} files)`, false);
           await invokeP4Reopen(
             defaultClFiles.map(f => f.depot_path),
-            newClId,
-            p4port ?? undefined,
-            p4user ?? undefined,
-            p4client ?? undefined
+            newClId
           );
           addOutputLine(`Moved ${defaultClFiles.length} files to changelist ${newClId}.`, false);
           toast.success(`Created changelist #${newClId} with ${defaultClFiles.length} files`);
@@ -96,10 +84,7 @@ export function EditDescriptionDialog({
         addOutputLine(`p4 change -i (edit changelist ${changelist.id})`, false);
         await invokeP4EditChangeDescription(
           changelist.id,
-          description,
-          p4port ?? undefined,
-          p4user ?? undefined,
-          p4client ?? undefined
+          description
         );
         addOutputLine(`Change ${changelist.id} updated.`, false);
         toast.success(`Updated changelist #${changelist.id}`);

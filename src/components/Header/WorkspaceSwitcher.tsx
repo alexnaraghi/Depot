@@ -49,7 +49,7 @@ export function WorkspaceSwitcher() {
     setIsSwitching(true);
     try {
       // Validate new workspace and get updated info
-      const info = await invokeP4Info(p4port, p4user, newClient);
+      const info = await invokeP4Info();
 
       // Update connection store atomically
       setConnected({

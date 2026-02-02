@@ -51,7 +51,7 @@ export function ReconcilePreviewDialog({
   // Fetch pending changelists for the picker
   const { data: changelists } = useQuery({
     queryKey: ['p4', 'changes', 'pending', p4port, p4user, p4client],
-    queryFn: () => invokeP4Changes('pending', p4port ?? undefined, p4user ?? undefined, p4client ?? undefined),
+    queryFn: () => invokeP4Changes('pending'),
     enabled: open,
   });
 

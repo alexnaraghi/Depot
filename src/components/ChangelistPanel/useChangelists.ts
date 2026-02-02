@@ -55,7 +55,7 @@ export function useChangelists(): {
       const { addOutputLine } = useOperationStore.getState();
       const verbose = await getVerboseLogging();
       if (verbose) addOutputLine('p4 changes -s pending', false);
-      const result = await invokeP4Changes('pending', p4port ?? undefined, p4user ?? undefined, p4client ?? undefined);
+      const result = await invokeP4Changes('pending');
       if (verbose) addOutputLine(`... returned ${result.length} items`, false);
       return result;
     },
@@ -72,7 +72,7 @@ export function useChangelists(): {
       const { addOutputLine } = useOperationStore.getState();
       const verbose = await getVerboseLogging();
       if (verbose) addOutputLine('p4 opened', false);
-      const result = await invokeP4Opened(p4port ?? undefined, p4user ?? undefined, p4client ?? undefined);
+      const result = await invokeP4Opened();
       if (verbose) addOutputLine(`... returned ${result.length} items`, false);
       return result;
     },
@@ -159,10 +159,7 @@ export function useChangelists(): {
         const verbose = await getVerboseLogging();
         if (verbose) addOutputLine(`p4 describe -S ${clId}`, false);
         const result = await invokeP4DescribeShelved(
-          clId,
-          p4port ?? undefined,
-          p4user ?? undefined,
-          p4client ?? undefined
+          clId
         );
         if (verbose) addOutputLine(`... returned ${result.length} items`, false);
         return result;

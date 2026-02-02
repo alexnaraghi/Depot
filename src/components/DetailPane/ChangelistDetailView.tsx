@@ -3,7 +3,6 @@ import { P4Changelist, FileAction } from '@/types/p4';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
 import { useShelvedFilesQuery, useShelve } from '@/hooks/useShelvedFiles';
 import { invokeP4DeleteChange } from '@/lib/tauri';
-import { useConnectionStore } from '@/stores/connectionStore';
 import { useOperationStore } from '@/store/operation';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
@@ -27,7 +26,6 @@ interface ChangelistDetailViewProps {
 export function ChangelistDetailView({ changelist }: ChangelistDetailViewProps) {
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const { p4port, p4user, p4client } = useConnectionStore();
   const { addOutputLine } = useOperationStore();
   const queryClient = useQueryClient();
   const shelve = useShelve();
@@ -64,10 +62,7 @@ export function ChangelistDetailView({ changelist }: ChangelistDetailViewProps) 
     try {
       addOutputLine(`p4 change -d ${changelist.id}`, false);
       await invokeP4DeleteChange(
-        changelist.id,
-        p4port ?? undefined,
-        p4user ?? undefined,
-        p4client ?? undefined
+        changelist.id
       );
       addOutputLine(`Change ${changelist.id} deleted.`, false);
       toast.success(`Deleted changelist ${changelist.id}`);

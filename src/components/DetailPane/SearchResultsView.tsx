@@ -1,6 +1,5 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useConnectionStore } from '@/stores/connectionStore';
 import { useSearchFilterStore } from '@/stores/searchFilterStore';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
 import { invokeP4ChangesSubmitted, invokeP4Files, P4FileResult } from '@/lib/tauri';
@@ -29,7 +28,6 @@ interface SearchResultsViewProps {
  * - depot: Backend p4 files command for depot path search
  */
 export function SearchResultsView({ searchType, query, toolbarDriven, minimal }: SearchResultsViewProps) {
-  const { p4port, p4user, p4client } = useConnectionStore();
   const drillToFile = useDetailPaneStore(s => s.drillToFile);
   const navigate = useDetailPaneStore(s => s.navigate);
   const clearFilter = useSearchFilterStore(s => s.clearFilter);
@@ -45,7 +43,7 @@ export function SearchResultsView({ searchType, query, toolbarDriven, minimal }:
   // Submitted CL search
   const { data: submittedCLs, isLoading: submittedLoading } = useQuery({
     queryKey: ['p4', 'changes', 'submitted'],
-    queryFn: () => invokeP4ChangesSubmitted(500, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined),
+    queryFn: () => invokeP4ChangesSubmitted(500),
     enabled: searchType === 'submitted',
   });
 
@@ -67,7 +65,7 @@ export function SearchResultsView({ searchType, query, toolbarDriven, minimal }:
   const [depotPattern, setDepotPattern] = useState(query || '//...');
   const { data: depotFiles, isLoading: depotLoading, error: depotError, refetch: refetchDepot } = useQuery({
     queryKey: ['p4', 'files', depotPattern],
-    queryFn: () => invokeP4Files(depotPattern, 100, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined),
+    queryFn: () => invokeP4Files(depotPattern, 100),
     enabled: searchType === 'depot' && depotPattern.length > 0,
   });
 

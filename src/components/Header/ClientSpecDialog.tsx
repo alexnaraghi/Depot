@@ -38,7 +38,7 @@ export function ClientSpecDialog({
         setIsLoading(true);
         setError(null);
         try {
-          const result = await invokeP4GetClientSpec(workspace, p4port, p4user);
+          const result = await invokeP4GetClientSpec(workspace);
           setSpec(result);
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);

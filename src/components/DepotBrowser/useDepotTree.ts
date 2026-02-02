@@ -20,7 +20,7 @@ export interface DepotNodeData {
  * Track loaded paths separately to know when to fetch.
  */
 export function useDepotTree() {
-  const { p4port, p4user, p4client, status } = useConnectionStore();
+  const { p4port, p4user, status } = useConnectionStore();
   const isConnected = status === 'connected';
 
   const [treeData, setTreeData] = useState<DepotNodeData[]>([]);
@@ -31,7 +31,7 @@ export function useDepotTree() {
   const { isLoading, error } = useQuery({
     queryKey: ['depot', 'roots', p4port, p4user],
     queryFn: async () => {
-      const depots = await invokeP4Depots(p4port ?? undefined, p4user ?? undefined);
+      const depots = await invokeP4Depots();
 
       const roots: DepotNodeData[] = depots.map(depot => ({
         id: `//${depot.name}`,
@@ -70,17 +70,11 @@ export function useDepotTree() {
       const [dirs, fileResults] = await Promise.all([
         invokeP4Dirs(
           `${depotPath}/*`,
-          showDeleted,
-          p4port ?? undefined,
-          p4user ?? undefined,
-          p4client ?? undefined
+          showDeleted
         ),
         invokeP4Files(
           `${depotPath}/*`,
-          1000,
-          p4port ?? undefined,
-          p4user ?? undefined,
-          p4client ?? undefined
+          1000
         ),
       ]);
 
@@ -123,7 +117,7 @@ export function useDepotTree() {
         return next;
       });
     }
-  }, [p4port, p4user, p4client]);
+  }, []);
 
   return {
     treeData,

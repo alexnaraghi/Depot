@@ -11,7 +11,6 @@ import { P4Changelist, P4File } from '@/types/p4';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
 import { useSearchFilterStore } from '@/stores/searchFilterStore';
 import { invokeP4Reopen, invokeP4DeleteChange } from '@/lib/tauri';
-import { useConnectionStore } from '@/stores/connectionStore';
 import { useQueryClient } from '@tanstack/react-query';
 import { useOperationStore } from '@/store/operation';
 import { useDiff } from '@/hooks/useDiff';
@@ -40,7 +39,6 @@ interface ChangelistPanelProps {
 export function ChangelistPanel({ className }: ChangelistPanelProps) {
   const { treeData, isLoading, changelists } = useChangelists();
   const dndManager = useDndManager();
-  const { p4port, p4user, p4client } = useConnectionStore();
   const queryClient = useQueryClient();
   const { data: unresolvedFiles = [] } = useUnresolvedFiles();
   const treeRef = useRef<TreeApi<ChangelistTreeNode>>(null);
@@ -224,10 +222,7 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
       addOutputLine(`p4 reopen -c ${targetClId} ${filePaths.join(' ')}`, false);
       const result = await invokeP4Reopen(
         filePaths,
-        targetClId,
-        p4port ?? undefined,
-        p4user ?? undefined,
-        p4client ?? undefined
+        targetClId
       );
       addOutputLine(result.join('\n'), false);
       toast.success(`Moved ${filePaths.length} file(s) to changelist ${targetClId}`);
@@ -243,7 +238,7 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
       queryClient.setQueryData(['p4', 'opened'], previousOpened);
       queryClient.setQueryData(['p4', 'changes'], previousChanges);
     }
-  }, [p4port, p4user, p4client, queryClient, addOutputLine]);
+  }, [queryClient, addOutputLine]);
 
   // Handle submit button click on changelist
   const handleSubmitClick = useCallback((cl: P4Changelist) => {
@@ -281,7 +276,7 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
 
     try {
       addOutputLine(`p4 change -d ${cl.id}`, false);
-      await invokeP4DeleteChange(cl.id, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined);
+      await invokeP4DeleteChange(cl.id);
       addOutputLine(`Change ${cl.id} deleted.`, false);
       toast.success(`Deleted changelist #${cl.id}`);
       queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
@@ -289,7 +284,7 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
       addOutputLine(`Error: ${error}`, true);
       toast.error(`Failed to delete changelist: ${error}`);
     }
-  }, [p4port, p4user, p4client, queryClient, addOutputLine]);
+  }, [queryClient, addOutputLine]);
 
   // Handle right-click on file
   const handleContextMenu = useCallback((e: React.MouseEvent, file: P4File) => {

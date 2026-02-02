@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, Archive } from 'lucide-react';
 import { P4File, P4Changelist } from '@/types/p4';
 import { invokeP4Reopen } from '@/lib/tauri';
-import { useConnectionStore } from '@/stores/connectionStore';
 import { useOperationStore } from '@/store/operation';
 import { useQueryClient } from '@tanstack/react-query';
 import { useShelve } from '@/hooks/useShelvedFiles';
@@ -44,7 +43,6 @@ export function ChangelistContextMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   const submenuRef = useRef<HTMLDivElement>(null);
   const [submenuOpen, setSubmenuOpen] = useState(false);
-  const { p4port, p4user, p4client } = useConnectionStore();
   const { addOutputLine } = useOperationStore();
   const queryClient = useQueryClient();
   const shelve = useShelve();
@@ -85,10 +83,7 @@ export function ChangelistContextMenu({
       addOutputLine(`p4 reopen -c ${targetId} ${filePaths.join(' ')}`, false);
       const result = await invokeP4Reopen(
         filePaths,
-        targetId,
-        p4port ?? undefined,
-        p4user ?? undefined,
-        p4client ?? undefined
+        targetId
       );
       addOutputLine(result.join('\n'), false);
 

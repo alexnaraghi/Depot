@@ -31,10 +31,11 @@ export function useUnresolvedFiles() {
   const query = useQuery({
     queryKey: ['p4', 'unresolved', p4port, p4user, p4client],
     queryFn: async () => {
+      const { p4port, p4user, p4client } = useConnectionStore.getState();
       const result = await invoke<P4UnresolvedFile[]>('p4_fstat_unresolved', {
-        server: p4port,
-        user: p4user,
-        client: p4client,
+        server: p4port ?? undefined,
+        user: p4user ?? undefined,
+        client: p4client ?? undefined,
       });
       return result;
     },
@@ -70,7 +71,6 @@ export function useUnresolvedFiles() {
 export function useResolve() {
   const queryClient = useQueryClient();
   const { startOperation, completeOperation, addOutputLine } = useOperationStore();
-  const { p4port, p4user, p4client } = useConnectionStore();
 
   /**
    * Helper to run an operation with standard boilerplate
@@ -146,13 +146,16 @@ export function useResolve() {
         operationId: `resolve-${Date.now()}`,
         operationName: `Resolving ${depotPath}`,
         command: `p4 resolve -a${mode[0]} ${depotPath}`,
-        fn: () => invoke('p4_resolve_accept', {
-          depotPath,
-          mode,
-          server: p4port,
-          user: p4user,
-          client: p4client,
-        }),
+        fn: () => {
+          const { p4port, p4user, p4client } = useConnectionStore.getState();
+          return invoke('p4_resolve_accept', {
+            depotPath,
+            mode,
+            server: p4port ?? undefined,
+            user: p4user ?? undefined,
+            client: p4client ?? undefined,
+          });
+        },
         onSuccess: () => {
           addOutputLine(`${depotPath} - resolved (${mode})`, false);
         },
@@ -166,7 +169,7 @@ export function useResolve() {
         ],
       });
     },
-    [runOperation, addOutputLine, p4port, p4user, p4client]
+    [runOperation, addOutputLine]
   );
 
   /**
@@ -182,13 +185,16 @@ export function useResolve() {
         operationId: `merge-tool-${Date.now()}`,
         operationName: `Launching merge tool for ${depotPath}`,
         command: `Launching merge tool for ${depotPath}`,
-        fn: () => invoke<number>('launch_merge_tool', {
-          depotPath,
-          localPath,
-          server: p4port,
-          user: p4user,
-          client: p4client,
-        }),
+        fn: () => {
+          const { p4port, p4user, p4client } = useConnectionStore.getState();
+          return invoke<number>('launch_merge_tool', {
+            depotPath,
+            localPath,
+            server: p4port ?? undefined,
+            user: p4user ?? undefined,
+            client: p4client ?? undefined,
+          });
+        },
         onSuccess: (exitCode) => {
           if (exitCode === 0) {
             addOutputLine(`Merge tool completed successfully`, false);
@@ -209,7 +215,7 @@ export function useResolve() {
         ],
       });
     },
-    [runOperation, addOutputLine, p4port, p4user, p4client]
+    [runOperation, addOutputLine]
   );
 
   return {

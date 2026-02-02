@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useOperationStore } from '@/store/operation';
-import { useConnectionStore } from '@/stores/connectionStore';
 import { invokeP4Edit, invokeP4Revert, invokeP4Submit } from '@/lib/tauri';
 import toast from 'react-hot-toast';
 
@@ -29,7 +28,6 @@ interface RunOperationOptions<T> {
 export function useFileOperations() {
   const queryClient = useQueryClient();
   const { startOperation, completeOperation, addOutputLine } = useOperationStore();
-  const { p4port, p4user, p4client } = useConnectionStore();
 
   /**
    * Helper to run an operation with standard boilerplate
@@ -96,7 +94,7 @@ export function useFileOperations() {
       operationId: `edit-${Date.now()}`,
       operationName: `Checking out ${paths.length} file(s)`,
       command: `p4 edit ${paths.join(' ')}`,
-      fn: () => invokeP4Edit(paths, changelist, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined),
+      fn: () => invokeP4Edit(paths, changelist),
       onSuccess: (result) => {
         // Log each checked out file
         for (const file of result) {
@@ -111,7 +109,7 @@ export function useFileOperations() {
         ['p4', 'changes'],
       ],
     });
-  }, [runOperation, addOutputLine, p4port, p4user, p4client]);
+  }, [runOperation, addOutputLine]);
 
   /**
    * Revert files to depot state (discard local changes)
@@ -124,7 +122,7 @@ export function useFileOperations() {
       operationId: `revert-${Date.now()}`,
       operationName: `Reverting ${paths.length} file(s)`,
       command: `p4 revert ${paths.join(' ')}`,
-      fn: () => invokeP4Revert(paths, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined),
+      fn: () => invokeP4Revert(paths),
       onSuccess: (reverted) => {
         // Log each reverted file
         for (const depotPath of reverted) {
@@ -139,7 +137,7 @@ export function useFileOperations() {
         ['p4', 'changes'],
       ],
     });
-  }, [runOperation, addOutputLine, p4port, p4user, p4client]);
+  }, [runOperation, addOutputLine]);
 
   /**
    * Submit changelist to depot
@@ -153,7 +151,7 @@ export function useFileOperations() {
       operationId: `submit-${Date.now()}`,
       operationName: `Submitting changelist ${changelist}`,
       command: `p4 submit -c ${changelist}`,
-      fn: () => invokeP4Submit(changelist, description, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined),
+      fn: () => invokeP4Submit(changelist, description),
       onSuccess: (submittedCl) => {
         addOutputLine(`Change ${submittedCl} submitted.`, false);
       },
@@ -165,7 +163,7 @@ export function useFileOperations() {
         ['p4', 'changes'],
       ],
     });
-  }, [runOperation, addOutputLine, p4port, p4user, p4client]);
+  }, [runOperation, addOutputLine]);
 
   return {
     checkout,

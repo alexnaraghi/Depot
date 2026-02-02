@@ -1,4 +1,18 @@
 import { invoke, Channel } from '@tauri-apps/api/core';
+import { useConnectionStore } from '../stores/connectionStore';
+
+/**
+ * Get current connection args from the store.
+ * Auto-injected into all P4 commands.
+ */
+function getConnectionArgs() {
+  const { p4port, p4user, p4client } = useConnectionStore.getState();
+  return {
+    server: p4port ?? undefined,
+    user: p4user ?? undefined,
+    client: p4client ?? undefined,
+  };
+}
 
 // Types matching Rust structs
 export interface OutputLine {
@@ -102,8 +116,8 @@ export async function invokeKillAllProcesses(): Promise<void> {
  * Get P4 client/workspace info (client root, user, server).
  * Use to determine workspace root path on startup.
  */
-export async function invokeP4Info(server?: string, user?: string, client?: string): Promise<P4ClientInfo> {
-  return invoke<P4ClientInfo>('p4_info', { server, user, client });
+export async function invokeP4Info(): Promise<P4ClientInfo> {
+  return invoke<P4ClientInfo>('p4_info', getConnectionArgs());
 }
 
 /**
@@ -112,48 +126,48 @@ export async function invokeP4Info(server?: string, user?: string, client?: stri
  * @param paths - Specific paths to check, or empty for all workspace files
  * @param depotPath - Depot path to query (e.g., "//stream/main/...") when paths is empty
  */
-export async function invokeP4Fstat(paths: string[] = [], depotPath?: string, server?: string, user?: string, client?: string): Promise<P4FileInfo[]> {
-  return invoke<P4FileInfo[]>('p4_fstat', { paths, depotPath, server, user, client });
+export async function invokeP4Fstat(paths: string[] = [], depotPath?: string): Promise<P4FileInfo[]> {
+  return invoke<P4FileInfo[]>('p4_fstat', { paths, depotPath, ...getConnectionArgs() });
 }
 
 /**
  * Get all opened files in the workspace.
  * Use for displaying pending changelist files.
  */
-export async function invokeP4Opened(server?: string, user?: string, client?: string): Promise<P4FileInfo[]> {
-  return invoke<P4FileInfo[]>('p4_opened', { server, user, client });
+export async function invokeP4Opened(): Promise<P4FileInfo[]> {
+  return invoke<P4FileInfo[]>('p4_opened', getConnectionArgs());
 }
 
 /**
  * Get changelists (pending, submitted, or all).
  * Use for displaying changelist panel.
  */
-export async function invokeP4Changes(status?: string, server?: string, user?: string, client?: string): Promise<P4ChangelistInfo[]> {
-  return invoke<P4ChangelistInfo[]>('p4_changes', { status, server, user, client });
+export async function invokeP4Changes(status?: string): Promise<P4ChangelistInfo[]> {
+  return invoke<P4ChangelistInfo[]>('p4_changes', { status, ...getConnectionArgs() });
 }
 
 /**
  * Edit (checkout) files for modification.
  * Use when user wants to edit files.
  */
-export async function invokeP4Edit(paths: string[], changelist?: number, server?: string, user?: string, client?: string): Promise<P4FileInfo[]> {
-  return invoke<P4FileInfo[]>('p4_edit', { paths, changelist, server, user, client });
+export async function invokeP4Edit(paths: string[], changelist?: number): Promise<P4FileInfo[]> {
+  return invoke<P4FileInfo[]>('p4_edit', { paths, changelist, ...getConnectionArgs() });
 }
 
 /**
  * Revert files to depot state (discard local changes).
  * Use when user wants to discard changes.
  */
-export async function invokeP4Revert(paths: string[], server?: string, user?: string, client?: string): Promise<string[]> {
-  return invoke<string[]>('p4_revert', { paths, server, user, client });
+export async function invokeP4Revert(paths: string[]): Promise<string[]> {
+  return invoke<string[]>('p4_revert', { paths, ...getConnectionArgs() });
 }
 
 /**
  * Submit changelist to depot.
  * Use when user wants to commit their changes.
  */
-export async function invokeP4Submit(changelist: number, description?: string, server?: string, user?: string, client?: string): Promise<number> {
-  return invoke<number>('p4_submit', { changelist, description, server, user, client });
+export async function invokeP4Submit(changelist: number, description?: string): Promise<number> {
+  return invoke<number>('p4_submit', { changelist, description, ...getConnectionArgs() });
 }
 
 /**
@@ -166,14 +180,11 @@ export async function invokeP4Submit(changelist: number, description?: string, s
 export async function invokeP4Sync(
   paths: string[],
   depotPath: string | undefined,
-  server: string | undefined,
-  user: string | undefined,
-  client: string | undefined,
   onProgress: (progress: SyncProgress) => void
 ): Promise<string> {
   const channel = new Channel<SyncProgress>();
   channel.onmessage = onProgress;
-  return invoke<string>('p4_sync', { paths, depotPath, server, user, client, onProgress: channel });
+  return invoke<string>('p4_sync', { paths, depotPath, ...getConnectionArgs(), onProgress: channel });
 }
 
 /**
@@ -195,29 +206,29 @@ export async function invokeTestConnection(server: string, user: string, client:
 /**
  * Create a new changelist with the given description.
  */
-export async function invokeP4CreateChange(description: string, server?: string, user?: string, client?: string): Promise<number> {
-  return invoke<number>('p4_create_change', { description, server, user, client });
+export async function invokeP4CreateChange(description: string): Promise<number> {
+  return invoke<number>('p4_create_change', { description, ...getConnectionArgs() });
 }
 
 /**
  * Delete a changelist.
  */
-export async function invokeP4DeleteChange(changelist: number, server?: string, user?: string, client?: string): Promise<void> {
-  return invoke<void>('p4_delete_change', { changelist, server, user, client });
+export async function invokeP4DeleteChange(changelist: number): Promise<void> {
+  return invoke<void>('p4_delete_change', { changelist, ...getConnectionArgs() });
 }
 
 /**
  * Reopen files to a different changelist.
  */
-export async function invokeP4Reopen(paths: string[], changelist: number, server?: string, user?: string, client?: string): Promise<string[]> {
-  return invoke<string[]>('p4_reopen', { paths, changelist, server, user, client });
+export async function invokeP4Reopen(paths: string[], changelist: number): Promise<string[]> {
+  return invoke<string[]>('p4_reopen', { paths, changelist, ...getConnectionArgs() });
 }
 
 /**
  * Edit changelist description.
  */
-export async function invokeP4EditChangeDescription(changelist: number, description: string, server?: string, user?: string, client?: string): Promise<void> {
-  return invoke<void>('p4_edit_change_description', { changelist, description, server, user, client });
+export async function invokeP4EditChangeDescription(changelist: number, description: string): Promise<void> {
+  return invoke<void>('p4_edit_change_description', { changelist, description, ...getConnectionArgs() });
 }
 
 /**
@@ -239,12 +250,9 @@ export interface P4Revision {
  */
 export async function invokeP4Filelog(
   depotPath: string,
-  maxRevisions?: number,
-  server?: string,
-  user?: string,
-  client?: string
+  maxRevisions?: number
 ): Promise<P4Revision[]> {
-  return invoke<P4Revision[]>('p4_filelog', { depotPath, maxRevisions, server, user, client });
+  return invoke<P4Revision[]>('p4_filelog', { depotPath, maxRevisions, ...getConnectionArgs() });
 }
 
 /**
@@ -253,12 +261,9 @@ export async function invokeP4Filelog(
  */
 export async function invokeP4PrintToFile(
   depotPath: string,
-  revision: number,
-  server?: string,
-  user?: string,
-  client?: string
+  revision: number
 ): Promise<string> {
-  return invoke<string>('p4_print_to_file', { depotPath, revision, server, user, client });
+  return invoke<string>('p4_print_to_file', { depotPath, revision, ...getConnectionArgs() });
 }
 
 /**
@@ -277,12 +282,9 @@ export async function invokeLaunchDiffTool(
  * Get submitted changelists with full descriptions.
  */
 export async function invokeP4ChangesSubmitted(
-  maxChanges?: number,
-  server?: string,
-  user?: string,
-  client?: string
+  maxChanges?: number
 ): Promise<P4ChangelistInfo[]> {
-  return invoke<P4ChangelistInfo[]>('p4_changes_submitted', { maxChanges, server, user, client });
+  return invoke<P4ChangelistInfo[]>('p4_changes_submitted', { maxChanges, ...getConnectionArgs() });
 }
 
 /**
@@ -311,12 +313,9 @@ export interface ReconcilePreview {
  */
 export async function invokeP4Shelve(
   changelistId: number,
-  filePaths: string[],
-  server?: string,
-  user?: string,
-  client?: string
+  filePaths: string[]
 ): Promise<string> {
-  return invoke<string>('p4_shelve', { changelistId, filePaths, server, user, client });
+  return invoke<string>('p4_shelve', { changelistId, filePaths, ...getConnectionArgs() });
 }
 
 /**
@@ -324,12 +323,9 @@ export async function invokeP4Shelve(
  * Returns structured data about each shelved file.
  */
 export async function invokeP4DescribeShelved(
-  changelistId: number,
-  server?: string,
-  user?: string,
-  client?: string
+  changelistId: number
 ): Promise<P4ShelvedFile[]> {
-  return invoke<P4ShelvedFile[]>('p4_describe_shelved', { changelistId, server, user, client });
+  return invoke<P4ShelvedFile[]>('p4_describe_shelved', { changelistId, ...getConnectionArgs() });
 }
 
 /**
@@ -341,18 +337,13 @@ export async function invokeP4DescribeShelved(
 export async function invokeP4Unshelve(
   changelistId: number,
   targetChangelistId: number,
-  filePaths?: string[],
-  server?: string,
-  user?: string,
-  client?: string
+  filePaths?: string[]
 ): Promise<string> {
   return invoke<string>('p4_unshelve', {
     sourceChangelistId: changelistId,
     targetChangelistId,
     filePaths,
-    server,
-    user,
-    client
+    ...getConnectionArgs()
   });
 }
 
@@ -360,12 +351,9 @@ export async function invokeP4Unshelve(
  * Delete all shelved files from a changelist.
  */
 export async function invokeP4DeleteShelf(
-  changelistId: number,
-  server?: string,
-  user?: string,
-  client?: string
+  changelistId: number
 ): Promise<string> {
-  return invoke<string>('p4_delete_shelf', { changelistId, server, user, client });
+  return invoke<string>('p4_delete_shelf', { changelistId, ...getConnectionArgs() });
 }
 
 /**
@@ -375,12 +363,9 @@ export async function invokeP4DeleteShelf(
  * @param depotPath - Depot path to reconcile (e.g., "//stream/main/...") or undefined for "//..."
  */
 export async function invokeP4ReconcilePreview(
-  depotPath: string | undefined,
-  server?: string,
-  user?: string,
-  client?: string
+  depotPath: string | undefined
 ): Promise<ReconcilePreview[]> {
-  return invoke<ReconcilePreview[]>('p4_reconcile_preview', { depotPath, server, user, client });
+  return invoke<ReconcilePreview[]>('p4_reconcile_preview', { depotPath, ...getConnectionArgs() });
 }
 
 /**
@@ -391,24 +376,17 @@ export async function invokeP4ReconcilePreview(
  */
 export async function invokeP4ReconcileApply(
   filePaths: string[],
-  changelistId?: number,
-  server?: string,
-  user?: string,
-  client?: string
+  changelistId?: number
 ): Promise<string> {
-  return invoke<string>('p4_reconcile_apply', { filePaths, changelistId, server, user, client });
+  return invoke<string>('p4_reconcile_apply', { filePaths, changelistId, ...getConnectionArgs() });
 }
 
 /**
  * Preview files needing resolution after merge/unshelve operations.
  * Returns list of depot paths that require conflict resolution.
  */
-export async function invokeP4ResolvePreview(
-  server?: string,
-  user?: string,
-  client?: string
-): Promise<string[]> {
-  return invoke<string[]>('p4_resolve_preview', { server, user, client });
+export async function invokeP4ResolvePreview(): Promise<string[]> {
+  return invoke<string[]>('p4_resolve_preview', getConnectionArgs());
 }
 
 /**
@@ -428,12 +406,9 @@ export interface P4FileResult {
  */
 export async function invokeP4Files(
   pattern: string,
-  maxResults: number = 50,
-  server?: string,
-  user?: string,
-  client?: string
+  maxResults: number = 50
 ): Promise<P4FileResult[]> {
-  return invoke<P4FileResult[]>('p4_files', { pattern, maxResults, server, user, client });
+  return invoke<P4FileResult[]>('p4_files', { pattern, maxResults, ...getConnectionArgs() });
 }
 
 /**
@@ -465,22 +440,17 @@ export interface P4ClientSpec {
 /**
  * List available streams for the depot.
  */
-export async function invokeP4ListStreams(
-  server?: string,
-  user?: string,
-  client?: string
-): Promise<P4Stream[]> {
-  return invoke<P4Stream[]>('p4_list_streams', { server, user, client });
+export async function invokeP4ListStreams(): Promise<P4Stream[]> {
+  return invoke<P4Stream[]>('p4_list_streams', getConnectionArgs());
 }
 
 /**
  * Get client spec for a specific workspace.
  */
 export async function invokeP4GetClientSpec(
-  workspace: string,
-  server?: string,
-  user?: string
+  workspace: string
 ): Promise<P4ClientSpec> {
+  const { server, user } = getConnectionArgs();
   return invoke<P4ClientSpec>('p4_get_client_spec', { workspace, server, user });
 }
 
@@ -490,10 +460,9 @@ export async function invokeP4GetClientSpec(
  */
 export async function invokeP4UpdateClientStream(
   workspace: string,
-  newStream: string,
-  server?: string,
-  user?: string
+  newStream: string
 ): Promise<string> {
+  const { server, user } = getConnectionArgs();
   return invoke<string>('p4_update_client_stream', { workspace, newStream, server, user });
 }
 
@@ -508,7 +477,8 @@ export interface P4Depot {
 /**
  * List all depot roots with name and type.
  */
-export async function invokeP4Depots(server?: string, user?: string): Promise<P4Depot[]> {
+export async function invokeP4Depots(): Promise<P4Depot[]> {
+  const { server, user } = getConnectionArgs();
   return invoke<P4Depot[]>('p4_depots', { server, user });
 }
 
@@ -520,10 +490,7 @@ export async function invokeP4Depots(server?: string, user?: string): Promise<P4
  */
 export async function invokeP4Dirs(
   depotPath: string,
-  includeDeleted: boolean = false,
-  server?: string,
-  user?: string,
-  client?: string
+  includeDeleted: boolean = false
 ): Promise<string[]> {
-  return invoke<string[]>('p4_dirs', { depotPath, includeDeleted, server, user, client });
+  return invoke<string[]>('p4_dirs', { depotPath, includeDeleted, ...getConnectionArgs() });
 }

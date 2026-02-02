@@ -2,7 +2,6 @@ import { useEffect, useRef } from 'react';
 import { Download, Edit3, History, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { invokeP4Sync, invokeP4Edit } from '@/lib/tauri';
-import { useConnectionStore } from '@/stores/connectionStore';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
 import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -28,7 +27,6 @@ interface DepotContextMenuProps {
  */
 export function DepotContextMenu({ depotPath, isFolder, x, y, onClose }: DepotContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
-  const { p4port, p4user, p4client } = useConnectionStore();
   const queryClient = useQueryClient();
 
   // Handle click outside to close
@@ -61,9 +59,6 @@ export function DepotContextMenu({ depotPath, isFolder, x, y, onClose }: DepotCo
       await invokeP4Sync(
         [depotPath],
         undefined,
-        p4port ?? undefined,
-        p4user ?? undefined,
-        p4client ?? undefined,
         () => {} // No progress callback needed
       );
 
@@ -86,10 +81,7 @@ export function DepotContextMenu({ depotPath, isFolder, x, y, onClose }: DepotCo
 
       await invokeP4Edit(
         [depotPath],
-        undefined,
-        p4port ?? undefined,
-        p4user ?? undefined,
-        p4client ?? undefined
+        undefined
       );
 
       // Refresh opened files

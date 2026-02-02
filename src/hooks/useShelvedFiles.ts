@@ -27,12 +27,7 @@ export function useShelvedFilesQuery(changelistId: number) {
       const { addOutputLine } = useOperationStore.getState();
       const verbose = await getVerboseLogging();
       if (verbose) addOutputLine(`p4 describe -S ${changelistId}`, false);
-      const result = await invokeP4DescribeShelved(
-        changelistId,
-        p4port ?? undefined,
-        p4user ?? undefined,
-        p4client ?? undefined
-      );
+      const result = await invokeP4DescribeShelved(changelistId);
       if (verbose) addOutputLine(`... returned ${result.length} items`, false);
       return result;
     },
@@ -46,7 +41,6 @@ export function useShelvedFilesQuery(changelistId: number) {
  * Invalidates shelved, opened, and changes queries on success.
  */
 export function useShelve() {
-  const { p4port, p4user, p4client } = useConnectionStore();
   const queryClient = useQueryClient();
   const { addOutputLine } = useOperationStore();
 
@@ -59,13 +53,7 @@ export function useShelve() {
       filePaths: string[];
     }) => {
       addOutputLine(`p4 shelve -c ${changelistId} ${filePaths.join(' ')}`, false);
-      return invokeP4Shelve(
-        changelistId,
-        filePaths,
-        p4port ?? undefined,
-        p4user ?? undefined,
-        p4client ?? undefined
-      );
+      return invokeP4Shelve(changelistId, filePaths);
     },
     onSuccess: (data, variables) => {
       addOutputLine(String(data), false);
@@ -94,7 +82,6 @@ export function useShelve() {
  *                    If omitted, unshelves all files from the changelist.
  */
 export function useUnshelve() {
-  const { p4port, p4user, p4client } = useConnectionStore();
   const queryClient = useQueryClient();
   const { addOutputLine } = useOperationStore();
 
@@ -107,12 +94,7 @@ export function useUnshelve() {
       filePaths?: string[];
     }) => {
       // Get shelved files to check for conflicts
-      const shelvedFiles = await invokeP4DescribeShelved(
-        changelistId,
-        p4port ?? undefined,
-        p4user ?? undefined,
-        p4client ?? undefined
-      );
+      const shelvedFiles = await invokeP4DescribeShelved(changelistId);
 
       // Filter to only the files we're unshelving (if specific files requested)
       const filesToUnshelve = filePaths
@@ -120,11 +102,7 @@ export function useUnshelve() {
         : shelvedFiles;
 
       // Get currently opened files
-      const openedFiles = await invokeP4Opened(
-        p4port ?? undefined,
-        p4user ?? undefined,
-        p4client ?? undefined
-      );
+      const openedFiles = await invokeP4Opened();
 
       // Check for overlaps
       const openedPaths = new Set(openedFiles.map((f) => f.depot_path));
@@ -144,10 +122,7 @@ export function useUnshelve() {
       return invokeP4Unshelve(
         changelistId,
         changelistId,  // target = source (same CL)
-        filePaths,
-        p4port ?? undefined,
-        p4user ?? undefined,
-        p4client ?? undefined
+        filePaths
       );
     },
     onSuccess: async (data, variables) => {
@@ -164,12 +139,7 @@ export function useUnshelve() {
 
       // Check for files needing resolution
       try {
-        const { p4port, p4user, p4client } = useConnectionStore.getState();
-        const unresolvedFiles = await invokeP4ResolvePreview(
-          p4port ?? undefined,
-          p4user ?? undefined,
-          p4client ?? undefined
-        );
+        const unresolvedFiles = await invokeP4ResolvePreview();
         if (unresolvedFiles.length > 0) {
           addOutputLine(`${unresolvedFiles.length} file(s) need resolution`, false);
           toast(`${unresolvedFiles.length} file(s) need resolution after unshelve`, {
@@ -197,19 +167,13 @@ export function useUnshelve() {
  * Invalidates shelved queries on success.
  */
 export function useDeleteShelf() {
-  const { p4port, p4user, p4client } = useConnectionStore();
   const queryClient = useQueryClient();
   const { addOutputLine } = useOperationStore();
 
   return useMutation({
     mutationFn: async ({ changelistId }: { changelistId: number }) => {
       addOutputLine(`p4 shelve -d -c ${changelistId}`, false);
-      return invokeP4DeleteShelf(
-        changelistId,
-        p4port ?? undefined,
-        p4user ?? undefined,
-        p4client ?? undefined
-      );
+      return invokeP4DeleteShelf(changelistId);
     },
     onSuccess: (data) => {
       addOutputLine(String(data), false);
