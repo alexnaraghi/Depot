@@ -48,9 +48,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Pending Todos
 
-7 pending — see `.planning/todos/pending/`
+8 pending — see `.planning/todos/pending/`
 - 4 from quick-007 (partial completion)
 - 3 from previous sessions
+- 1 new: settings menu scrollable layout
 
 ### Blockers/Concerns
 
