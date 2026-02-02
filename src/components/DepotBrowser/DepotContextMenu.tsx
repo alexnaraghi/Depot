@@ -68,8 +68,10 @@ export function DepotContextMenu({ depotPath, isFolder, x, y, onClose }: DepotCo
       );
 
       // Refresh file tree and opened files
-      await queryClient.invalidateQueries({ queryKey: ['fileTree'] });
-      await queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['fileTree'] }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
+      ]);
 
       toast.success('Synced', { id: 'sync-depot' });
       onClose();

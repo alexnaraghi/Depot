@@ -86,9 +86,11 @@ export function useReconcile() {
       const fileCount = result.trim().split('\n').filter(l => l.trim().length > 0).length;
       toast.success(`Reconciled ${fileCount} file(s) to ${clTarget}`);
       // Invalidate queries to refresh UI
-      queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
-      queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
-      queryClient.invalidateQueries({ queryKey: ['p4', 'fstat'] });
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'fstat'] }),
+      ]);
     },
     onError: (error) => {
       const { addOutputLine } = useOperationStore.getState();

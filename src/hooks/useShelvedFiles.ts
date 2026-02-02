@@ -70,9 +70,11 @@ export function useShelve() {
     onSuccess: (data, variables) => {
       addOutputLine(String(data), false);
       toast.success(`Shelved ${variables.filePaths.length} file(s)`);
-      queryClient.invalidateQueries({ queryKey: ['p4', 'shelved'] });
-      queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
-      queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['p4', 'shelved'] }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] }),
+      ]);
     },
     onError: (error) => {
       addOutputLine(`Error: ${error}`, true);
@@ -154,9 +156,11 @@ export function useUnshelve() {
         ? `Unshelved ${variables.filePaths.length} file(s) successfully`
         : 'Unshelved files successfully';
       toast.success(message);
-      queryClient.invalidateQueries({ queryKey: ['p4', 'shelved'] });
-      queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
-      queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['p4', 'shelved'] }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] }),
+      ]);
 
       // Check for files needing resolution
       try {

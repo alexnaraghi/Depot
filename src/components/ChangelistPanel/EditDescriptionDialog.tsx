@@ -88,8 +88,10 @@ export function EditDescriptionDialog({
         }
 
         // Invalidate both changes and opened queries
-        queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
-        queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
+        Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] }),
+          queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
+        ]);
       } else {
         addOutputLine(`p4 change -i (edit changelist ${changelist.id})`, false);
         await invokeP4EditChangeDescription(

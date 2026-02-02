@@ -87,10 +87,12 @@ export function useResolve() {
         completeOperation(true);
 
         // Invalidate all relevant queries
-        await queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
-        await queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
-        await queryClient.invalidateQueries({ queryKey: ['p4', 'unresolved'] });
-        await queryClient.invalidateQueries({ queryKey: ['fileTree'] });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
+          queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] }),
+          queryClient.invalidateQueries({ queryKey: ['p4', 'unresolved'] }),
+          queryClient.invalidateQueries({ queryKey: ['fileTree'] }),
+        ]);
 
         toast.success(`Resolved using ${mode}`);
       } catch (error) {
@@ -136,10 +138,12 @@ export function useResolve() {
         }
 
         // Invalidate queries regardless of exit code (user may have made changes)
-        await queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
-        await queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
-        await queryClient.invalidateQueries({ queryKey: ['p4', 'unresolved'] });
-        await queryClient.invalidateQueries({ queryKey: ['fileTree'] });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
+          queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] }),
+          queryClient.invalidateQueries({ queryKey: ['p4', 'unresolved'] }),
+          queryClient.invalidateQueries({ queryKey: ['fileTree'] }),
+        ]);
 
         return exitCode;
       } catch (error) {

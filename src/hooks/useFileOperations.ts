@@ -45,9 +45,11 @@ export function useFileOperations() {
       completeOperation(true);
 
       // Invalidate queries to refresh file tree and changelist panel
-      await queryClient.invalidateQueries({ queryKey: ['fileTree'] });
-      await queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
-      await queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['fileTree'] }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] }),
+      ]);
 
       toast.success(`Checked out ${result.length} file(s)`);
       return result;
@@ -83,9 +85,11 @@ export function useFileOperations() {
       completeOperation(true);
 
       // Invalidate queries to refresh file tree and changelist panel
-      await queryClient.invalidateQueries({ queryKey: ['fileTree'] });
-      await queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
-      await queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['fileTree'] }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] }),
+      ]);
 
       toast.success(`Reverted ${reverted.length} file(s)`);
       return reverted;
@@ -118,9 +122,11 @@ export function useFileOperations() {
       completeOperation(true);
 
       // Invalidate queries to refresh file tree and changelist panel
-      await queryClient.invalidateQueries({ queryKey: ['fileTree'] });
-      await queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
-      await queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['fileTree'] }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] }),
+      ]);
 
       toast.success(`Submitted as changelist ${submittedCl}`);
       return submittedCl;

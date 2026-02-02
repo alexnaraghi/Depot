@@ -96,8 +96,10 @@ export function ChangelistContextMenu({
       toast.success(`Moved ${files.length} file(s) to changelist ${targetLabel}`);
 
       // Invalidate queries to refresh UI
-      queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
-      queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
+      ]);
 
       onClose();
     } catch (error) {

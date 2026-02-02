@@ -231,8 +231,10 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
       addOutputLine(result.join('\n'), false);
       toast.success(`Moved ${filePaths.length} file(s) to changelist ${targetClId}`);
       // On success, invalidate queries to refetch fresh data
-      queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
-      queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] });
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
+      ]);
     } catch (error) {
       addOutputLine(`Error: ${error}`, true);
       toast.error(`Failed to move files: ${error}`);
