@@ -6,6 +6,18 @@ import { invoke } from '@tauri-apps/api/core';
 import { P4UnresolvedFile } from '@/types/p4';
 import toast from 'react-hot-toast';
 
+interface RunOperationOptions<T> {
+  operationId: string;
+  operationName: string;
+  command: string;
+  fn: () => Promise<T>;
+  onSuccess?: (result: T) => void;
+  onComplete?: (result: T) => { success: boolean; message?: string };
+  successMessage?: string | ((result: T) => string);
+  errorMessage: string;
+  invalidateKeys: string[][];
+}
+
 /**
  * Hook for querying unresolved files requiring conflict resolution
  *
@@ -61,6 +73,68 @@ export function useResolve() {
   const { p4port, p4user, p4client } = useConnectionStore();
 
   /**
+   * Helper to run an operation with standard boilerplate
+   * - Creates operation ID and starts operation
+   * - Logs command to output panel
+   * - Executes operation function
+   * - Logs success output
+   * - Completes operation
+   * - Invalidates queries
+   * - Shows toast notification (if successMessage provided)
+   * - Handles errors with logging and toast
+   */
+  const runOperation = useCallback(async <T,>(options: RunOperationOptions<T>): Promise<T> => {
+    const {
+      operationId,
+      operationName,
+      command,
+      fn,
+      onSuccess,
+      onComplete,
+      successMessage,
+      errorMessage,
+      invalidateKeys,
+    } = options;
+
+    startOperation(operationId, operationName);
+    addOutputLine(command, false);
+
+    try {
+      const result = await fn();
+
+      // Call success callback if provided (for logging individual results)
+      if (onSuccess) {
+        onSuccess(result);
+      }
+
+      // Allow custom completion logic (for operations where success is conditional)
+      if (onComplete) {
+        const { success, message } = onComplete(result);
+        completeOperation(success, message);
+      } else {
+        completeOperation(true);
+      }
+
+      // Invalidate queries to refresh UI
+      await Promise.all(
+        invalidateKeys.map(key => queryClient.invalidateQueries({ queryKey: key }))
+      );
+
+      if (successMessage) {
+        const message = typeof successMessage === 'function' ? successMessage(result) : successMessage;
+        toast.success(message);
+      }
+
+      return result;
+    } catch (error) {
+      addOutputLine(`Error: ${error}`, true);
+      completeOperation(false, String(error));
+      toast.error(`${errorMessage}: ${error}`);
+      throw error;
+    }
+  }, [startOperation, completeOperation, addOutputLine, queryClient]);
+
+  /**
    * Accept resolve with specified mode
    *
    * @param depotPath - Depot path to resolve
@@ -68,41 +142,31 @@ export function useResolve() {
    */
   const resolveAccept = useCallback(
     async (depotPath: string, mode: 'theirs' | 'yours' | 'merge') => {
-      const operationId = `resolve-${Date.now()}`;
-      startOperation(operationId, `Resolving ${depotPath}`);
-
-      // Log to output panel
-      addOutputLine(`p4 resolve -a${mode[0]} ${depotPath}`, false);
-
-      try {
-        await invoke('p4_resolve_accept', {
+      return runOperation({
+        operationId: `resolve-${Date.now()}`,
+        operationName: `Resolving ${depotPath}`,
+        command: `p4 resolve -a${mode[0]} ${depotPath}`,
+        fn: () => invoke('p4_resolve_accept', {
           depotPath,
           mode,
           server: p4port,
           user: p4user,
           client: p4client,
-        });
-
-        addOutputLine(`${depotPath} - resolved (${mode})`, false);
-        completeOperation(true);
-
-        // Invalidate all relevant queries
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
-          queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] }),
-          queryClient.invalidateQueries({ queryKey: ['p4', 'unresolved'] }),
-          queryClient.invalidateQueries({ queryKey: ['fileTree'] }),
-        ]);
-
-        toast.success(`Resolved using ${mode}`);
-      } catch (error) {
-        addOutputLine(`Error: ${error}`, true);
-        completeOperation(false, String(error));
-        toast.error(`Resolve failed: ${error}`);
-        throw error;
-      }
+        }),
+        onSuccess: () => {
+          addOutputLine(`${depotPath} - resolved (${mode})`, false);
+        },
+        successMessage: `Resolved using ${mode}`,
+        errorMessage: 'Resolve failed',
+        invalidateKeys: [
+          ['p4', 'opened'],
+          ['p4', 'changes'],
+          ['p4', 'unresolved'],
+          ['fileTree'],
+        ],
+      });
     },
-    [startOperation, completeOperation, addOutputLine, queryClient, p4port, p4user, p4client]
+    [runOperation, addOutputLine, p4port, p4user, p4client]
   );
 
   /**
@@ -114,46 +178,38 @@ export function useResolve() {
    */
   const launchMergeTool = useCallback(
     async (depotPath: string, localPath: string) => {
-      const operationId = `merge-tool-${Date.now()}`;
-      startOperation(operationId, `Launching merge tool for ${depotPath}`);
-
-      // Log to output panel
-      addOutputLine(`Launching merge tool for ${depotPath}`, false);
-
-      try {
-        const exitCode = await invoke<number>('launch_merge_tool', {
+      return runOperation({
+        operationId: `merge-tool-${Date.now()}`,
+        operationName: `Launching merge tool for ${depotPath}`,
+        command: `Launching merge tool for ${depotPath}`,
+        fn: () => invoke<number>('launch_merge_tool', {
           depotPath,
           localPath,
           server: p4port,
           user: p4user,
           client: p4client,
-        });
-
-        if (exitCode === 0) {
-          addOutputLine(`Merge tool completed successfully`, false);
-          completeOperation(true);
-        } else {
-          addOutputLine(`Merge tool exited with code ${exitCode}`, true);
-          completeOperation(false, `Merge tool exited with code ${exitCode}`);
-        }
-
-        // Invalidate queries regardless of exit code (user may have made changes)
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
-          queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] }),
-          queryClient.invalidateQueries({ queryKey: ['p4', 'unresolved'] }),
-          queryClient.invalidateQueries({ queryKey: ['fileTree'] }),
-        ]);
-
-        return exitCode;
-      } catch (error) {
-        addOutputLine(`Error: ${error}`, true);
-        completeOperation(false, String(error));
-        toast.error(`Failed to launch merge tool: ${error}`);
-        throw error;
-      }
+        }),
+        onSuccess: (exitCode) => {
+          if (exitCode === 0) {
+            addOutputLine(`Merge tool completed successfully`, false);
+          } else {
+            addOutputLine(`Merge tool exited with code ${exitCode}`, true);
+          }
+        },
+        onComplete: (exitCode) => ({
+          success: exitCode === 0,
+          message: exitCode === 0 ? undefined : `Merge tool exited with code ${exitCode}`,
+        }),
+        errorMessage: 'Failed to launch merge tool',
+        invalidateKeys: [
+          ['p4', 'opened'],
+          ['p4', 'changes'],
+          ['p4', 'unresolved'],
+          ['fileTree'],
+        ],
+      });
     },
-    [startOperation, completeOperation, addOutputLine, queryClient, p4port, p4user, p4client]
+    [runOperation, addOutputLine, p4port, p4user, p4client]
   );
 
   return {

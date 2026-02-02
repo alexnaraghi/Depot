@@ -5,6 +5,17 @@ import { useConnectionStore } from '@/stores/connectionStore';
 import { invokeP4Edit, invokeP4Revert, invokeP4Submit } from '@/lib/tauri';
 import toast from 'react-hot-toast';
 
+interface RunOperationOptions<T> {
+  operationId: string;
+  operationName: string;
+  command: string;
+  fn: () => Promise<T>;
+  onSuccess?: (result: T) => void;
+  successMessage: string | ((result: T) => string);
+  errorMessage: string;
+  invalidateKeys: string[][];
+}
+
 /**
  * Hook for P4 file operations with state management
  *
@@ -21,6 +32,59 @@ export function useFileOperations() {
   const { p4port, p4user, p4client } = useConnectionStore();
 
   /**
+   * Helper to run an operation with standard boilerplate
+   * - Creates operation ID and starts operation
+   * - Logs command to output panel
+   * - Executes operation function
+   * - Logs success output
+   * - Completes operation
+   * - Invalidates queries
+   * - Shows toast notification
+   * - Handles errors with logging and toast
+   */
+  const runOperation = useCallback(async <T,>(options: RunOperationOptions<T>): Promise<T> => {
+    const {
+      operationId,
+      operationName,
+      command,
+      fn,
+      onSuccess,
+      successMessage,
+      errorMessage,
+      invalidateKeys,
+    } = options;
+
+    startOperation(operationId, operationName);
+    addOutputLine(command, false);
+
+    try {
+      const result = await fn();
+
+      // Call success callback if provided (for logging individual results)
+      if (onSuccess) {
+        onSuccess(result);
+      }
+
+      completeOperation(true);
+
+      // Invalidate queries to refresh UI
+      await Promise.all(
+        invalidateKeys.map(key => queryClient.invalidateQueries({ queryKey: key }))
+      );
+
+      const message = typeof successMessage === 'function' ? successMessage(result) : successMessage;
+      toast.success(message);
+
+      return result;
+    } catch (error) {
+      addOutputLine(`Error: ${error}`, true);
+      completeOperation(false, String(error));
+      toast.error(`${errorMessage}: ${error}`);
+      throw error;
+    }
+  }, [startOperation, completeOperation, addOutputLine, queryClient]);
+
+  /**
    * Checkout files for editing
    *
    * @param paths - Depot paths to checkout
@@ -28,38 +92,26 @@ export function useFileOperations() {
    * @returns Array of checked out file info
    */
   const checkout = useCallback(async (paths: string[], changelist?: number) => {
-    const operationId = `edit-${Date.now()}`;
-    startOperation(operationId, `Checking out ${paths.length} file(s)`);
-
-    // Log to output panel
-    addOutputLine(`p4 edit ${paths.join(' ')}`, false);
-
-    try {
-      const result = await invokeP4Edit(paths, changelist, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined);
-
-      // Log each checked out file
-      for (const file of result) {
-        addOutputLine(`${file.depot_path}#${file.revision} - opened for ${file.action || 'edit'}`, false);
-      }
-
-      completeOperation(true);
-
-      // Invalidate queries to refresh file tree and changelist panel
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['fileTree'] }),
-        queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
-        queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] }),
-      ]);
-
-      toast.success(`Checked out ${result.length} file(s)`);
-      return result;
-    } catch (error) {
-      addOutputLine(`Error: ${error}`, true);
-      completeOperation(false, String(error));
-      toast.error(`Checkout failed: ${error}`);
-      throw error;
-    }
-  }, [startOperation, completeOperation, addOutputLine, queryClient, p4port, p4user, p4client]);
+    return runOperation({
+      operationId: `edit-${Date.now()}`,
+      operationName: `Checking out ${paths.length} file(s)`,
+      command: `p4 edit ${paths.join(' ')}`,
+      fn: () => invokeP4Edit(paths, changelist, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined),
+      onSuccess: (result) => {
+        // Log each checked out file
+        for (const file of result) {
+          addOutputLine(`${file.depot_path}#${file.revision} - opened for ${file.action || 'edit'}`, false);
+        }
+      },
+      successMessage: (result) => `Checked out ${result.length} file(s)`,
+      errorMessage: 'Checkout failed',
+      invalidateKeys: [
+        ['fileTree'],
+        ['p4', 'opened'],
+        ['p4', 'changes'],
+      ],
+    });
+  }, [runOperation, addOutputLine, p4port, p4user, p4client]);
 
   /**
    * Revert files to depot state (discard local changes)
@@ -68,38 +120,26 @@ export function useFileOperations() {
    * @returns Array of reverted depot paths
    */
   const revert = useCallback(async (paths: string[]) => {
-    const operationId = `revert-${Date.now()}`;
-    startOperation(operationId, `Reverting ${paths.length} file(s)`);
-
-    // Log to output panel
-    addOutputLine(`p4 revert ${paths.join(' ')}`, false);
-
-    try {
-      const reverted = await invokeP4Revert(paths, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined);
-
-      // Log each reverted file
-      for (const depotPath of reverted) {
-        addOutputLine(`${depotPath} - reverted`, false);
-      }
-
-      completeOperation(true);
-
-      // Invalidate queries to refresh file tree and changelist panel
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['fileTree'] }),
-        queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
-        queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] }),
-      ]);
-
-      toast.success(`Reverted ${reverted.length} file(s)`);
-      return reverted;
-    } catch (error) {
-      addOutputLine(`Error: ${error}`, true);
-      completeOperation(false, String(error));
-      toast.error(`Revert failed: ${error}`);
-      throw error;
-    }
-  }, [startOperation, completeOperation, addOutputLine, queryClient, p4port, p4user, p4client]);
+    return runOperation({
+      operationId: `revert-${Date.now()}`,
+      operationName: `Reverting ${paths.length} file(s)`,
+      command: `p4 revert ${paths.join(' ')}`,
+      fn: () => invokeP4Revert(paths, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined),
+      onSuccess: (reverted) => {
+        // Log each reverted file
+        for (const depotPath of reverted) {
+          addOutputLine(`${depotPath} - reverted`, false);
+        }
+      },
+      successMessage: (reverted) => `Reverted ${reverted.length} file(s)`,
+      errorMessage: 'Revert failed',
+      invalidateKeys: [
+        ['fileTree'],
+        ['p4', 'opened'],
+        ['p4', 'changes'],
+      ],
+    });
+  }, [runOperation, addOutputLine, p4port, p4user, p4client]);
 
   /**
    * Submit changelist to depot
@@ -109,34 +149,23 @@ export function useFileOperations() {
    * @returns Submitted changelist number
    */
   const submit = useCallback(async (changelist: number, description?: string) => {
-    const operationId = `submit-${Date.now()}`;
-    startOperation(operationId, `Submitting changelist ${changelist}`);
-
-    // Log to output panel
-    addOutputLine(`p4 submit -c ${changelist}`, false);
-
-    try {
-      const submittedCl = await invokeP4Submit(changelist, description, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined);
-
-      addOutputLine(`Change ${submittedCl} submitted.`, false);
-      completeOperation(true);
-
-      // Invalidate queries to refresh file tree and changelist panel
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['fileTree'] }),
-        queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
-        queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] }),
-      ]);
-
-      toast.success(`Submitted as changelist ${submittedCl}`);
-      return submittedCl;
-    } catch (error) {
-      addOutputLine(`Error: ${error}`, true);
-      completeOperation(false, String(error));
-      toast.error(`Submit failed: ${error}`);
-      throw error;
-    }
-  }, [startOperation, completeOperation, addOutputLine, queryClient, p4port, p4user, p4client]);
+    return runOperation({
+      operationId: `submit-${Date.now()}`,
+      operationName: `Submitting changelist ${changelist}`,
+      command: `p4 submit -c ${changelist}`,
+      fn: () => invokeP4Submit(changelist, description, p4port ?? undefined, p4user ?? undefined, p4client ?? undefined),
+      onSuccess: (submittedCl) => {
+        addOutputLine(`Change ${submittedCl} submitted.`, false);
+      },
+      successMessage: (submittedCl) => `Submitted as changelist ${submittedCl}`,
+      errorMessage: 'Submit failed',
+      invalidateKeys: [
+        ['fileTree'],
+        ['p4', 'opened'],
+        ['p4', 'changes'],
+      ],
+    });
+  }, [runOperation, addOutputLine, p4port, p4user, p4client]);
 
   return {
     checkout,
