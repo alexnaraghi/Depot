@@ -41,6 +41,34 @@ fn apply_connection_args(
     }
 }
 
+/// Parse p4 -ztag output into a vector of records (key-value HashMaps).
+/// Each record is separated by a blank line. Fields are in "... key value" format.
+fn parse_ztag_records(output: &str) -> Vec<HashMap<String, String>> {
+    let mut records = Vec::new();
+    let mut current: HashMap<String, String> = HashMap::new();
+
+    for line in output.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            if !current.is_empty() {
+                records.push(std::mem::take(&mut current));
+            }
+            continue;
+        }
+        if let Some(stripped) = line.strip_prefix("... ") {
+            if let Some((key, value)) = stripped.split_once(' ') {
+                current.insert(key.to_string(), value.to_string());
+            } else {
+                current.insert(stripped.to_string(), String::new());
+            }
+        }
+    }
+    if !current.is_empty() {
+        records.push(current);
+    }
+    records
+}
+
 /// File information from p4 fstat
 #[derive(Debug, Clone, Serialize)]
 pub struct P4FileInfo {
@@ -101,37 +129,20 @@ pub struct P4Revision {
 
 /// Parse p4 -ztag info output into P4ClientInfo
 fn parse_ztag_info(output: &str) -> Result<P4ClientInfo, String> {
-    let mut client_name = String::new();
-    let mut client_root = String::new();
-    let mut client_stream: Option<String> = None;
-    let mut user_name = String::new();
-    let mut server_address = String::new();
+    let records = parse_ztag_records(output);
+    let fields = records.into_iter().next().unwrap_or_default();
 
-    for line in output.lines() {
-        if let Some(stripped) = line.strip_prefix("... ") {
-            if let Some((key, value)) = stripped.split_once(' ') {
-                match key {
-                    "clientName" => client_name = value.to_string(),
-                    "clientRoot" => client_root = value.to_string(),
-                    "clientStream" => client_stream = Some(value.to_string()),
-                    "userName" => user_name = value.to_string(),
-                    "serverAddress" => server_address = value.to_string(),
-                    _ => {}
-                }
-            }
-        }
-    }
-
+    let client_root = fields.get("clientRoot").cloned().unwrap_or_default();
     if client_root.is_empty() {
         return Err("Could not determine P4 client root. Is P4CLIENT set?".to_string());
     }
 
     Ok(P4ClientInfo {
-        client_name,
+        client_name: fields.get("clientName").cloned().unwrap_or_default(),
         client_root,
-        client_stream,
-        user_name,
-        server_address,
+        client_stream: fields.get("clientStream").cloned(),
+        user_name: fields.get("userName").cloned().unwrap_or_default(),
+        server_address: fields.get("serverAddress").cloned().unwrap_or_default(),
     })
 }
 
@@ -202,38 +213,10 @@ pub async fn p4_fstat(
 
 /// Parse p4 -ztag fstat output into P4FileInfo structs
 fn parse_ztag_fstat(output: &str) -> Result<Vec<P4FileInfo>, String> {
-    let mut files = Vec::new();
-    let mut current_file: HashMap<String, String> = HashMap::new();
-
-    for line in output.lines() {
-        let line = line.trim();
-
-        // Empty line or end of record
-        if line.is_empty() {
-            if !current_file.is_empty() {
-                if let Some(file_info) = build_file_info(&current_file) {
-                    files.push(file_info);
-                }
-                current_file.clear();
-            }
-            continue;
-        }
-
-        // Parse "... fieldName value" format
-        if let Some(stripped) = line.strip_prefix("... ") {
-            if let Some((key, value)) = stripped.split_once(' ') {
-                current_file.insert(key.to_string(), value.to_string());
-            }
-        }
-    }
-
-    // Handle last record if no trailing empty line
-    if !current_file.is_empty() {
-        if let Some(file_info) = build_file_info(&current_file) {
-            files.push(file_info);
-        }
-    }
-
+    let files = parse_ztag_records(output)
+        .into_iter()
+        .filter_map(|record| build_file_info(&record))
+        .collect();
     Ok(files)
 }
 
@@ -389,36 +372,10 @@ pub async fn p4_changes(
 
 /// Parse p4 -ztag changes output into P4Changelist structs
 fn parse_ztag_changes(output: &str) -> Result<Vec<P4Changelist>, String> {
-    let mut changelists = Vec::new();
-    let mut current: HashMap<String, String> = HashMap::new();
-
-    for line in output.lines() {
-        let line = line.trim();
-
-        if line.is_empty() {
-            if !current.is_empty() {
-                if let Some(cl) = build_changelist(&current) {
-                    changelists.push(cl);
-                }
-                current.clear();
-            }
-            continue;
-        }
-
-        if let Some(stripped) = line.strip_prefix("... ") {
-            if let Some((key, value)) = stripped.split_once(' ') {
-                current.insert(key.to_string(), value.to_string());
-            }
-        }
-    }
-
-    // Handle last record
-    if !current.is_empty() {
-        if let Some(cl) = build_changelist(&current) {
-            changelists.push(cl);
-        }
-    }
-
+    let changelists = parse_ztag_records(output)
+        .into_iter()
+        .filter_map(|record| build_changelist(&record))
+        .collect();
     Ok(changelists)
 }
 
@@ -1074,36 +1031,10 @@ pub async fn p4_list_workspaces(server: String, user: String) -> Result<Vec<P4Wo
 
 /// Parse p4 -ztag clients output into P4Workspace structs
 fn parse_ztag_clients(output: &str) -> Result<Vec<P4Workspace>, String> {
-    let mut workspaces = Vec::new();
-    let mut current: HashMap<String, String> = HashMap::new();
-
-    for line in output.lines() {
-        let line = line.trim();
-
-        if line.is_empty() {
-            if !current.is_empty() {
-                if let Some(ws) = build_workspace(&current) {
-                    workspaces.push(ws);
-                }
-                current.clear();
-            }
-            continue;
-        }
-
-        if let Some(stripped) = line.strip_prefix("... ") {
-            if let Some((key, value)) = stripped.split_once(' ') {
-                current.insert(key.to_string(), value.to_string());
-            }
-        }
-    }
-
-    // Handle last record if no trailing empty line
-    if !current.is_empty() {
-        if let Some(ws) = build_workspace(&current) {
-            workspaces.push(ws);
-        }
-    }
-
+    let workspaces = parse_ztag_records(output)
+        .into_iter()
+        .filter_map(|record| build_workspace(&record))
+        .collect();
     Ok(workspaces)
 }
 
@@ -1157,19 +1088,10 @@ pub async fn p4_test_connection(
 /// Note: p4 filelog -ztag produces indexed fields like rev0, change0, action0, etc.
 /// all in a single record
 fn parse_ztag_filelog(output: &str) -> Result<Vec<P4Revision>, String> {
-    let mut fields: HashMap<String, String> = HashMap::new();
+    let records = parse_ztag_records(output);
+    let fields = records.into_iter().next().unwrap_or_default();
 
-    // First pass: collect all fields
-    for line in output.lines() {
-        let line = line.trim();
-        if let Some(stripped) = line.strip_prefix("... ") {
-            if let Some((key, value)) = stripped.split_once(' ') {
-                fields.insert(key.to_string(), value.to_string());
-            }
-        }
-    }
-
-    // Second pass: extract revisions by index
+    // Extract revisions by index
     let mut revisions = Vec::new();
     let mut index = 0;
 
@@ -1474,19 +1396,10 @@ pub async fn p4_describe_shelved(
 /// Parse p4 -ztag describe -S output into P4ShelvedFile structs
 /// Similar to filelog parsing - uses indexed fields (depotFile0, action0, type0, rev0, etc.)
 fn parse_ztag_describe_shelved(output: &str) -> Result<Vec<P4ShelvedFile>, String> {
-    let mut fields: HashMap<String, String> = HashMap::new();
+    let records = parse_ztag_records(output);
+    let fields = records.into_iter().next().unwrap_or_default();
 
-    // First pass: collect all fields
-    for line in output.lines() {
-        let line = line.trim();
-        if let Some(stripped) = line.strip_prefix("... ") {
-            if let Some((key, value)) = stripped.split_once(' ') {
-                fields.insert(key.to_string(), value.to_string());
-            }
-        }
-    }
-
-    // Second pass: extract shelved files by index
+    // Extract shelved files by index
     let mut files = Vec::new();
     let mut index = 0;
 
@@ -1912,36 +1825,10 @@ pub async fn p4_list_streams(
 
 /// Parse p4 -ztag streams output into P4Stream structs
 fn parse_ztag_streams(output: &str) -> Result<Vec<P4Stream>, String> {
-    let mut streams = Vec::new();
-    let mut current: HashMap<String, String> = HashMap::new();
-
-    for line in output.lines() {
-        let line = line.trim();
-
-        if line.is_empty() {
-            if !current.is_empty() {
-                if let Some(stream) = build_stream(&current) {
-                    streams.push(stream);
-                }
-                current.clear();
-            }
-            continue;
-        }
-
-        if let Some(stripped) = line.strip_prefix("... ") {
-            if let Some((key, value)) = stripped.split_once(' ') {
-                current.insert(key.to_string(), value.to_string());
-            }
-        }
-    }
-
-    // Handle last record if no trailing empty line
-    if !current.is_empty() {
-        if let Some(stream) = build_stream(&current) {
-            streams.push(stream);
-        }
-    }
-
+    let streams = parse_ztag_records(output)
+        .into_iter()
+        .filter_map(|record| build_stream(&record))
+        .collect();
     Ok(streams)
 }
 
@@ -1991,20 +1878,19 @@ pub async fn p4_get_client_spec(
 
 /// Parse p4 -ztag client -o output into P4ClientSpec
 fn parse_ztag_client_spec(output: &str) -> Result<P4ClientSpec, String> {
-    let mut fields: HashMap<String, String> = HashMap::new();
-    let mut view_lines: Vec<String> = Vec::new();
+    let records = parse_ztag_records(output);
+    let fields = records.into_iter().next().unwrap_or_default();
 
-    for line in output.lines() {
-        let line = line.trim();
-        if let Some(stripped) = line.strip_prefix("... ") {
-            if let Some((key, value)) = stripped.split_once(' ') {
-                // Check for View mapping lines (View0, View1, View2, ...)
-                if key.starts_with("View") {
-                    view_lines.push(value.to_string());
-                } else {
-                    fields.insert(key.to_string(), value.to_string());
-                }
-            }
+    // Extract View mapping lines (View0, View1, View2, ...) from the flat record
+    let mut view_lines: Vec<String> = Vec::new();
+    let mut view_idx = 0;
+    loop {
+        let key = format!("View{}", view_idx);
+        if let Some(value) = fields.get(&key) {
+            view_lines.push(value.clone());
+            view_idx += 1;
+        } else {
+            break;
         }
     }
 
@@ -2145,36 +2031,10 @@ pub async fn p4_depots(
 
 /// Parse p4 -ztag depots output into P4Depot structs
 fn parse_ztag_depots(output: &str) -> Result<Vec<P4Depot>, String> {
-    let mut depots = Vec::new();
-    let mut current: HashMap<String, String> = HashMap::new();
-
-    for line in output.lines() {
-        let line = line.trim();
-
-        if line.is_empty() {
-            if !current.is_empty() {
-                if let Some(depot) = build_depot(&current) {
-                    depots.push(depot);
-                }
-                current.clear();
-            }
-            continue;
-        }
-
-        if let Some(stripped) = line.strip_prefix("... ") {
-            if let Some((key, value)) = stripped.split_once(' ') {
-                current.insert(key.to_string(), value.to_string());
-            }
-        }
-    }
-
-    // Handle last record if no trailing empty line
-    if !current.is_empty() {
-        if let Some(depot) = build_depot(&current) {
-            depots.push(depot);
-        }
-    }
-
+    let depots = parse_ztag_records(output)
+        .into_iter()
+        .filter_map(|record| build_depot(&record))
+        .collect();
     Ok(depots)
 }
 
@@ -2228,15 +2088,10 @@ pub async fn p4_dirs(
 
 /// Parse p4 -ztag dirs output into directory paths
 fn parse_ztag_dirs(output: &str) -> Result<Vec<String>, String> {
-    let mut dirs = Vec::new();
-
-    for line in output.lines() {
-        let line = line.trim();
-        if let Some(stripped) = line.strip_prefix("... dir ") {
-            dirs.push(stripped.to_string());
-        }
-    }
-
+    let dirs = parse_ztag_records(output)
+        .into_iter()
+        .filter_map(|record| record.get("dir").cloned())
+        .collect();
     Ok(dirs)
 }
 
@@ -2285,38 +2140,10 @@ pub async fn p4_fstat_unresolved(
 
 /// Parse p4 -ztag fstat -Ru -Or output into P4UnresolvedFile structs
 fn parse_ztag_fstat_unresolved(output: &str) -> Result<Vec<P4UnresolvedFile>, String> {
-    let mut files = Vec::new();
-    let mut current_file: HashMap<String, String> = HashMap::new();
-
-    for line in output.lines() {
-        let line = line.trim();
-
-        // Empty line or end of record
-        if line.is_empty() {
-            if !current_file.is_empty() {
-                if let Some(file_info) = build_unresolved_file_info(&current_file) {
-                    files.push(file_info);
-                }
-                current_file.clear();
-            }
-            continue;
-        }
-
-        // Parse "... fieldName value" format
-        if let Some(stripped) = line.strip_prefix("... ") {
-            if let Some((key, value)) = stripped.split_once(' ') {
-                current_file.insert(key.to_string(), value.to_string());
-            }
-        }
-    }
-
-    // Handle last record if no trailing empty line
-    if !current_file.is_empty() {
-        if let Some(file_info) = build_unresolved_file_info(&current_file) {
-            files.push(file_info);
-        }
-    }
-
+    let files = parse_ztag_records(output)
+        .into_iter()
+        .filter_map(|record| build_unresolved_file_info(&record))
+        .collect();
     Ok(files)
 }
 
@@ -2420,15 +2247,7 @@ pub async fn launch_merge_tool(
     let stdout = String::from_utf8_lossy(&output.stdout);
 
     // Parse ztag output to extract resolve file info
-    let mut fields: HashMap<String, String> = HashMap::new();
-    for line in stdout.lines() {
-        let line = line.trim();
-        if let Some(stripped) = line.strip_prefix("... ") {
-            if let Some((key, value)) = stripped.split_once(' ') {
-                fields.insert(key.to_string(), value.to_string());
-            }
-        }
-    }
+    let fields = parse_ztag_records(&stdout).into_iter().next().unwrap_or_default();
 
     // Extract base file and revision
     let base_file = fields
