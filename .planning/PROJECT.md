@@ -2,7 +2,7 @@
 
 ## What This Is
 
-A modern Windows Perforce GUI that replaces P4V for daily development work. Features settings management, file history, external diff, multiple changelists with drag-and-drop, shelving, reconcile, context menus, keyboard shortcuts, command palette, and a polished blue-tinted dark theme. Designed to never trap the user in modal dialogs or blocking states.
+A modern Windows Perforce GUI that replaces P4V for daily development work. Features a three-column layout (file tree, detail pane, changelists), depot browser, workspace/stream switching, in-place search filtering, auto-refresh, conflict resolution with external merge tools, settings management, file history, external diff, multiple changelists with drag-and-drop, shelving, reconcile, context menus, keyboard shortcuts, command palette, and a polished blue-tinted dark theme. Designed to never trap the user in modal dialogs or blocking states.
 
 ## Core Value
 
@@ -38,23 +38,23 @@ The user is never blocked — operations are always cancellable, errors are non-
 - ✓ Keyboard shortcuts for core operations — v2.0
 - ✓ Command palette with fuzzy search — v2.0
 - ✓ Clean, modern visual design with loading states — v2.0
+- ✓ E2E testing infrastructure with WebdriverIO + tauri-driver — v3.0
+- ✓ Drag-and-drop reliability with optimistic updates — v3.0
+- ✓ Auto-refresh with configurable polling interval — v3.0
+- ✓ Three-column layout (file tree, detail pane, changelists) — v3.0
+- ✓ In-place search filtering with command palette deep search — v3.0
+- ✓ Workspace switching with query invalidation — v3.0
+- ✓ Stream switching with auto-shelve confirmation — v3.0
+- ✓ Depot browser with lazy-loaded hierarchy — v3.0
+- ✓ Conflict resolution with external merge tool integration — v3.0
+- ✓ Settings dialog (external editor, auto-refresh interval) — v3.0
+- ✓ Manual refresh button — v3.0
+- ✓ Client spec viewer (read-only) — v3.0
+- ✓ Actionable search results with context menus — v3.0
 
 ### Active
 
-- [ ] Resolve workflow — detect conflicts, launch external merge tool, mark resolved
-- [ ] Depot tree browser — full depot hierarchy with sync, checkout, history, diff operations
-- [ ] Workspace switching — disconnect/connect to different workspaces
-- [ ] Stream switching — change which stream the workspace is on
-- [ ] View client spec — read-only view of workspace mappings and settings
-- [ ] Actionable search results — interact with files, CLs, and authors from search
-- [ ] Auto-refresh — configurable periodic polling of workspace state and pending CLs
-- [ ] External editor setting — configure preferred editor
-- [ ] Automated E2E testing — regression tests for existing and new functionality
-- [ ] Fix changelist drag-and-drop reliability
-- [ ] Move files when editing default CL description
-- [ ] Unshelve to same changelist (not default)
-- [ ] Resolve dialog after unshelving conflicts
-- [ ] Implement refresh button
+(None yet — define in next milestone)
 
 ### Out of Scope
 
@@ -69,14 +69,15 @@ The user is never blocked — operations are always cancellable, errors are non-
 
 ## Context
 
-**Current state:** Shipped v2.0 with ~55,000 LOC (TypeScript + Rust).
-Tech stack: Tauri 2.0, React 19, TanStack Query, Zustand, shadcn/ui, Tailwind CSS, react-arborist.
+**Current state:** Shipped v3.0 with ~15,000 LOC (TypeScript + Rust), ~73,000 total.
+Tech stack: Tauri 2.0, React 19, TanStack Query, Zustand, shadcn/ui, Tailwind CSS, react-arborist, WebdriverIO.
 
 **Known issues / tech debt:**
-- Changelist drag-and-drop reliability needs improvement
-- Default CL description editing should move files to new CL
-- Unshelve should offer resolve dialog for conflicts
-- No automated E2E testing yet
+- E2E tests need execution against real P4 server (human_needed)
+- TODO: unshelve all for changelist (ChangelistPanel.tsx:576)
+- TODO: p4_print command for Open This Revision (RevisionDetailView.tsx:43)
+- TODO: p4_describe command for sibling files (RevisionDetailView.tsx:96)
+- Workspace/stream switch not registered in operation store (auto-refresh edge case)
 
 ## Constraints
 
@@ -104,20 +105,16 @@ Tech stack: Tauri 2.0, React 19, TanStack Query, Zustand, shadcn/ui, Tailwind CS
 | Blue-tinted dark theme (hue 220) | VS Code aesthetic, semantic color system | ✓ Good |
 | No animations | Instant UI response, removed all transition classes | ✓ Good |
 | Custom events for shortcuts | Cross-component keyboard shortcuts without prop drilling | ✓ Good |
+| WebdriverIO v9 + tauri-driver | Standard Tauri E2E testing, pre-seed settings via filesystem | ✓ Good |
+| Optimistic updates for drag-drop | cancelQueries + snapshot + rollback prevents UI flicker | ✓ Good |
+| TanStack Query refetchInterval | Built-in polling conditional on connection/operation/focus | ✓ Good |
+| DetailSelection discriminated union | Type-safe detail pane routing with none/file/changelist/revision | ✓ Good |
+| Dimming over hiding for search | Preserves tree structure and spatial context | ✓ Good |
+| Auto-shelve on stream switch | Create numbered CL, reopen files, shelve to prevent work loss | ✓ Good |
+| Lazy loading for depot browser | Load subdirectories on toggle to prevent memory exhaustion | ✓ Good |
+| spawn_blocking for merge tool | Doesn't block async runtime while waiting for external process | ✓ Good |
 
-## Current Milestone: v3.0 Daily Driver
-
-**Goal:** Make P4Now reliable enough for real contributors to evaluate with their daily Perforce workflows.
-
-**Target features:**
-- Resolve workflow with external merge tool
-- Depot tree browser with full file operations
-- Workspace and stream switching
-- Actionable search results
-- Auto-refresh with configurable polling interval
-- Settings additions (external editor, auto-refresh interval)
-- Automated E2E testing for regression coverage
-- Bug fixes for drag-and-drop, unshelve, default CL, refresh
+## Current Milestone: Planning next milestone
 
 ## Milestones
 
@@ -125,9 +122,9 @@ Tech stack: Tauri 2.0, React 19, TanStack Query, Zustand, shadcn/ui, Tailwind CS
 |---------|--------|------|
 | v1.0 MVP | Complete | 2026-01-28 |
 | v2.0 Feature Complete | Complete | 2026-01-30 |
-| v3.0 Daily Driver | In Progress | — |
+| v3.0 Daily Driver | Complete | 2026-02-01 |
 
 See `.planning/milestones/` for archived roadmaps and requirements.
 
 ---
-*Last updated: 2026-01-29 after v3.0 milestone start*
+*Last updated: 2026-02-01 after v3.0 milestone*
