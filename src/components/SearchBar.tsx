@@ -1,8 +1,9 @@
-import { useRef, useEffect } from 'react';
+import { useRef } from 'react';
 import { Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSearchFilterStore } from '@/stores/searchFilterStore';
+import { useCommand } from '@/hooks/useCommand';
 
 /**
  * Global search filter bar that drives in-place column filtering.
@@ -23,16 +24,11 @@ export function SearchBar() {
 
   const totalMatches = fileTreeMatchCount + changelistMatchCount;
 
-  // Listen for Ctrl+F focus event from MainLayout
-  useEffect(() => {
-    const handleFocusSearch = () => {
-      inputRef.current?.focus();
-      inputRef.current?.select();
-    };
-
-    window.addEventListener('p4now:focus-search', handleFocusSearch);
-    return () => window.removeEventListener('p4now:focus-search', handleFocusSearch);
-  }, []);
+  // Listen for focus-search command
+  useCommand('focus-search', () => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  });
 
   // Handle Escape key - progressive behavior
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

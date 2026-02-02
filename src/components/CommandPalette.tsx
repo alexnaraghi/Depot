@@ -12,6 +12,7 @@ import { SHORTCUTS } from '@/lib/shortcuts';
 import { useFileTreeStore } from '@/stores/fileTreeStore';
 import { useChangelistStore } from '@/stores/changelistStore';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
+import { useCommandStore } from '@/stores/commandStore';
 import {
   RefreshCw,
   Download,
@@ -78,7 +79,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           <CommandItem
             onSelect={() =>
               executeCommand(() => {
-                window.dispatchEvent(new CustomEvent('p4now:sync'));
+                useCommandStore.getState().dispatch('sync');
               })
             }
           >
@@ -90,7 +91,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           <CommandItem
             onSelect={() =>
               executeCommand(() => {
-                window.dispatchEvent(new CustomEvent('p4now:reconcile'));
+                useCommandStore.getState().dispatch('reconcile');
               })
             }
           >
@@ -104,7 +105,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           <CommandItem
             onSelect={() =>
               executeCommand(() => {
-                window.dispatchEvent(new CustomEvent('p4now:new-changelist'));
+                useCommandStore.getState().dispatch('new-changelist');
               })
             }
           >
@@ -117,7 +118,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             disabled={!hasSubmittableChangelist}
             onSelect={() =>
               executeCommand(() => {
-                window.dispatchEvent(new CustomEvent('p4now:submit'));
+                useCommandStore.getState().dispatch('submit');
               })
             }
           >
@@ -134,7 +135,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             disabled={!hasFileSelected}
             onSelect={() =>
               executeCommand(() => {
-                window.dispatchEvent(new CustomEvent('p4now:checkout-selected'));
+                useCommandStore.getState().dispatch('checkout-selected');
               })
             }
           >
@@ -147,7 +148,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             disabled={!hasFileSelected}
             onSelect={() =>
               executeCommand(() => {
-                window.dispatchEvent(new CustomEvent('p4now:diff-selected'));
+                useCommandStore.getState().dispatch('diff-selected');
               })
             }
           >
@@ -161,7 +162,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             disabled={!hasFileSelected}
             onSelect={() =>
               executeCommand(() => {
-                window.dispatchEvent(new CustomEvent('p4now:revert-selected'));
+                useCommandStore.getState().dispatch('revert-selected');
               })
             }
           >
@@ -175,7 +176,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             disabled={!hasFileSelected}
             onSelect={() =>
               executeCommand(() => {
-                window.dispatchEvent(new CustomEvent('p4now:history-selected'));
+                useCommandStore.getState().dispatch('history-selected');
               })
             }
           >
@@ -216,7 +217,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
           <CommandItem
             onSelect={() =>
               executeCommand(() => {
-                window.dispatchEvent(new CustomEvent('p4now:open-settings'));
+                useCommandStore.getState().dispatch('open-settings');
               })
             }
           >

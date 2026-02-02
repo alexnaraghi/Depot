@@ -13,6 +13,7 @@ import { AlertCircle } from 'lucide-react';
 import { useDndManager } from '@/contexts/DndContext';
 import createFuzzySearch from '@nozbe/microfuzz';
 import { cn } from '@/lib/utils';
+import { useCommand } from '@/hooks/useCommand';
 
 /**
  * Main file tree component
@@ -61,44 +62,30 @@ export function FileTree() {
     return () => window.removeEventListener('resize', updateHeight);
   }, []);
 
-  // Listen for context-sensitive shortcut events
-  useEffect(() => {
-    const handleDiffSelected = () => {
-      if (selectedFile) {
-        handleDiffAgainstHave(selectedFile.depotPath, selectedFile.localPath);
-      }
-    };
+  // Listen for context-sensitive command events
+  useCommand('diff-selected', () => {
+    if (selectedFile) {
+      handleDiffAgainstHave(selectedFile.depotPath, selectedFile.localPath);
+    }
+  });
 
-    const handleHistorySelected = () => {
-      if (selectedFile) {
-        handleShowHistory(selectedFile.depotPath, selectedFile.localPath);
-      }
-    };
+  useCommand('history-selected', () => {
+    if (selectedFile) {
+      handleShowHistory(selectedFile.depotPath, selectedFile.localPath);
+    }
+  });
 
-    const handleRevertSelected = () => {
-      if (selectedFile) {
-        revert([selectedFile.depotPath]);
-      }
-    };
+  useCommand('revert-selected', () => {
+    if (selectedFile) {
+      revert([selectedFile.depotPath]);
+    }
+  });
 
-    const handleCheckoutSelected = () => {
-      if (selectedFile) {
-        checkout([selectedFile.depotPath]);
-      }
-    };
-
-    window.addEventListener('p4now:diff-selected', handleDiffSelected);
-    window.addEventListener('p4now:history-selected', handleHistorySelected);
-    window.addEventListener('p4now:revert-selected', handleRevertSelected);
-    window.addEventListener('p4now:checkout-selected', handleCheckoutSelected);
-
-    return () => {
-      window.removeEventListener('p4now:diff-selected', handleDiffSelected);
-      window.removeEventListener('p4now:history-selected', handleHistorySelected);
-      window.removeEventListener('p4now:revert-selected', handleRevertSelected);
-      window.removeEventListener('p4now:checkout-selected', handleCheckoutSelected);
-    };
-  }, [selectedFile, checkout, revert]);
+  useCommand('checkout-selected', () => {
+    if (selectedFile) {
+      checkout([selectedFile.depotPath]);
+    }
+  });
 
   // Apply fuzzy filtering to tree
   const filterResults = useCallback((data: FileNodeData[], term: string) => {

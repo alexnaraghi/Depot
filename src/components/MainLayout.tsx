@@ -29,6 +29,8 @@ import { SHORTCUTS } from '@/lib/shortcuts';
 import { getColumnWidths, saveColumnWidths } from '@/lib/settings';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import { useCommandStore } from '@/stores/commandStore';
+import { useCommand } from '@/hooks/useCommand';
 
 /**
  * Main application layout
@@ -122,7 +124,7 @@ export function MainLayout() {
   };
 
   const handleNewChangelist = () => {
-    window.dispatchEvent(new CustomEvent('p4now:new-changelist'));
+    useCommandStore.getState().dispatch('new-changelist');
   };
 
   const handleCheckout = () => {
@@ -155,40 +157,32 @@ export function MainLayout() {
 
   // Search shortcuts
   useHotkeys(SHORTCUTS.SEARCH.keys, () => {
-    window.dispatchEvent(new CustomEvent('p4now:focus-search'));
+    useCommandStore.getState().dispatch('focus-search');
   }, { enableOnFormTags: true, preventDefault: true });
 
-  // Context-sensitive shortcuts - still dispatch events for FileTree/ChangelistPanel to handle
+  // Context-sensitive shortcuts - dispatch commands for FileTree/ChangelistPanel to handle
   // (they have access to more context like local paths)
   useHotkeys(SHORTCUTS.DIFF.keys, () => {
-    window.dispatchEvent(new CustomEvent('p4now:diff-selected'));
+    useCommandStore.getState().dispatch('diff-selected');
   }, { enableOnFormTags: false, preventDefault: true });
 
   useHotkeys(SHORTCUTS.HISTORY.keys, () => {
-    window.dispatchEvent(new CustomEvent('p4now:history-selected'));
+    useCommandStore.getState().dispatch('history-selected');
   }, { enableOnFormTags: false, preventDefault: true });
 
   useHotkeys(SHORTCUTS.REVERT.keys, () => {
-    window.dispatchEvent(new CustomEvent('p4now:revert-selected'));
+    useCommandStore.getState().dispatch('revert-selected');
   }, { enableOnFormTags: false, preventDefault: true });
 
   useHotkeys(SHORTCUTS.SUBMIT.keys, () => {
-    window.dispatchEvent(new CustomEvent('p4now:submit'));
+    useCommandStore.getState().dispatch('submit');
   }, { enableOnFormTags: false, preventDefault: true });
 
-  // Listen for 'p4now:open-settings' custom event to open settings dialog
-  useEffect(() => {
-    const handleOpenSettings = () => setSettingsOpen(true);
-    window.addEventListener('p4now:open-settings', handleOpenSettings);
-    return () => window.removeEventListener('p4now:open-settings', handleOpenSettings);
-  }, []);
+  // Listen for 'open-settings' command to open settings dialog
+  useCommand('open-settings', () => setSettingsOpen(true));
 
-  // Listen for 'p4now:open-connection' custom event to open connection dialog
-  useEffect(() => {
-    const handleOpenConnection = () => setConnectionDialogOpen(true);
-    window.addEventListener('p4now:open-connection', handleOpenConnection);
-    return () => window.removeEventListener('p4now:open-connection', handleOpenConnection);
-  }, []);
+  // Listen for 'open-connection' command to open connection dialog
+  useCommand('open-connection', () => setConnectionDialogOpen(true));
 
   // Auto-open connection dialog when disconnected on mount
   useEffect(() => {

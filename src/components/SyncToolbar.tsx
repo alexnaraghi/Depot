@@ -1,10 +1,11 @@
 import { RefreshCw, X, FolderSync } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useSync } from '@/hooks/useSync';
 import { SyncConflictDialog } from '@/components/dialogs/SyncConflictDialog';
 import { ReconcilePreviewDialog } from '@/components/dialogs/ReconcilePreviewDialog';
 import { SHORTCUTS } from '@/lib/shortcuts';
+import { useCommand } from '@/hooks/useCommand';
 
 /**
  * Toolbar for sync and reconcile operations.
@@ -49,29 +50,11 @@ export function SyncToolbar() {
     }
   };
 
-  // Listen for sync keyboard shortcut
-  useEffect(() => {
-    const handleSyncEvent = () => {
-      handleSync();
-    };
+  // Listen for sync command
+  useCommand('sync', handleSync);
 
-    window.addEventListener('p4now:sync', handleSyncEvent);
-    return () => {
-      window.removeEventListener('p4now:sync', handleSyncEvent);
-    };
-  }, [handleSync]);
-
-  // Listen for reconcile keyboard shortcut / command palette
-  useEffect(() => {
-    const handleReconcileEvent = () => {
-      setReconcileDialogOpen(true);
-    };
-
-    window.addEventListener('p4now:reconcile', handleReconcileEvent);
-    return () => {
-      window.removeEventListener('p4now:reconcile', handleReconcileEvent);
-    };
-  }, []);
+  // Listen for reconcile command
+  useCommand('reconcile', () => setReconcileDialogOpen(true));
 
   return (
     <>

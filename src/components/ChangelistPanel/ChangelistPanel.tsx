@@ -23,6 +23,7 @@ import toast from 'react-hot-toast';
 import { Plus, Send, Archive, ArrowDownToLine, Pencil, Trash2, Undo2 } from 'lucide-react';
 import { useDndManager } from '@/contexts/DndContext';
 import createFuzzySearch from '@nozbe/microfuzz';
+import { useCommand } from '@/hooks/useCommand';
 
 interface ChangelistPanelProps {
   className?: string;
@@ -344,34 +345,18 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
     });
   }, []);
 
-  // Listen for custom event to open create changelist dialog
-  useEffect(() => {
-    const handleNewChangelist = () => {
-      setCreateDialogOpen(true);
-    };
+  // Listen for new-changelist command
+  useCommand('new-changelist', () => setCreateDialogOpen(true));
 
-    window.addEventListener('p4now:new-changelist', handleNewChangelist);
-    return () => {
-      window.removeEventListener('p4now:new-changelist', handleNewChangelist);
-    };
-  }, []);
-
-  // Listen for submit shortcut event
-  useEffect(() => {
-    const handleSubmit = () => {
-      // Get the first changelist with files (or selected changelist if tracked)
-      const changelistWithFiles = changelists.find(cl => cl.fileCount > 0);
-      if (changelistWithFiles) {
-        setSelectedChangelist(changelistWithFiles);
-        setSubmitDialogOpen(true);
-      }
-    };
-
-    window.addEventListener('p4now:submit', handleSubmit);
-    return () => {
-      window.removeEventListener('p4now:submit', handleSubmit);
-    };
-  }, [changelists]);
+  // Listen for submit command
+  useCommand('submit', () => {
+    // Get the first changelist with files
+    const changelistWithFiles = changelists.find(cl => cl.fileCount > 0);
+    if (changelistWithFiles) {
+      setSelectedChangelist(changelistWithFiles);
+      setSubmitDialogOpen(true);
+    }
+  });
 
   // Handle diff against have
   const handleDiffAgainstHave = useCallback((depotPath: string, localPath: string) => {

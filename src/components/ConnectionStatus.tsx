@@ -1,5 +1,6 @@
 import { useConnectionStore } from '@/stores/connectionStore';
 import { Badge } from '@/components/ui/badge';
+import { useCommandStore } from '@/stores/commandStore';
 
 export function ConnectionStatus() {
   const { status, errorMessage } = useConnectionStore();
@@ -48,7 +49,7 @@ export function ConnectionStatus() {
   };
 
   const handleClick = () => {
-    window.dispatchEvent(new CustomEvent('p4now:open-connection'));
+    useCommandStore.getState().dispatch('open-connection');
   };
 
   return (
