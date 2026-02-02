@@ -4,7 +4,7 @@
 
 - ✅ **v1.0 MVP** - Phases 01-02 (shipped 2026-01-28)
 - ✅ **v2.0 Feature Complete** - Phases 03-08 (shipped 2026-01-30)
-- 🚧 **v3.0 Daily Driver** - Phases 09-15 (in progress)
+- 🚧 **v3.0 Daily Driver** - Phases 09-15 (all phases complete, pending audit)
 
 ## Phases
 
@@ -187,8 +187,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 15-01-PLAN.md — Rust backend resolve commands (fstat unresolved, resolve accept, launch merge tool)
-- [ ] 15-02-PLAN.md — Frontend resolve UI (conflict banner, blocking overlay, context menus, submit blocking)
+- [x] 15-01-PLAN.md — Rust backend resolve commands (fstat unresolved, resolve accept, launch merge tool)
+- [x] 15-02-PLAN.md — Frontend resolve UI (conflict banner, blocking overlay, context menus, submit blocking)
 
 ## Progress
 
@@ -204,4 +204,4 @@ Phases execute in numeric order: 09 → 10 → 11 → 12 → 13 → 14 → 15
 | 12. Search Filtering & Results | 4/4 | ✓ Complete | 2026-02-01 |
 | 13. Workspace & Stream Switching | 5/5 | ✓ Complete | 2026-02-01 |
 | 14. Depot Browser | 3/3 | ✓ Complete | 2026-02-01 |
-| 15. Resolve Workflow | 0/? | Not started | - |
+| 15. Resolve Workflow | 2/2 | ✓ Complete | 2026-02-01 |

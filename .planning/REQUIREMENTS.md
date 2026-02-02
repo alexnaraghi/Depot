@@ -7,13 +7,13 @@
 
 ### Resolve
 
-- [ ] **RSLV-01**: User sees conflict indicator on files needing resolution after sync
-- [ ] **RSLV-02**: User can launch external merge tool on conflicted files
+- [x] **RSLV-01**: User sees conflict indicator on files needing resolution after sync
+- [x] **RSLV-02**: User can launch external merge tool on conflicted files
 
 ### Depot Browser
 
-- [ ] **DPOT-01**: User can browse full depot hierarchy in a tree view
-- [ ] **DPOT-02**: User can sync files/folders from depot browser
+- [x] **DPOT-01**: User can browse full depot hierarchy in a tree view
+- [x] **DPOT-02**: User can sync files/folders from depot browser
 
 ### Workspace Management
 
@@ -116,10 +116,10 @@
 | WKSP-03 | Phase 13 | Complete |
 | STRM-01 | Phase 13 | Complete |
 | STRM-02 | Phase 13 | Complete |
-| DPOT-01 | Phase 14 | Pending |
-| DPOT-02 | Phase 14 | Pending |
-| RSLV-01 | Phase 15 | Pending |
-| RSLV-02 | Phase 15 | Pending |
+| DPOT-01 | Phase 14 | Complete |
+| DPOT-02 | Phase 14 | Complete |
+| RSLV-01 | Phase 15 | Complete |
+| RSLV-02 | Phase 15 | Complete |
 
 **Coverage:**
 - v3.0 requirements: 21 total
