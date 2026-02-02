@@ -21,7 +21,7 @@ Progress: [██████████] 100% (26 of 26 v3.0 plans)
 
 **Velocity:**
 - Total plans completed: 58 (14 v1.0 + 17 v2.0 + 27 v3.0)
-- Quick tasks completed: 6
+- Quick tasks completed: 7
 - Average duration: 6 min
 - Total execution time: ~376 min (104 v1.0 + ~112 v2.0 + 160 v3.0)
 
@@ -59,11 +59,12 @@ None — all v3.0 phases complete.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 005 | Fix detail pane selection and CL click behavior | 2026-02-01 | 1c7a040 | [005-fix-detail-pane-selection-and-cl-click](./quick/005-fix-detail-pane-selection-and-cl-click/) |
+| 006 | Architecture report short-term fixes | 2026-02-02 | 9b2e63b | [006-architecture-report-short-term-fixes](./quick/006-architecture-report-short-term-fixes/) |
 
 ## Session Continuity
 
-Last session: 2026-02-01
-Stopped at: v3.0 milestone shipped
+Last session: 2026-02-02
+Stopped at: Completed quick task 006
 Resume file: None
 
 ---
