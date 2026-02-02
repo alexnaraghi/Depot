@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { invokeP4Sync, invokeKillProcess, invokeP4Info, SyncProgress } from '@/lib/tauri';
 import { useOperationStore } from '@/store/operation';
@@ -63,6 +63,8 @@ export function useSync() {
   const [conflict, setConflict] = useState<SyncConflict | null>(null);
   const [totalFiles, setTotalFiles] = useState(0);
   const [syncedFiles, setSyncedFiles] = useState(0);
+  const totalFilesRef = useRef(0);
+  const syncedFilesRef = useRef(0);
 
   /**
    * Execute sync operation with progress tracking.
@@ -82,6 +84,8 @@ export function useSync() {
     setConflict(null);
     setTotalFiles(0);
     setSyncedFiles(0);
+    totalFilesRef.current = 0;
+    syncedFilesRef.current = 0;
 
     try {
       // Build sync args
@@ -118,22 +122,20 @@ export function useSync() {
             return;
           }
 
-          // Track progress
-          setSyncedFiles((prev) => {
-            const newCount = prev + 1;
-            setTotalFiles((total) => Math.max(total, newCount));
+          // Track progress via refs to avoid stale closure
+          syncedFilesRef.current += 1;
+          totalFilesRef.current = Math.max(totalFilesRef.current, syncedFilesRef.current);
+          setSyncedFiles(syncedFilesRef.current);
+          setTotalFiles(totalFilesRef.current);
 
-            // Update progress bar (0-100)
-            if (totalFiles > 0) {
-              updateProgress(Math.round((newCount / totalFiles) * 100));
-            }
-
-            return newCount;
-          });
+          // Update progress bar (0-100)
+          if (totalFilesRef.current > 0) {
+            updateProgress(Math.round((syncedFilesRef.current / totalFilesRef.current) * 100));
+          }
 
           // Update message with current file
           const fileName = progress.depot_path.split('/').pop() || progress.depot_path;
-          updateMessage(`Syncing: ${fileName} (${syncedFiles + 1} files)`);
+          updateMessage(`Syncing: ${fileName} (${syncedFilesRef.current} files)`);
 
           // Log to output panel
           addOutputLine(
@@ -175,8 +177,6 @@ export function useSync() {
     addOutputLine,
     updateFile,
     depotPath,
-    syncedFiles,
-    totalFiles,
     queryClient,
   ]);
 
@@ -196,6 +196,8 @@ export function useSync() {
       setConflict(null);
       setTotalFiles(0);
       setSyncedFiles(0);
+      totalFilesRef.current = 0;
+      syncedFilesRef.current = 0;
     } catch (error) {
       completeOperation(false, `Cancel failed: ${error}`);
     }
