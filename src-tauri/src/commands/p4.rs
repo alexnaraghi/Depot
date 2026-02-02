@@ -595,15 +595,7 @@ pub async fn p4_submit(
         // Default changelist: must use -d flag with description
         let desc = description.unwrap_or_else(|| "Submitted from P4Now".to_string());
         let mut cmd = Command::new("p4");
-        if let Some(s) = &server {
-            cmd.args(["-p", s]);
-        }
-        if let Some(u) = &user {
-            cmd.args(["-u", u]);
-        }
-        if let Some(c) = &client {
-            cmd.args(["-c", c]);
-        }
+        apply_connection_args(&mut cmd, &server, &user, &client);
         cmd.args(["submit", "-d", &desc]);
         cmd.output()
             .map_err(|e| format!("Failed to execute p4 submit: {}", e))?
@@ -619,15 +611,7 @@ pub async fn p4_submit(
             )?;
         }
         let mut cmd = Command::new("p4");
-        if let Some(s) = &server {
-            cmd.args(["-p", s]);
-        }
-        if let Some(u) = &user {
-            cmd.args(["-u", u]);
-        }
-        if let Some(c) = &client {
-            cmd.args(["-c", c]);
-        }
+        apply_connection_args(&mut cmd, &server, &user, &client);
         cmd.args(["submit", "-c", &changelist.to_string()]);
         cmd.output()
             .map_err(|e| format!("Failed to execute p4 submit: {}", e))?
