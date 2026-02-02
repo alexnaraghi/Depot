@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { invokeP4Depots, invokeP4Dirs, invokeP4Files } from '@/lib/tauri';
@@ -48,6 +48,14 @@ export function useDepotTree() {
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+
+  // Clear local state when disconnected
+  useEffect(() => {
+    if (!isConnected) {
+      setTreeData([]);
+      loadedPaths.current.clear();
+    }
+  }, [isConnected]);
 
   const loadChildren = useCallback(async (depotPath: string) => {
     if (loadedPaths.current.has(depotPath)) return;

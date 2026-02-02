@@ -35,22 +35,29 @@ export function ConnectionStatus() {
   const getClassName = () => {
     switch (status) {
       case 'connected':
-        return 'bg-green-600 hover:bg-green-700 text-white';
+        return 'bg-green-600 hover:bg-green-700 text-white cursor-pointer';
       case 'disconnected':
-        return 'border-slate-500 text-slate-400';
+        return 'border-slate-500 text-slate-400 cursor-pointer';
       case 'connecting':
         return 'animate-pulse';
+      case 'error':
+        return 'cursor-pointer';
       default:
         return '';
     }
+  };
+
+  const handleClick = () => {
+    window.dispatchEvent(new CustomEvent('p4now:open-connection'));
   };
 
   return (
     <Badge
       variant={getVariant()}
       className={getClassName()}
-      title={status === 'error' && errorMessage ? errorMessage : undefined}
+      title={status === 'error' && errorMessage ? errorMessage : 'Click to manage connection'}
       data-testid="connection-status"
+      onClick={handleClick}
     >
       {getText()}
     </Badge>

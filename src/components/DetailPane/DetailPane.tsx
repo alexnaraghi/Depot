@@ -1,6 +1,7 @@
 import { useEffect, useDeferredValue } from 'react';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
 import { useSearchFilterStore } from '@/stores/searchFilterStore';
+import { useConnectionStore } from '@/stores/connectionStore';
 import { FileDetailView } from './FileDetailView';
 import { ChangelistDetailView } from './ChangelistDetailView';
 import { RevisionDetailView } from './RevisionDetailView';
@@ -25,6 +26,7 @@ export function DetailPane() {
   const clear = useDetailPaneStore(s => s.clear);
   const filterTerm = useSearchFilterStore(s => s.filterTerm);
   const isFilterActive = useSearchFilterStore(s => s.isActive);
+  const isConnected = useConnectionStore(s => s.status) === 'connected';
   const deferredFilterTerm = useDeferredValue(filterTerm);
 
   // Handle Escape key for back navigation
@@ -45,6 +47,13 @@ export function DetailPane() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [history.length, goBack, clear, isFilterActive]);
 
+  // Clear selection when disconnected
+  useEffect(() => {
+    if (!isConnected) {
+      clear();
+    }
+  }, [isConnected, clear]);
+
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Breadcrumb navigation - hide during toolbar search */}
@@ -60,7 +69,14 @@ export function DetailPane() {
         {/* Normal selection routing (hidden when filter active) */}
         {!isFilterActive && (
           <>
-            {selection.type === 'none' && <SearchResultsView searchType="submitted" query="" minimal />}
+            {selection.type === 'none' && !isConnected && (
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
+                <p className="text-lg font-medium">Not connected</p>
+                <p className="text-sm">Click the connection status badge to connect to a Perforce server.</p>
+              </div>
+            )}
+
+            {selection.type === 'none' && isConnected && <SearchResultsView searchType="submitted" query="" minimal />}
 
             {selection.type === 'file' && (
               <FileDetailView depotPath={selection.depotPath} localPath={selection.localPath} />

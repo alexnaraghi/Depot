@@ -5,6 +5,7 @@ import { FileTree } from '@/components/FileTree/FileTree';
 import { ChangelistPanel } from '@/components/ChangelistPanel/ChangelistPanel';
 import { DetailPane } from '@/components/DetailPane/DetailPane';
 import { ConnectionStatus } from '@/components/ConnectionStatus';
+import { ConnectionDialog } from '@/components/ConnectionDialog';
 import { SettingsDialog } from '@/components/SettingsDialog';
 import { SearchBar } from '@/components/SearchBar';
 import { CommandPalette } from '@/components/CommandPalette';
@@ -15,6 +16,7 @@ import { StreamSwitcher } from '@/components/Header/StreamSwitcher';
 import { DepotBrowser } from '@/components/DepotBrowser/DepotBrowser';
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
 import { useFileTreeStore } from '@/stores/fileTreeStore';
+import { useConnectionStore } from '@/stores/connectionStore';
 import { useSync } from '@/hooks/useSync';
 import { useFileOperations } from '@/hooks/useFileOperations';
 import { useDiff } from '@/hooks/useDiff';
@@ -43,9 +45,11 @@ export function MainLayout() {
   const [rightWidth, setRightWidth] = useState(320);
   const [resizingColumn, setResizingColumn] = useState<'left' | 'right' | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [connectionDialogOpen, setConnectionDialogOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [reconcileDialogOpen, setReconcileDialogOpen] = useState(false);
   const selectedFile = useFileTreeStore(s => s.selectedFile);
+  const connectionStatus = useConnectionStore(s => s.status);
   const queryClient = useQueryClient();
 
   // Accordion state with localStorage persistence
@@ -57,6 +61,13 @@ export function MainLayout() {
     const saved = localStorage.getItem('accordion-depot');
     return saved !== null ? saved === 'true' : true;
   });
+
+  // Auto-expand workspace files when connected
+  useEffect(() => {
+    if (connectionStatus === 'connected') {
+      setWorkspaceOpen(true);
+    }
+  }, [connectionStatus]);
 
   // Load saved column widths on mount
   useEffect(() => {
@@ -176,6 +187,20 @@ export function MainLayout() {
     window.addEventListener('p4now:open-settings', handleOpenSettings);
     return () => window.removeEventListener('p4now:open-settings', handleOpenSettings);
   }, []);
+
+  // Listen for 'p4now:open-connection' custom event to open connection dialog
+  useEffect(() => {
+    const handleOpenConnection = () => setConnectionDialogOpen(true);
+    window.addEventListener('p4now:open-connection', handleOpenConnection);
+    return () => window.removeEventListener('p4now:open-connection', handleOpenConnection);
+  }, []);
+
+  // Auto-open connection dialog when disconnected on mount
+  useEffect(() => {
+    if (connectionStatus === 'disconnected') {
+      setConnectionDialogOpen(true);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLeftResize = () => {
     setResizingColumn('left');
@@ -336,6 +361,9 @@ export function MainLayout() {
 
         </div>
       </header>
+
+      {/* Connection dialog */}
+      <ConnectionDialog open={connectionDialogOpen} onOpenChange={setConnectionDialogOpen} />
 
       {/* Settings dialog */}
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />

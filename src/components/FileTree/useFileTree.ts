@@ -65,6 +65,13 @@ export function useFileTree() {
   const { status, p4port, p4user, p4client } = useConnectionStore();
   const isConnected = status === 'connected';
 
+  // Clear store when disconnected
+  useEffect(() => {
+    if (!isConnected) {
+      useFileTreeStore.setState({ files: new Map(), rootPath: null, selectedFile: null, isLoading: false });
+    }
+  }, [isConnected]);
+
   // First, query for P4 client info to get the workspace root and stream
   // Only runs when connected (settings configured and connection verified)
   const { data: clientInfo, isLoading: clientInfoLoading, error: clientInfoError } = useQuery({
@@ -84,10 +91,10 @@ export function useFileTree() {
 
   // Set the root path from client info
   useEffect(() => {
-    if (clientInfo?.client_root && rootPath !== clientInfo.client_root) {
+    if (isConnected && clientInfo?.client_root && rootPath !== clientInfo.client_root) {
       setRootPath(clientInfo.client_root);
     }
-  }, [clientInfo, rootPath, setRootPath]);
+  }, [isConnected, clientInfo, rootPath, setRootPath]);
 
   // Build depot path for querying (e.g., "//stream/main/...")
   const depotPath = clientInfo?.client_stream

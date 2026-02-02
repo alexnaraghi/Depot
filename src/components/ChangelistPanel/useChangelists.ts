@@ -82,9 +82,16 @@ export function useChangelists(): {
     refetchInterval: refetchIntervalValue,
   });
 
+  // Clear store when disconnected (bypass setChangelists which preserves default CL)
+  useEffect(() => {
+    if (!isConnected) {
+      useChangelistStore.setState({ changelists: new Map(), isLoading: false });
+    }
+  }, [isConnected]);
+
   // Merge changelist data with opened files
   useEffect(() => {
-    if (!clData || !openedData) return;
+    if (!isConnected || !clData || !openedData) return;
 
     const clMap = new Map<number, P4Changelist>();
 
