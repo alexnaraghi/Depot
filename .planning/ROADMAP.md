@@ -141,9 +141,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 18-01-PLAN.md - Sync status overlays with folder aggregation
-- [ ] 18-02-PLAN.md - Backend p4_describe command for submitted CL files
-- [ ] 18-03-PLAN.md - Submitted CL file list display and navigation
+- [x] 18-01-PLAN.md - Sync status overlays with folder aggregation
+- [x] 18-02-PLAN.md - Backend p4_describe command for submitted CL files
+- [x] 18-03-PLAN.md - Submitted CL file list display and navigation
 
 #### Phase 19: Submit Enhancement
 **Goal**: User can preview changelist before submitting
@@ -182,5 +182,5 @@ Plans:
 | 15. Resolve Workflow | v3.0 | 2/2 | Complete | 2026-02-01 |
 | 16. File Content Viewer | v4.0 | 3/3 | Complete | 2026-02-03 |
 | 17. File Annotations | v4.0 | 3/3 | Complete | 2026-02-03 |
-| 18. Table Stakes UI | v4.0 | 0/TBD | Not started | - |
+| 18. Table Stakes UI | v4.0 | 3/3 | Complete | 2026-02-03 |
 | 19. Submit Enhancement | v4.0 | 0/TBD | Not started | - |

@@ -24,9 +24,9 @@ Requirements for P4V parity milestone. Each maps to roadmap phases.
 
 ### Workspace Sync Status
 
-- [ ] **SYNC-01**: File tree shows icon overlay indicating out-of-date files
-- [ ] **SYNC-02**: Sync status compares have-rev vs head-rev
-- [ ] **SYNC-03**: Sync status visible in tree without expanding folders
+- [x] **SYNC-01**: File tree shows icon overlay indicating out-of-date files
+- [x] **SYNC-02**: Sync status compares have-rev vs head-rev
+- [x] **SYNC-03**: Sync status visible in tree without expanding folders
 
 ### Submit Dialog Preview
 
@@ -37,9 +37,9 @@ Requirements for P4V parity milestone. Each maps to roadmap phases.
 
 ### Submitted Changelist File List
 
-- [ ] **CLFILE-01**: User can view all files in a submitted changelist
-- [ ] **CLFILE-02**: Files show action indicators (add, edit, delete, integrate)
-- [ ] **CLFILE-03**: User can click file to view that revision
+- [x] **CLFILE-01**: User can view all files in a submitted changelist
+- [x] **CLFILE-02**: Files show action indicators (add, edit, delete, integrate)
+- [x] **CLFILE-03**: User can click file to view that revision
 
 ## Future Requirements
 
@@ -99,16 +99,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BLAME-04 | Phase 17 | Complete |
 | BLAME-05 | Phase 17 | Complete |
 | BLAME-06 | Phase 17 | Complete |
-| SYNC-01 | Phase 18 | Pending |
-| SYNC-02 | Phase 18 | Pending |
-| SYNC-03 | Phase 18 | Pending |
+| SYNC-01 | Phase 18 | Complete |
+| SYNC-02 | Phase 18 | Complete |
+| SYNC-03 | Phase 18 | Complete |
 | SUBMIT-01 | Phase 19 | Pending |
 | SUBMIT-02 | Phase 19 | Pending |
 | SUBMIT-03 | Phase 19 | Pending |
 | SUBMIT-04 | Phase 19 | Pending |
-| CLFILE-01 | Phase 18 | Pending |
-| CLFILE-02 | Phase 18 | Pending |
-| CLFILE-03 | Phase 18 | Pending |
+| CLFILE-01 | Phase 18 | Complete |
+| CLFILE-02 | Phase 18 | Complete |
+| CLFILE-03 | Phase 18 | Complete |
 
 **Coverage:**
 - v4.0 requirements: 19 total
