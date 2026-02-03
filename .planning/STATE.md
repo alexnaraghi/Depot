@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 
 Milestone: v4.0 Road to P4V Killer
 Phase: 17 of 19 (File Annotations)
-Plan: 2 of TBD (UI Components complete)
-Status: In progress
-Last activity: 2026-02-03 — Completed 17-02-PLAN.md (File Annotation Viewer UI)
+Plan: 3 of 3 (Phase complete)
+Status: Phase complete
+Last activity: 2026-02-03 — Completed 17-03-PLAN.md (Interactive Features)
 
-Progress: [█████████░░░░░░░░░░░] 63/TBD plans complete (v3.0: 58/58, v4.0: 5)
+Progress: [█████████░░░░░░░░░░░] 64/TBD plans complete (v3.0: 58/58, v4.0: 6)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 63 (14 v1.0 + 17 v2.0 + 27 v3.0 + 5 v4.0)
+- Total plans completed: 64 (14 v1.0 + 17 v2.0 + 27 v3.0 + 6 v4.0)
 - Quick tasks completed: 8 (007 partial)
 - Average duration: 5 min
-- Total execution time: ~457 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 34 quick + 47 v4.0)
+- Total execution time: ~465 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 34 quick + 55 v4.0)
 
 **By Phase (v3.0):**
 
@@ -43,7 +43,7 @@ Progress: [█████████░░░░░░░░░░░] 63/TBD 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 16 | 3 | 14 min | 5 min |
-| 17 | 2 | 33 min | 17 min |
+| 17 | 3 | 41 min | 14 min |
 
 *Updated after each plan completion*
 
@@ -68,14 +68,15 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Blockers/Concerns
 
-None — Phase 16 complete and verified. External editor stub noted but not blocking.
+None — Phase 17 complete. All 6 BLAME requirements satisfied.
 
 **Research notes:**
 - Use p4 have + p4 files (not p4 fstat) for sync status (10-100x faster)
 - Use p4 describe -s to suppress diffs (critical for large CLs)
-- New libraries: prism-react-renderer (syntax highlighting, INSTALLED ✓), @tanstack/react-virtual (virtualization, INSTALLED ✓)
+- New libraries: prism-react-renderer (syntax highlighting, INSTALLED ✓), @tanstack/react-virtual (virtualization, INSTALLED ✓), @radix-ui/react-tooltip (tooltips, INSTALLED ✓)
 - Size checks before p4 print and p4 annotate (10MB limits, IMPLEMENTED ✓)
 - P4FileInfo struct doesn't include fileSize — parse p4 -ztag fstat directly in frontend hooks
+- Lazy tooltip loading pattern: enabled: isOpen for on-demand fetching
 
 ### Quick Tasks Completed
 
@@ -88,8 +89,8 @@ None — Phase 16 complete and verified. External editor stub noted but not bloc
 ## Session Continuity
 
 Last session: 2026-02-03
-Stopped at: Completed 17-02-PLAN.md
+Stopped at: Completed 17-03-PLAN.md (Phase 17 complete)
 Resume file: None
 
 ---
-**Next step:** Continue Phase 17 with next plan (Keyboard Navigation or Integration)
+**Next step:** Begin Phase 18 (Sync Status + CL File List) or Phase 19 (Submit Preview)
