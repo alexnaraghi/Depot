@@ -54,7 +54,13 @@ The user is never blocked — operations are always cancellable, errors are non-
 
 ### Active
 
-(None yet — define in next milestone)
+- [ ] Submit dialog with changelist description preview and edit
+- [ ] File annotations (blame) — per-line author, revision, date
+- [ ] Workspace file tree showing sync status (have-rev vs head-rev indicators)
+- [ ] Open file in configured external editor (workspace and depot revisions)
+- [ ] Submitted changelist full file list view
+- [ ] File content viewer (view any revision without external tool)
+- [ ] Bookmark/favorite paths in depot and workspace trees
 
 ### Out of Scope
 
@@ -114,7 +120,18 @@ Tech stack: Tauri 2.0, React 19, TanStack Query, Zustand, shadcn/ui, Tailwind CS
 | Lazy loading for depot browser | Load subdirectories on toggle to prevent memory exhaustion | ✓ Good |
 | spawn_blocking for merge tool | Doesn't block async runtime while waiting for external process | ✓ Good |
 
-## Current Milestone: Planning next milestone
+## Current Milestone: v4.0 Road to P4V Killer
+
+**Goal:** Close the most visible daily-use gaps versus P4V — submit preview, blame view, workspace sync status, file viewer, and bookmarks.
+
+**Target features:**
+- Submit dialog with changelist description preview/edit
+- File annotations (blame) with per-line author/revision/date
+- Workspace file tree showing have-rev vs head-rev sync status
+- Open file in external editor (fixes p4_print tech debt)
+- Submitted changelist full file list (fixes p4_describe tech debt)
+- File content viewer for any revision
+- Bookmark/favorite paths for quick navigation
 
 ## Milestones
 
@@ -123,8 +140,9 @@ Tech stack: Tauri 2.0, React 19, TanStack Query, Zustand, shadcn/ui, Tailwind CS
 | v1.0 MVP | Complete | 2026-01-28 |
 | v2.0 Feature Complete | Complete | 2026-01-30 |
 | v3.0 Daily Driver | Complete | 2026-02-01 |
+| v4.0 Road to P4V Killer | In Progress | — |
 
 See `.planning/milestones/` for archived roadmaps and requirements.
 
 ---
-*Last updated: 2026-02-01 after v3.0 milestone*
+*Last updated: 2026-02-03 after v4.0 milestone start*
