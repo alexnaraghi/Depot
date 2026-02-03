@@ -1,4 +1,4 @@
-import { P4File, P4Changelist } from '@/types/p4';
+import { P4File, P4Changelist, FileStatus } from '@/types/p4';
 import { P4ShelvedFile } from '@/lib/tauri';
 
 /**
@@ -11,6 +11,9 @@ export interface FileTreeNode {
   isFolder: boolean;
   file?: P4File;
   children?: FileTreeNode[];
+  // Sync status for folder aggregation
+  hasOutOfDateDescendants?: boolean;  // True if any descendant file is out-of-date
+  outOfDateCount?: number;            // Count of out-of-date files in subtree
 }
 
 /**
@@ -111,7 +114,41 @@ export function buildFileTree(files: P4File[], rootPath: string): FileTreeNode[]
     parentNode.children!.push(fileNode);
   }
 
-  return rootNode.children || [];
+  const result = rootNode.children || [];
+  result.forEach(aggregateSyncStatus);
+  return result;
+}
+
+/**
+ * Recursively aggregate sync status from files up to folders
+ * Folders are marked as having out-of-date descendants if any child file or folder has out-of-date files
+ */
+function aggregateSyncStatus(node: FileTreeNode): void {
+  if (!node.isFolder || !node.children || node.children.length === 0) {
+    return;
+  }
+
+  // Process children first (bottom-up traversal)
+  node.children.forEach(aggregateSyncStatus);
+
+  // Aggregate: folder has out-of-date descendants if any child does
+  let outOfDateCount = 0;
+  let hasOutOfDate = false;
+
+  for (const child of node.children) {
+    if (child.isFolder) {
+      if (child.hasOutOfDateDescendants) {
+        hasOutOfDate = true;
+      }
+      outOfDateCount += child.outOfDateCount || 0;
+    } else if (child.file?.status === FileStatus.OutOfDate) {
+      hasOutOfDate = true;
+      outOfDateCount += 1;
+    }
+  }
+
+  node.hasOutOfDateDescendants = hasOutOfDate;
+  node.outOfDateCount = outOfDateCount;
 }
 
 /**
