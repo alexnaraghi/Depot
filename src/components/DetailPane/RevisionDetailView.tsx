@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { P4Revision } from '@/lib/tauri';
+import { P4Revision, invokeP4Changes } from '@/lib/tauri';
 import { useDiff } from '@/hooks/useDiff';
+import { useDetailPaneStore } from '@/stores/detailPaneStore';
 import { Button } from '@/components/ui/button';
 import { FileContentViewer } from './FileContentViewer';
 import { FileAnnotationViewer } from './FileAnnotationViewer';
+import toast from 'react-hot-toast';
 
 interface RevisionDetailViewProps {
   depotPath: string;
@@ -19,6 +21,7 @@ interface RevisionDetailViewProps {
  */
 export function RevisionDetailView({ depotPath, localPath, revision }: RevisionDetailViewProps) {
   const { diffRevisions, diffAgainstWorkspace } = useDiff();
+  const { selectChangelist } = useDetailPaneStore();
   const [showContent, setShowContent] = useState(false);
   const [showAnnotations, setShowAnnotations] = useState(false);
 
@@ -59,9 +62,30 @@ export function RevisionDetailView({ depotPath, localPath, revision }: RevisionD
     }
   };
 
-  const handleAnnotationClick = (changelistId: number) => {
-    // TODO: Navigate to changelist detail in Plan 03
-    console.log('Clicked changelist:', changelistId);
+  const handleAnnotationClick = async (changelistId: number) => {
+    try {
+      // Fetch submitted changelists to find the one clicked
+      const changelists = await invokeP4Changes('submitted');
+      const targetCl = changelists.find(cl => cl.id === changelistId);
+
+      if (targetCl) {
+        // Convert to P4Changelist format
+        selectChangelist({
+          id: targetCl.id,
+          description: targetCl.description,
+          user: targetCl.user,
+          client: targetCl.client,
+          status: targetCl.status as 'pending' | 'submitted' | 'shelved',
+          files: [], // Files will be loaded lazily when needed
+          fileCount: targetCl.file_count,
+        });
+      } else {
+        toast.error(`Changelist ${changelistId} not found`);
+      }
+    } catch (error) {
+      console.error('Failed to load changelist:', error);
+      toast.error('Failed to load changelist');
+    }
   };
 
   return (

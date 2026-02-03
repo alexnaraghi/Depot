@@ -5,7 +5,7 @@ import { useAnnotationNavigation } from '@/hooks/useAnnotationNavigation';
 import { AnnotationGutter } from './AnnotationGutter';
 import { Highlight, themes } from 'prism-react-renderer';
 import { getLanguageFromPath } from '@/lib/languageMap';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle, ArrowLeft, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 // Size thresholds (match FileContentViewer)
@@ -42,12 +42,18 @@ export function FileAnnotationViewer({
   const containerRef = useRef<HTMLDivElement>(null);
   const [userConfirmedLargeFile, setUserConfirmedLargeFile] = useState(false);
 
-  // Step 1: Get file metadata first
-  const { data: fileInfo, isLoading: isLoadingInfo, error: infoError } = useFileInfo(depotPath, revision);
+  // Blame revision navigation state
+  const [blameRevision, setBlameRevision] = useState(revision);
+  const [revisionHistory, setRevisionHistory] = useState<number[]>([revision]);
 
-  // Reset confirmation when file changes
+  // Step 1: Get file metadata first
+  const { data: fileInfo, isLoading: isLoadingInfo, error: infoError } = useFileInfo(depotPath, blameRevision);
+
+  // Reset confirmation and blame state when file or revision changes
   useEffect(() => {
     setUserConfirmedLargeFile(false);
+    setBlameRevision(revision);
+    setRevisionHistory([revision]);
   }, [depotPath, revision]);
 
   // Determine if we should load annotations
@@ -56,13 +62,13 @@ export function FileAnnotationViewer({
     fileInfo.fileSize <= MAX_VIEWABLE_SIZE &&
     (fileInfo.fileSize <= MAX_AUTO_LOAD_SIZE || userConfirmedLargeFile);
 
-  // Step 2: Load annotations only if validation passes
+  // Step 2: Load annotations only if validation passes (use blameRevision)
   const {
     data: annotations,
     isLoading: isLoadingAnnotations,
     error: annotationsError,
     refetch,
-  } = useFileAnnotations(depotPath, revision, { enabled: shouldLoadAnnotations });
+  } = useFileAnnotations(depotPath, blameRevision, { enabled: shouldLoadAnnotations });
 
   // Calculate timestamp range for heatmap
   const { minTimestamp, maxTimestamp } = (() => {
@@ -111,6 +117,24 @@ export function FileAnnotationViewer({
     }
     return lines;
   }, [currentBlock]);
+
+  // Blame navigation handlers
+  const handleBlamePriorRevision = () => {
+    if (blameRevision <= 1) return;
+
+    const newRevision = blameRevision - 1;
+    setRevisionHistory([...revisionHistory, blameRevision]);
+    setBlameRevision(newRevision);
+  };
+
+  const handleBlameHistoryBack = () => {
+    if (revisionHistory.length <= 1) return;
+
+    const newHistory = [...revisionHistory];
+    const previousRevision = newHistory.pop()!;
+    setRevisionHistory(newHistory);
+    setBlameRevision(previousRevision);
+  };
 
   // Get language for syntax highlighting
   const language = getLanguageFromPath(depotPath);
@@ -237,6 +261,31 @@ export function FileAnnotationViewer({
   // Main annotation view: side-by-side gutter + code
   return (
     <div className="space-y-2">
+      {/* Blame revision controls */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleBlameHistoryBack}
+          disabled={revisionHistory.length <= 1}
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleBlamePriorRevision}
+          disabled={blameRevision <= 1}
+        >
+          <History className="h-4 w-4 mr-1" />
+          Blame Prior Revision
+        </Button>
+        <span className="text-sm text-muted-foreground ml-auto">
+          Viewing blame at #{blameRevision}
+        </span>
+      </div>
+
       {/* Navigation indicator (only show when there are multiple blocks) */}
       {totalBlocks > 1 && (
         <div className="flex items-center gap-2 text-xs text-muted-foreground px-2">
