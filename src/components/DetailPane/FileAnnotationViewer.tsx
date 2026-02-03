@@ -1,6 +1,7 @@
-import { useRef, useState, useEffect } from 'react';
-import { useFileAnnotations } from '@/hooks/useFileAnnotations';
+import { useRef, useState, useEffect, useMemo } from 'react';
+import { useFileAnnotations, useAnnotationBlocks } from '@/hooks/useFileAnnotations';
 import { useFileInfo } from '@/hooks/useFileInfo';
+import { useAnnotationNavigation } from '@/hooks/useAnnotationNavigation';
 import { AnnotationGutter } from './AnnotationGutter';
 import { Highlight, themes } from 'prism-react-renderer';
 import { getLanguageFromPath } from '@/lib/languageMap';
@@ -79,6 +80,37 @@ export function FileAnnotationViewer({
       maxTimestamp: Math.max(...timestamps),
     };
   })();
+
+  // Get annotation blocks for keyboard navigation
+  const blocks = useAnnotationBlocks(annotations);
+
+  // Scroll to line callback for keyboard navigation
+  const scrollToLine = (lineNumber: number) => {
+    if (!containerRef.current) return;
+
+    // Calculate position (20px per line, 1-indexed)
+    const position = (lineNumber - 1) * 20;
+    // Offset by 100px for better visibility
+    containerRef.current.scrollTop = position - 100;
+  };
+
+  // Setup keyboard navigation
+  const {
+    currentBlockIndex,
+    currentBlock,
+    totalBlocks,
+  } = useAnnotationNavigation(blocks, scrollToLine);
+
+  // Calculate highlighted lines from current block
+  const highlightedLines = useMemo(() => {
+    if (!currentBlock) return new Set<number>();
+
+    const lines = new Set<number>();
+    for (let i = currentBlock.startLine; i <= currentBlock.endLine; i++) {
+      lines.add(i);
+    }
+    return lines;
+  }, [currentBlock]);
 
   // Get language for syntax highlighting
   const language = getLanguageFromPath(depotPath);
@@ -204,19 +236,33 @@ export function FileAnnotationViewer({
 
   // Main annotation view: side-by-side gutter + code
   return (
-    <div
-      ref={containerRef}
-      className="h-[600px] overflow-auto border rounded-md bg-card"
-    >
-      <div className="flex">
-        {/* Annotation gutter */}
-        <AnnotationGutter
-          annotations={annotations}
-          minTimestamp={minTimestamp}
-          maxTimestamp={maxTimestamp}
-          onAnnotationClick={onChangelistClick}
-          containerRef={containerRef}
-        />
+    <div className="space-y-2">
+      {/* Navigation indicator (only show when there are multiple blocks) */}
+      {totalBlocks > 1 && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground px-2">
+          <span>
+            Block {currentBlockIndex + 1} of {totalBlocks}
+          </span>
+          <span className="text-muted-foreground/60">
+            (Alt+↑/↓ to navigate)
+          </span>
+        </div>
+      )}
+
+      <div
+        ref={containerRef}
+        className="h-[600px] overflow-auto border rounded-md bg-card"
+      >
+        <div className="flex">
+          {/* Annotation gutter */}
+          <AnnotationGutter
+            annotations={annotations}
+            minTimestamp={minTimestamp}
+            maxTimestamp={maxTimestamp}
+            onAnnotationClick={onChangelistClick}
+            containerRef={containerRef}
+            highlightedLines={highlightedLines}
+          />
 
         {/* Code content with syntax highlighting */}
         <div className="flex-1 min-w-0">
@@ -252,6 +298,7 @@ export function FileAnnotationViewer({
               </pre>
             )}
           </Highlight>
+        </div>
         </div>
       </div>
     </div>

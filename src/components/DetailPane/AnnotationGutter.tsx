@@ -1,6 +1,8 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { P4AnnotationLine } from '@/lib/tauri';
 import { calculateAgeColor } from '@/lib/annotationColors';
+import { AnnotationTooltip } from './AnnotationTooltip';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 interface AnnotationGutterProps {
   annotations: P4AnnotationLine[];
@@ -8,7 +10,7 @@ interface AnnotationGutterProps {
   maxTimestamp: number;
   onAnnotationClick?: (changelistId: number) => void;
   containerRef: React.RefObject<HTMLDivElement | null>;
-  highlightedBlockIndex?: number;
+  highlightedLines?: Set<number>;
 }
 
 /**
@@ -23,7 +25,7 @@ export function AnnotationGutter({
   maxTimestamp,
   onAnnotationClick,
   containerRef,
-  highlightedBlockIndex,
+  highlightedLines,
 }: AnnotationGutterProps) {
   // Setup virtualizer for efficient rendering
   const virtualizer = useVirtualizer({
@@ -34,52 +36,59 @@ export function AnnotationGutter({
   });
 
   return (
-    <div
-      style={{
-        height: `${virtualizer.getTotalSize()}px`,
-        width: '256px', // w-64 equivalent
-        position: 'relative',
-      }}
-      className="flex-shrink-0"
-    >
-      {virtualizer.getVirtualItems().map((virtualRow) => {
-        const annotation = annotations[virtualRow.index];
+    <TooltipProvider>
+      <div
+        style={{
+          height: `${virtualizer.getTotalSize()}px`,
+          width: '256px', // w-64 equivalent
+          position: 'relative',
+        }}
+        className="flex-shrink-0"
+      >
+        {virtualizer.getVirtualItems().map((virtualRow) => {
+          const annotation = annotations[virtualRow.index];
 
-        // Parse date to timestamp for heatmap color
-        const [year, month, day] = annotation.date.split('/').map(Number);
-        const timestamp = new Date(year, month - 1, day).getTime();
-        const bgColor = calculateAgeColor(timestamp, minTimestamp, maxTimestamp);
+          // Parse date to timestamp for heatmap color
+          const [year, month, day] = annotation.date.split('/').map(Number);
+          const timestamp = new Date(year, month - 1, day).getTime();
+          const bgColor = calculateAgeColor(timestamp, minTimestamp, maxTimestamp);
 
-        // Determine if this line is highlighted (for keyboard nav)
-        const isHighlighted = highlightedBlockIndex !== undefined &&
-          highlightedBlockIndex === virtualRow.index;
+          // Line number (1-indexed) for highlighting
+          const lineNumber = virtualRow.index + 1;
+          const isHighlighted = highlightedLines?.has(lineNumber) ?? false;
 
-        return (
-          <div
-            key={virtualRow.key}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: `${virtualRow.size}px`,
-              transform: `translateY(${virtualRow.start}px)`,
-              backgroundColor: bgColor,
-            }}
-            className={`
-              flex items-center px-2 text-xs font-mono cursor-pointer
-              hover:bg-accent/50 transition-colors
-              ${isHighlighted ? 'ring-2 ring-primary' : ''}
-            `}
-            onClick={() => onAnnotationClick?.(annotation.changelistId)}
-            title={`CL#${annotation.changelistId} by ${annotation.user} on ${annotation.date}`}
-          >
-            <span className="text-foreground/90 truncate">
-              CL#{annotation.changelistId} | {annotation.user} | {annotation.date}
-            </span>
-          </div>
-        );
-      })}
-    </div>
+          return (
+            <AnnotationTooltip
+              key={virtualRow.key}
+              changelistId={annotation.changelistId}
+              user={annotation.user}
+              date={annotation.date}
+            >
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  height: `${virtualRow.size}px`,
+                  transform: `translateY(${virtualRow.start}px)`,
+                  backgroundColor: bgColor,
+                }}
+                className={`
+                  flex items-center px-2 text-xs font-mono cursor-pointer
+                  hover:bg-accent/50 transition-colors
+                  ${isHighlighted ? 'ring-2 ring-primary/50' : ''}
+                `}
+                onClick={() => onAnnotationClick?.(annotation.changelistId)}
+              >
+                <span className="text-foreground/90 truncate">
+                  CL#{annotation.changelistId} | {annotation.user} | {annotation.date}
+                </span>
+              </div>
+            </AnnotationTooltip>
+          );
+        })}
+      </div>
+    </TooltipProvider>
   );
 }
