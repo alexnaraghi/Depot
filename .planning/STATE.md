@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-03)
 
 **Core value:** The user is never blocked — operations are always cancellable, errors are non-blocking, and the app remains responsive even during network issues or long-running operations.
-**Current focus:** v4.0 Road to P4V Killer - Phase 16: File Content Viewer
+**Current focus:** v4.0 Road to P4V Killer - Phase 17: File Annotations
 
 ## Current Position
 
 Milestone: v4.0 Road to P4V Killer
-Phase: 16 of 19 (File Content Viewer)
-Plan: 03 of TBD (just completed 16-03-PLAN.md)
-Status: Phase 16 in progress
-Last activity: 2026-02-03 — Completed 16-03: File Size Validation
+Phase: 17 of 19 (File Annotations)
+Plan: Not started (Phase 16 complete, ready to plan Phase 17)
+Status: Ready to plan Phase 17
+Last activity: 2026-02-03 — Phase 16 File Content Viewer complete (3/3 plans, verified)
 
-Progress: [████████░░░░░░░░░░░░] 61/TBD plans complete (v3.0: 58/58, v4.0: 3/TBD)
+Progress: [█████████░░░░░░░░░░░] 61/TBD plans complete (v3.0: 58/58, v4.0: 3)
 
 ## Performance Metrics
 
@@ -67,7 +67,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Blockers/Concerns
 
-**Phase 16 Plan 03 complete** — File size validation implemented with two-stage loading. External editor integration pending for binary files and files >10MB.
+None — Phase 16 complete and verified. External editor stub noted but not blocking.
 
 **Research notes:**
 - Use p4 have + p4 files (not p4 fstat) for sync status (10-100x faster)
@@ -87,8 +87,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 ## Session Continuity
 
 Last session: 2026-02-03
-Stopped at: Completed 16-03-PLAN.md (File Size Validation)
+Stopped at: Phase 16 complete
 Resume file: None
 
 ---
-**Next step:** Phase 16 has more plans (file history integration, external editor, etc.). Check ROADMAP.md for remaining Phase 16 plans or move to Phase 17 (File Annotations) or Phase 18 (CL File List + Sync Status).
+**Next step:** Run `/gsd:discuss-phase 17` or `/gsd:plan-phase 17` to begin File Annotations phase

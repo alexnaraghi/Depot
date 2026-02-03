@@ -104,9 +104,9 @@
 **Plans**: 3 plans
 
 Plans:
-- [ ] 16-01-PLAN.md - Install prism-react-renderer, create language map, add backend command
-- [ ] 16-02-PLAN.md - Create FileContentViewer component with syntax highlighting
-- [ ] 16-03-PLAN.md - Add file size validation and warning dialog
+- [x] 16-01-PLAN.md - Install prism-react-renderer, create language map, add backend command
+- [x] 16-02-PLAN.md - Create FileContentViewer component with syntax highlighting
+- [x] 16-03-PLAN.md - Add file size validation and warning dialog
 
 #### Phase 17: File Annotations
 **Goal**: User can view per-line blame information with rich interaction
@@ -176,7 +176,7 @@ Plans:
 | 13. Workspace/Stream | v3.0 | 5/5 | Complete | 2026-02-01 |
 | 14. Depot Browser | v3.0 | 3/3 | Complete | 2026-02-01 |
 | 15. Resolve Workflow | v3.0 | 2/2 | Complete | 2026-02-01 |
-| 16. File Content Viewer | v4.0 | 0/TBD | Not started | - |
+| 16. File Content Viewer | v4.0 | 3/3 | Complete | 2026-02-03 |
 | 17. File Annotations | v4.0 | 0/TBD | Not started | - |
 | 18. Table Stakes UI | v4.0 | 0/TBD | Not started | - |
 | 19. Submit Enhancement | v4.0 | 0/TBD | Not started | - |

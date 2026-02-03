@@ -9,9 +9,9 @@ Requirements for P4V parity milestone. Each maps to roadmap phases.
 
 ### File Content Viewer
 
-- [ ] **VIEWER-01**: User can view file content at any revision in detail pane
-- [ ] **VIEWER-02**: File content is syntax highlighted based on file extension
-- [ ] **VIEWER-03**: Large files show size warning with option to load anyway
+- [x] **VIEWER-01**: User can view file content at any revision in detail pane
+- [x] **VIEWER-02**: File content is syntax highlighted based on file extension
+- [x] **VIEWER-03**: Large files show size warning with option to load anyway
 
 ### File Annotations (Blame)
 
@@ -90,9 +90,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| VIEWER-01 | Phase 16 | Pending |
-| VIEWER-02 | Phase 16 | Pending |
-| VIEWER-03 | Phase 16 | Pending |
+| VIEWER-01 | Phase 16 | Complete |
+| VIEWER-02 | Phase 16 | Complete |
+| VIEWER-03 | Phase 16 | Complete |
 | BLAME-01 | Phase 17 | Pending |
 | BLAME-02 | Phase 17 | Pending |
 | BLAME-03 | Phase 17 | Pending |
