@@ -309,6 +309,29 @@ export interface P4ShelvedFile {
 }
 
 /**
+ * File info from p4 describe output
+ */
+export interface P4DescribeFile {
+  depotPath: string;
+  revision: number;
+  action: string;
+  fileType: string;
+}
+
+/**
+ * Result of p4 describe for a submitted changelist
+ */
+export interface P4ChangelistDescription {
+  id: number;
+  user: string;
+  client: string;
+  time: number;
+  description: string;
+  status: string;
+  files: P4DescribeFile[];
+}
+
+/**
  * Reconcile preview information from p4 reconcile -n.
  */
 export interface ReconcilePreview {
@@ -327,6 +350,19 @@ export async function invokeP4Shelve(
   filePaths: string[]
 ): Promise<string> {
   return invoke<string>('p4_shelve', { changelistId, filePaths, ...getConnectionArgs() });
+}
+
+/**
+ * Describe a submitted changelist (metadata and file list)
+ * Uses -s flag to suppress diffs for performance
+ */
+export async function invokeP4Describe(
+  changelistId: number
+): Promise<P4ChangelistDescription> {
+  return invoke<P4ChangelistDescription>('p4_describe', {
+    changelistId,
+    ...getConnectionArgs(),
+  });
 }
 
 /**

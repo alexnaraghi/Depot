@@ -37,6 +37,7 @@ pub fn run() {
             commands::launch_diff_tool,
             commands::p4_changes_submitted,
             commands::p4_shelve,
+            commands::p4_describe,
             commands::p4_describe_shelved,
             commands::p4_unshelve,
             commands::p4_delete_shelf,
