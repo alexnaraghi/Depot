@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-03)
 
 **Core value:** The user is never blocked — operations are always cancellable, errors are non-blocking, and the app remains responsive even during network issues or long-running operations.
-**Current focus:** v4.0 Road to P4V Killer
+**Current focus:** v4.0 Road to P4V Killer - Phase 16: File Content Viewer
 
 ## Current Position
 
 Milestone: v4.0 Road to P4V Killer
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-03 — Milestone v4.0 started
+Phase: 16 of 19 (File Content Viewer)
+Plan: Not started (roadmap complete, ready to plan)
+Status: Ready to plan Phase 16
+Last activity: 2026-02-03 — v4.0 roadmap created with 4 phases
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [████████░░░░░░░░░░░░] 58/TBD plans complete (v3.0: 58/58 complete)
 
 ## Performance Metrics
 
@@ -38,6 +38,8 @@ Progress: [░░░░░░░░░░] 0%
 | 14 | 3 | 15 min | 5 min |
 | 15 | 2 | 10 min | 5 min |
 
+**v4.0 phases:** Ready to track
+
 *Updated after each plan completion*
 
 ## Accumulated Context
@@ -45,6 +47,12 @@ Progress: [░░░░░░░░░░] 0%
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
+
+**v4.0 Phase Structure:**
+- Phase 16 (Foundational): File Content Viewer enables submit preview, addresses p4_print tech debt
+- Phase 17 (Complex): File Annotations has most requirements (6), establishes long-running command patterns
+- Phase 18 (Quick wins): Sync Status + CL File List, addresses p4_describe tech debt
+- Phase 19 (Enhancement): Submit Preview depends on Phase 16 content viewer
 
 ### Pending Todos
 
@@ -55,7 +63,13 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Blockers/Concerns
 
-None — all v3.0 phases complete.
+None — v4.0 roadmap complete, ready to plan Phase 16.
+
+**Research notes:**
+- Use p4 have + p4 files (not p4 fstat) for sync status (10-100x faster)
+- Use p4 describe -s to suppress diffs (critical for large CLs)
+- New libraries: prism-react-renderer (syntax highlighting), react-virtuoso (blame virtualization)
+- Size checks before p4 print and p4 annotate (10MB limits)
 
 ### Quick Tasks Completed
 
@@ -68,8 +82,8 @@ None — all v3.0 phases complete.
 ## Session Continuity
 
 Last session: 2026-02-03
-Stopped at: Started milestone v4.0 Road to P4V Killer
+Stopped at: v4.0 roadmap created
 Resume file: None
 
 ---
-**Next step:** Continue with requirements and roadmap creation
+**Next step:** Run `/gsd:plan-phase 16` to begin File Content Viewer phase

@@ -90,31 +90,37 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| VIEWER-01 | — | Pending |
-| VIEWER-02 | — | Pending |
-| VIEWER-03 | — | Pending |
-| BLAME-01 | — | Pending |
-| BLAME-02 | — | Pending |
-| BLAME-03 | — | Pending |
-| BLAME-04 | — | Pending |
-| BLAME-05 | — | Pending |
-| BLAME-06 | — | Pending |
-| SYNC-01 | — | Pending |
-| SYNC-02 | — | Pending |
-| SYNC-03 | — | Pending |
-| SUBMIT-01 | — | Pending |
-| SUBMIT-02 | — | Pending |
-| SUBMIT-03 | — | Pending |
-| SUBMIT-04 | — | Pending |
-| CLFILE-01 | — | Pending |
-| CLFILE-02 | — | Pending |
-| CLFILE-03 | — | Pending |
+| VIEWER-01 | Phase 16 | Pending |
+| VIEWER-02 | Phase 16 | Pending |
+| VIEWER-03 | Phase 16 | Pending |
+| BLAME-01 | Phase 17 | Pending |
+| BLAME-02 | Phase 17 | Pending |
+| BLAME-03 | Phase 17 | Pending |
+| BLAME-04 | Phase 17 | Pending |
+| BLAME-05 | Phase 17 | Pending |
+| BLAME-06 | Phase 17 | Pending |
+| SYNC-01 | Phase 18 | Pending |
+| SYNC-02 | Phase 18 | Pending |
+| SYNC-03 | Phase 18 | Pending |
+| SUBMIT-01 | Phase 19 | Pending |
+| SUBMIT-02 | Phase 19 | Pending |
+| SUBMIT-03 | Phase 19 | Pending |
+| SUBMIT-04 | Phase 19 | Pending |
+| CLFILE-01 | Phase 18 | Pending |
+| CLFILE-02 | Phase 18 | Pending |
+| CLFILE-03 | Phase 18 | Pending |
 
 **Coverage:**
 - v4.0 requirements: 19 total
-- Mapped to phases: 0
-- Unmapped: 19
+- Mapped to phases: 19
+- Unmapped: 0
+
+**Phase breakdown:**
+- Phase 16 (File Content Viewer): 3 requirements
+- Phase 17 (File Annotations): 6 requirements
+- Phase 18 (Table Stakes UI): 6 requirements (3 sync + 3 CL file list)
+- Phase 19 (Submit Enhancement): 4 requirements
 
 ---
 *Requirements defined: 2026-02-03*
-*Last updated: 2026-02-03 after initial definition*
+*Last updated: 2026-02-03 after roadmap creation*
