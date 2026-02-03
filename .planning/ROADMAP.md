@@ -101,10 +101,12 @@
   2. File content shows syntax highlighting appropriate for file extension
   3. User sees size warning before loading large files with option to proceed
   4. Addresses p4_print tech debt from RevisionDetailView
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 16-01: TBD
+- [ ] 16-01-PLAN.md - Install prism-react-renderer, create language map, add backend command
+- [ ] 16-02-PLAN.md - Create FileContentViewer component with syntax highlighting
+- [ ] 16-03-PLAN.md - Add file size validation and warning dialog
 
 #### Phase 17: File Annotations
 **Goal**: User can view per-line blame information with rich interaction
