@@ -155,10 +155,11 @@ Plans:
   3. Preview dialog shows clickable list of files to be submitted
   4. User can cancel from preview, edit description, or proceed with submit
   5. User can click file in preview to view content before submitting
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 19-01: TBD
+- [ ] 19-01-PLAN.md — Extract action badge utility, replace SubmitDialog with Dialog-based component
+- [ ] 19-02-PLAN.md — Add file click navigation from submit preview to detail pane
 
 ## Progress
 
