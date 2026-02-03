@@ -1,5 +1,5 @@
 import { NodeRendererProps } from 'react-arborist';
-import { FolderOpen, Folder, File, AlertTriangle } from 'lucide-react';
+import { FolderOpen, Folder, File, AlertTriangle, ArrowDown } from 'lucide-react';
 import { P4File, FileStatus } from '@/types/p4';
 import { FileStatusIcon } from './FileStatusIcon';
 import { useUnresolvedFiles } from '@/hooks/useResolve';
@@ -17,6 +17,9 @@ export interface FileNodeData {
   onContextMenu?: (event: React.MouseEvent, file: P4File) => void;
   dimmed?: boolean;
   highlightRanges?: [number, number][];
+  // Sync status for folder overlay
+  hasOutOfDateDescendants?: boolean;
+  outOfDateCount?: number;
 }
 
 /**
@@ -24,13 +27,18 @@ export interface FileNodeData {
  * Handles both folders and files with status icons
  */
 export function FileNode({ node, style, dragHandle }: NodeRendererProps<FileNodeData>) {
-  const { name, isFolder, file, onContextMenu, dimmed, highlightRanges } = node.data;
+  const { name, isFolder, file, onContextMenu, dimmed, highlightRanges, hasOutOfDateDescendants } = node.data;
   const isSelected = node.isSelected;
   const isOpen = node.isOpen;
   const { isFileUnresolved } = useUnresolvedFiles();
 
   // Check if this file has unresolved conflicts
   const isConflicted = file && (isFileUnresolved(file.depotPath) || file.status === FileStatus.Conflict);
+
+  // Show out-of-date indicator for files that are out-of-date, or folders with out-of-date descendants
+  const showOutOfDate = isFolder
+    ? hasOutOfDateDescendants
+    : file?.status === FileStatus.OutOfDate;
 
   function handleContextMenu(event: React.MouseEvent) {
     if (dimmed) return; // Don't allow context menu on dimmed items
@@ -74,17 +82,27 @@ export function FileNode({ node, style, dragHandle }: NodeRendererProps<FileNode
     >
       {/* Folder or file icon */}
       {isFolder ? (
-        isOpen ? (
-          <FolderOpen className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-        ) : (
-          <Folder className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-        )
+        <div className="relative flex-shrink-0">
+          {isOpen ? (
+            <FolderOpen className="w-4 h-4 text-muted-foreground" />
+          ) : (
+            <Folder className="w-4 h-4 text-muted-foreground" />
+          )}
+          {/* Out-of-date overlay for folders */}
+          {showOutOfDate && (
+            <ArrowDown className="w-3 h-3 text-orange-500 absolute -bottom-1 -right-1" />
+          )}
+        </div>
       ) : (
         <div className="relative flex-shrink-0">
           <File className="w-4 h-4 text-muted-foreground" />
           {/* Conflict overlay icon */}
           {isConflicted && (
             <AlertTriangle className="w-3 h-3 text-yellow-500 absolute -bottom-1 -right-1" />
+          )}
+          {/* Out-of-date overlay for files (only if not conflicted) */}
+          {!isConflicted && showOutOfDate && (
+            <ArrowDown className="w-3 h-3 text-orange-500 absolute -bottom-1 -right-1" />
           )}
         </div>
       )}
