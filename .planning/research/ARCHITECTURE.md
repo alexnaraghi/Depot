@@ -627,3 +627,515 @@ const handleNavigate = (id: number) => {
 
 *Architecture research for: P4Now v3.0 Feature Integration*
 *Researched: 2026-01-29*
+
+
+---
+---
+
+# Architecture Research: P4V Parity Features for v4.0
+
+## Executive Summary
+
+The six P4V parity features integrate cleanly into P4Now's existing architecture with minimal structural changes. All features follow established patterns: new Rust commands in `p4.rs`, corresponding TypeScript invocations in `tauri.ts`, TanStack Query hooks for data fetching, and UI components in the detail pane. The primary architectural consideration is build order—file annotations and content viewer are foundational features that other features depend on, while bookmarks is fully independent.
+
+## Existing Architecture Overview
+
+**Backend (Rust/Tauri):**
+- `ProcessManager` spawns p4.exe processes
+- `commands/p4.rs` contains all p4 command wrappers with `-ztag` output parsing
+- Connection args (server/user/client) injected at invoke layer via `getConnectionArgs()`
+
+**Frontend (React):**
+- TanStack Query for server data caching and invalidation
+- Zustand stores for UI state (detailPane, fileTree, changelist, connection, searchFilter, command)
+- react-arborist for virtualized trees (FileTree, ChangelistTree, DepotBrowser)
+- Discriminated union routing in DetailPane: `none | file | changelist | revision | search`
+
+**Data Flow Pattern:**
+1. User action triggers hook (e.g., `useFileOperations`)
+2. Hook invokes Tauri command via `tauri.ts` wrapper
+3. Rust backend spawns p4.exe with connection args
+4. Result parsed from `-ztag` output into typed struct
+5. Frontend receives typed response, invalidates queries
+6. TanStack Query refetches, UI updates automatically
+
+## Component Analysis
+
+### Feature 1: File Annotations (Blame)
+
+**New Components:**
+- `FileAnnotationView.tsx` — New detail pane view showing line-by-line blame
+- `useFileAnnotations.ts` — TanStack Query hook for fetching annotations
+
+**Modified Components:**
+- `DetailPane.tsx` — Add `annotation` type to `DetailSelection` union
+- `FileDetailView.tsx` — Add "Show Annotations" button to action bar
+- `detailPaneStore.ts` — Add `drillToAnnotation()` action
+
+**New Rust Commands:**
+- `p4_annotate(depotPath: String, revision: Option<i32>) -> Vec<P4AnnotationLine>`
+  - Returns: `{ line_number, revision, changelist, user, date, content }`
+  - Uses: `p4 annotate -c -q <depotPath>#<revision>`
+  - Flag: `-c` for changelist numbers, `-q` to suppress header
+
+**New TypeScript APIs:**
+- `invokeP4Annotate(depotPath: string, revision?: number): Promise<P4AnnotationLine[]>`
+- Interface: `P4AnnotationLine { lineNumber, revision, changelist, user, date, content }`
+
+**Integration Points:**
+- FileDetailView action bar — New "Annotations" button next to "Diff"
+- DetailPane routing — New `annotation` selection type
+- Back navigation — Pressing Escape returns to FileDetailView
+
+**Data Flow:**
+1. User clicks "Show Annotations" in FileDetailView
+2. `drillToAnnotation()` navigates to annotation view with depot path + revision
+3. `useFileAnnotations` hook fetches via `invokeP4Annotate`
+4. Rust spawns `p4 annotate -c -q //depot/path#5`
+5. Parse output: each line is `... change 12345 //depot/path#5 - line content`
+6. Component renders table with changelist, user, date (from changelist lookup), content
+
+**Performance Considerations:**
+- Perforce limits annotations to files under 10MB by default
+- Frontend should show loading state (annotations can take 2-3 seconds for large files)
+- Consider virtualized rendering for files with 1000+ lines
+
+**Suggested Build Order:** **Phase 1** (foundational)
+
+---
+
+### Feature 2: Workspace File Tree with Sync Status
+
+**New Components:**
+- None (enhancement to existing FileTree)
+
+**Modified Components:**
+- `FileTree.tsx` — Add out-of-date badge rendering for files where `revision < headRevision`
+- `FileStatusIcon.tsx` — Add new icon variant for "out of date" status
+- `useFileTree.ts` — Modify to track sync status from fstat results
+
+**Modified Rust Commands:**
+- `p4_fstat()` already returns `head_revision` field — no changes needed
+
+**Integration Points:**
+- FileTree node rendering — Display badge when `file.revision < file.headRevision`
+- FileStatusIcon component — New color/icon for out-of-date status (orange badge with down-arrow)
+- Existing sync flow — Already updates tree via query invalidation
+
+**Data Flow:**
+1. `useFileTree` fetches via `invokeP4Fstat()` (already happens)
+2. Rust `p4_fstat` command already returns `revision` (have) and `head_revision` (depot)
+3. Frontend compares: if `revision < headRevision`, file is out-of-date
+4. `FileNode` component renders out-of-date badge
+5. User clicks sync button → existing sync flow updates `revision` → badge disappears
+
+**UI Design:**
+- Out-of-date files: Orange badge with "↓" icon and count (e.g., "↓3" for 3 revisions behind)
+- Hover tooltip: "Out of date: #5 (you have) vs #8 (depot)"
+- Consistent with existing status badges (green checkmark for synced, blue pencil for edited)
+
+**Suggested Build Order:** **Phase 2** (table stakes feature, depends on existing infrastructure)
+
+---
+
+### Feature 3: File Content Viewer
+
+**New Components:**
+- `FileContentView.tsx` — New detail pane view showing file content at specific revision
+- `useFileContent.ts` — Hook for fetching file content via `p4 print`
+
+**Modified Components:**
+- `RevisionDetailView.tsx` — Add "View Content" button to action bar
+- `DetailPane.tsx` — Add `content` type to `DetailSelection` union
+- `detailPaneStore.ts` — Add `drillToContent()` action
+
+**New Rust Commands:**
+- `p4_print(depotPath: String, revision: i32) -> String`
+  - Returns: File content as UTF-8 string
+  - Uses: `p4 print -q <depotPath>#<revision>`
+  - Flag: `-q` to suppress header (only content)
+
+**New TypeScript APIs:**
+- `invokeP4Print(depotPath: string, revision: number): Promise<string>`
+
+**Integration Points:**
+- RevisionDetailView — New "View Content" button next to "Diff"
+- FileDetailView — "View Current Revision" button
+- DetailPane routing — New `content` selection type with depot path + revision
+- Syntax highlighting — Use existing code editor library (Monaco or Prism.js)
+
+**Data Flow:**
+1. User clicks "View Content" in RevisionDetailView (or FileDetailView)
+2. `drillToContent()` navigates with depot path + revision
+3. `useFileContent` fetches via `invokeP4Print(path, rev)`
+4. Rust spawns `p4 print -q //depot/path#5`
+5. Return content as string
+6. Component renders in code viewer with syntax highlighting
+
+**Performance Considerations:**
+- Large files (>1MB) should show size warning with "View Anyway" confirmation
+- Consider streaming for very large files (requires Rust channel pattern like sync)
+- Binary files: Show hex viewer or "Binary file (X MB) - cannot display"
+
+**Suggested Build Order:** **Phase 1** (foundational, enables submit preview)
+
+---
+
+### Feature 4: Submit Dialog Preview
+
+**New Components:**
+- None (enhancement to existing SubmitDialog)
+
+**Modified Components:**
+- `SubmitDialog.tsx` — Expand file list section to show diffs inline or link to content view
+- No new data fetching needed — files already in `changelist.files`
+
+**Integration Points:**
+- SubmitDialog file list — Each file becomes clickable
+- Click behavior: Opens FileContentView in modal overlay OR drills to FileDetailView
+- Depends on: File content viewer (Feature 3) for "preview changes"
+
+**Data Flow:**
+1. User opens SubmitDialog (already happens)
+2. Dialog displays `changelist.files` (already happens)
+3. NEW: Each file is clickable
+4. Click → Opens FileContentView in overlay OR navigates to FileDetailView
+5. User can review changes before confirming submit
+
+**UI Options:**
+- **Option A:** Open FileDetailView in side panel (keeps dialog open)
+- **Option B:** Open FileContentView as modal overlay on dialog
+- **Option C:** Expand file row to show diff inline (like GitHub PR view)
+
+**Suggested Build Order:** **Phase 3** (enhancement to existing feature, depends on Feature 3)
+
+---
+
+### Feature 5: Submitted Changelist File List
+
+**New Components:**
+- None (enhancement to existing ChangelistDetailView)
+
+**Modified Components:**
+- `ChangelistDetailView.tsx` — Add file list section for submitted changelists
+- `useChangelists.ts` — May need to fetch files for submitted CLs on demand
+
+**New Rust Commands:**
+- `p4_describe(changelist: i32) -> P4ChangelistDetail`
+  - Returns: `{ id, description, user, client, time, files: Vec<P4DescribeFile> }`
+  - Uses: `p4 describe -s <changelist>` (shallow, no diffs)
+  - `-s` flag omits diffs (only file list)
+
+**New TypeScript APIs:**
+- `invokeP4Describe(changelist: number): Promise<P4ChangelistDetail>`
+- Interface: `P4DescribeFile { depotPath, action, fileType, revision }`
+
+**Integration Points:**
+- ChangelistDetailView — Check `changelist.status === 'submitted'`
+- If submitted: Fetch via `useQuery(['p4', 'describe', clId])`
+- Display file list same as pending CLs (but read-only, no actions)
+- File clicks → Navigate to RevisionDetailView for that changelist's revision
+
+**Data Flow:**
+1. User selects submitted changelist from SearchResultsView
+2. ChangelistDetailView detects `status === 'submitted'`
+3. `useQuery` fetches via `invokeP4Describe(clId)`
+4. Rust spawns `p4 describe -s 12345`
+5. Parse output into structured file list
+6. Component renders files (same UI as pending CL)
+7. Click file → Navigate to RevisionDetailView
+
+**Caching Strategy:**
+- Submitted changelists are immutable — cache indefinitely
+- Query key: `['p4', 'describe', clId]` (won't refetch unless invalidated)
+- Consider React Query `staleTime: Infinity` for submitted CLs
+
+**Suggested Build Order:** **Phase 2** (table stakes feature, straightforward command wrapper)
+
+---
+
+### Feature 6: Bookmarks
+
+**New Components:**
+- `BookmarkManager.tsx` — UI for managing bookmarks (add/remove/rename)
+- `BookmarkList.tsx` — Left sidebar section showing bookmarked paths
+- `useBookmarks.ts` — Hook for bookmark CRUD operations
+
+**Modified Components:**
+- `FileTree.tsx` — Add "Bookmark" action to context menu
+- `DepotBrowser.tsx` — Add "Bookmark" action to context menu
+- `MainLayout.tsx` — Add BookmarkList to left sidebar (collapsible section)
+
+**Storage:**
+- Use existing `tauri-plugin-store` (same as settings)
+- Store as `{ bookmarks: Array<{ id, name, depotPath, type }> }`
+- Type: `'file' | 'folder'`
+
+**Integration Points:**
+- FileTree context menu — "Add Bookmark" option
+- DepotBrowser context menu — "Add Bookmark" option
+- Left sidebar — New collapsible "Bookmarks" section above or below Workspace
+- Click bookmark → Navigate to file/folder in appropriate tree
+- Settings dialog — "Manage Bookmarks" tab
+
+**Data Flow:**
+1. User right-clicks file/folder → "Add Bookmark"
+2. Modal prompts for bookmark name (default: file/folder name)
+3. Save to store: `{ id: uuid(), name, depotPath, type }`
+4. BookmarkList re-renders with new bookmark
+5. Click bookmark → Expand tree to path, select node, show in detail pane
+
+**Persistence:**
+- Bookmarks stored in `settings.json` alongside connection settings
+- Load on app startup via `useSettings`
+- Auto-save on add/remove/rename
+
+**Suggested Build Order:** **Phase 4** (independent feature, no dependencies on other features)
+
+---
+
+## Suggested Build Order
+
+### Phase 1: Foundational Features (Milestone 1)
+**Rationale:** These features provide core building blocks for other features.
+
+1. **File Content Viewer** (Feature 3)
+   - Enables submit preview and revision browsing
+   - Straightforward p4 print command wrapper
+   - Adds new detail pane view type (pattern already established)
+   - **Estimate:** 2-3 days (Rust command + React component + syntax highlighting)
+
+2. **File Annotations** (Feature 1)
+   - Independent feature, high value for developers
+   - Follows same pattern as file content viewer
+   - More complex UI (table with changelist lookup)
+   - **Estimate:** 3-4 days (Rust command + React component + changelist data join)
+
+### Phase 2: Table Stakes Features (Milestone 2)
+**Rationale:** Features users expect from any P4 client.
+
+3. **Submitted Changelist File List** (Feature 5)
+   - Unblocks submitted CL exploration (currently only shows description)
+   - Simple p4 describe command wrapper
+   - Reuses existing ChangelistDetailView UI patterns
+   - **Estimate:** 1-2 days (Rust command + React hook + UI integration)
+
+4. **Workspace File Tree Sync Status** (Feature 2)
+   - Visual indicator for out-of-date files
+   - No new commands needed (fstat already returns data)
+   - Minimal UI changes (badge rendering)
+   - **Estimate:** 1 day (UI changes only)
+
+### Phase 3: Enhancement Features (Milestone 3)
+**Rationale:** Features that improve existing workflows.
+
+5. **Submit Dialog Preview** (Feature 4)
+   - Depends on file content viewer (Phase 1)
+   - Enhances existing submit flow
+   - Design decision needed: modal vs. side panel vs. inline
+   - **Estimate:** 2-3 days (UI design + integration)
+
+### Phase 4: Independent Features (Milestone 4)
+**Rationale:** Features that stand alone and can be added anytime.
+
+6. **Bookmarks** (Feature 6)
+   - No dependencies on other features
+   - Pure UI state management + persistence
+   - Deferred to allow focus on core P4 functionality
+   - **Estimate:** 2-3 days (storage + UI + tree navigation)
+
+---
+
+## Cross-Feature Integration Points
+
+### Detail Pane Routing
+All features extend the existing discriminated union pattern:
+
+```typescript
+// Current
+type DetailSelection =
+  | { type: 'none' }
+  | { type: 'file'; depotPath: string; localPath: string }
+  | { type: 'changelist'; changelist: P4Changelist }
+  | { type: 'revision'; depotPath: string; localPath: string; revision: P4Revision }
+  | { type: 'search'; searchType: 'submitted' | 'depot'; query: string }
+
+// After v4.0
+type DetailSelection =
+  | ... (existing types)
+  | { type: 'annotation'; depotPath: string; revision: number }  // Feature 1
+  | { type: 'content'; depotPath: string; revision: number }      // Feature 3
+```
+
+### Query Invalidation
+Features follow existing pattern — no changes needed:
+- File operations invalidate: `['fileTree']`, `['p4', 'opened']`, `['p4', 'changes']`
+- New queries add their own keys: `['p4', 'annotate', path]`, `['p4', 'print', path, rev]`
+
+### Back Navigation
+All detail pane views support Escape key navigation via `useDetailPaneStore.goBack()`:
+- Annotation view → FileDetailView
+- Content view → RevisionDetailView or FileDetailView
+- Feature 4 and 5 don't add new views (modify existing)
+
+---
+
+## Architecture Patterns to Follow
+
+### Pattern 1: Command Wrapper (Rust)
+```rust
+// Location: src-tauri/src/commands/p4.rs
+#[tauri::command]
+pub async fn p4_new_command(
+    param: String,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<ResponseType, String> {
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+    cmd.args(["-ztag", "command", param]);
+
+    let output = cmd.output().map_err(|e| e.to_string())?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+
+    let records = parse_ztag_records(&stdout);
+    // Parse into typed struct
+
+    Ok(result)
+}
+```
+
+### Pattern 2: Tauri Invocation (TypeScript)
+```typescript
+// Location: src/lib/tauri.ts
+export interface P4NewType {
+  field: string;
+}
+
+export async function invokeP4NewCommand(param: string): Promise<P4NewType[]> {
+  return invoke<P4NewType[]>('p4_new_command', { param, ...getConnectionArgs() });
+}
+```
+
+### Pattern 3: TanStack Query Hook (TypeScript)
+```typescript
+// Location: src/hooks/useNewFeature.ts
+export function useNewFeature(param: string) {
+  const { p4port, p4user, p4client } = useConnectionStore();
+
+  return useQuery<P4NewType[]>({
+    queryKey: ['p4', 'newfeature', param],
+    queryFn: async () => {
+      const { addOutputLine } = useOperationStore.getState();
+      const verbose = await getVerboseLogging();
+      if (verbose) addOutputLine(`p4 command ${param}`, false);
+      const result = await invokeP4NewCommand(param);
+      if (verbose) addOutputLine(`... returned ${result.length} items`, false);
+      return result;
+    },
+    enabled: !!p4port && !!p4user && !!p4client,
+  });
+}
+```
+
+### Pattern 4: Detail Pane View (React)
+```typescript
+// Location: src/components/DetailPane/NewView.tsx
+export function NewView({ param }: NewViewProps) {
+  const { data, isLoading, error } = useNewFeature(param);
+
+  if (isLoading) return <Loader2 className="animate-spin" />;
+  if (error) return <ErrorDisplay error={error} />;
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="border-b p-4">
+        {/* Header with breadcrumb */}
+      </div>
+      <div className="flex-1 overflow-auto p-4">
+        {/* Content */}
+      </div>
+    </div>
+  );
+}
+```
+
+---
+
+## Potential Architecture Improvements
+
+### Improvement 1: Unified File Viewer Component
+Current state: FileDetailView, RevisionDetailView, and new FileContentView have overlapping concerns.
+
+**Suggestion:** Create `UnifiedFileViewer` that accepts `{ depotPath, revision, view: 'detail' | 'content' | 'annotation' }` and renders appropriate sub-view. Reduces duplication and simplifies navigation.
+
+**Impact:** Moderate refactor, but cleaner long-term architecture.
+
+### Improvement 2: P4 Command Result Caching
+Current state: Each command invocation spawns p4.exe, even for immutable data (submitted CLs, file history).
+
+**Suggestion:** Add Rust-side in-memory cache with TTL for immutable results. TanStack Query already caches frontend, but Rust cache avoids process spawns entirely.
+
+**Impact:** Performance win for submitted CL browsing (Feature 5) and annotations (Feature 1).
+
+### Improvement 3: Batch P4 Commands
+Current state: Each file in submit preview requires separate p4 print invocation.
+
+**Suggestion:** Add `p4_print_batch(files: Vec<(String, i32)>)` that spawns single p4 process with multiple file specs. Perforce supports `p4 print file1#5 file2#3 ...` syntax.
+
+**Impact:** 10x faster submit preview for large changelists (Feature 4).
+
+---
+
+## Risk Assessment
+
+### Low Risk
+- **Feature 2 (Sync Status):** Pure UI change, no new commands
+- **Feature 6 (Bookmarks):** Pure frontend state, no P4 interaction
+
+### Medium Risk
+- **Feature 3 (Content Viewer):** Large files may cause memory issues (mitigate with size warning)
+- **Feature 5 (CL File List):** Submitted CLs with 1000+ files may slow UI (mitigate with virtualization)
+
+### Medium-High Risk
+- **Feature 1 (Annotations):** Perforce annotate can be slow for large/old files (mitigate with loading state + timeout)
+- **Feature 4 (Submit Preview):** Fetching content for 50+ files could overwhelm backend (mitigate with batching, Improvement 3)
+
+---
+
+## Testing Strategy
+
+### Unit Tests
+- Rust: Test `-ztag` parsing for each new command
+- TypeScript: Test hook state management and query invalidation
+
+### Integration Tests
+- Test complete flow: click action → fetch data → render view → navigate back
+- Test error cases: connection lost, command timeout, file not found
+
+### Performance Tests
+- Large file content viewer (10MB text file)
+- Annotations for 5000-line file with 200 revisions
+- Submit preview with 100-file changelist
+
+---
+
+## Sources
+
+**Perforce Command Documentation:**
+- [p4 annotate | Helix Core Command-Line Reference](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_annotate.html)
+- [p4 have command reference](https://www.perforce.com/manuals/v15.2/cmdref/p4_have.html)
+- [p4 print | Helix Core Command-Line Reference](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_print.html)
+- [p4 describe | Helix Core Command-Line Reference](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_describe.html)
+- [Helix Core Command-Line (P4) Guide - Annotation](https://www.perforce.com/manuals/p4guide/Content/P4Guide/scripting.file-reporting.annotation.html)
+
+**Existing Codebase Patterns:**
+- `src-tauri/src/commands/p4.rs` — Command wrapper pattern with `-ztag` parsing
+- `src/hooks/useFileHistory.ts` — TanStack Query hook pattern with pagination
+- `src/components/DetailPane/FileDetailView.tsx` — Detail view component structure
+- `src/stores/detailPaneStore.ts` — Navigation state management with discriminated unions
+
+---
+
+*Researched: 2026-02-03*

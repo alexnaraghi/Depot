@@ -1,878 +1,1121 @@
-# Pitfalls Research: v3.0 Feature Additions
+# Pitfalls Research: v4.0 P4V Parity Features
 
-**Domain:** Perforce GUI - Adding Resolve, Depot Browser, Workspace/Stream Switching, Auto-Refresh, E2E Testing to Existing System
-**Researched:** 2026-01-29
-**Confidence:** HIGH
+**Domain:** Perforce GUI - Adding Blame, Workspace Sync Status, File Viewer, Submit Preview, Submitted CL Files, Bookmarks
+**Researched:** 2026-02-03
+**Confidence:** MEDIUM
 
-This document focuses on pitfalls specific to adding v3.0 features to the existing P4Now v2.0 codebase (~55k LOC). For v2.0 pitfalls, see the previous version of this document.
+This document focuses on pitfalls specific to adding v4.0 P4V parity features to the existing P4Now v3.0 codebase (73,000 LOC). These features close visible daily-use gaps versus P4V.
+
+---
+
+## Executive Summary
+
+Adding P4V parity features to an existing Perforce GUI introduces integration pitfalls distinct from building these features from scratch. The core risks are: (1) `p4 annotate` performance degradation on large files and incorrect blame after renames, (2) `p4 fstat` workspace tree query inefficiency compared to `p4 have`, (3) `p4 print` binary file handling and memory exhaustion, (4) submit dialog preview conflicting with existing submit workflow, (5) `p4 describe` query cost for large submitted changelists, and (6) bookmark schema migration breaking existing settings. **Key insight**: All six features involve commands with known performance traps that manifest differently when integrated into an existing app versus new development.
 
 ---
 
 ## Critical Pitfalls
 
-### Pitfall 1: Resolve State Inconsistency After External Merge Tool
+### Pitfall 1: p4 annotate Blames Wrong Author After File Rename/Move
 
-**What goes wrong:**
-External merge tool (P4Merge, Beyond Compare) completes successfully with exit code 0, but the file remains in "needs resolve" state in Perforce. User clicks "Mark Resolved" button but UI doesn't update. The file appears in both "conflicted" and "resolved" lists. Manual refresh required to see actual state.
-
-**Why it happens:**
-Spawning external merge tool with `.spawn()` returns immediately without waiting for tool to close. When tool finishes:
-1. No callback triggers to detect completion
-2. No `p4 resolve -am <file>` command runs to mark file resolved server-side
-3. TanStack Query cache still shows "needs resolve" state
-4. Query invalidation never fires because the operation "completed" before merge tool opened
-
-Perforce's resolve workflow is a state machine:
-1. `p4 sync` or `p4 unshelve` creates conflict → file enters "needs resolve" state
-2. User runs merge tool to resolve conflicts → file still "needs resolve" (manual step)
-3. User runs `p4 resolve -am <file>` → server marks file as resolved
-4. `p4 opened` now shows file as "edit" without resolve flag
-
-The pitfall: Developers assume launching merge tool = resolving file. It doesn't. You must run `p4 resolve -am` after merge tool exits.
-
-**How to avoid:**
-1. **Wait for merge tool to complete:**
-   ```rust
-   let mut child = Command::new(merge_tool).args([left, right, result]).spawn()?;
-   let exit_status = child.wait()?; // BLOCKS until tool closes
-   ```
-2. **Capture exit code to distinguish save vs. cancel:**
-   - Exit 0 = saved, proceed to mark resolved
-   - Exit 1 = cancelled, do not mark resolved
-   - Timeout after 1 hour = show "Merge tool still open?" notification
-3. **After successful merge, run `p4 resolve -am <file>`:**
-   ```rust
-   if exit_status.success() {
-       Command::new("p4").args(["resolve", "-am", &depot_path]).output()?;
-   }
-   ```
-4. **Invalidate file queries immediately after resolve completes:**
-   ```typescript
-   await invoke('p4_resolve', { filePath, mergeTool });
-   queryClient.invalidateQueries(['files', 'opened']);
-   queryClient.invalidateQueries(['changelist', changelistId]);
-   ```
-5. **Show progress states:**
-   - "Launching P4Merge..."
-   - "Waiting for merge tool to close..."
-   - "Marking file as resolved..."
-   - "Resolved"
-
-**Warning signs:**
-- External merge tool closes but UI shows "needs resolve"
-- "Mark Resolved" button remains enabled after clicking
-- File appears in multiple states simultaneously
-- Refresh button required to see resolved state
-- `p4 opened` in terminal shows different state than UI
-
-**Phase to address:**
-**Phase 1 - Resolve Workflow Foundation.** This is core to the feature working at all. Without proper wait/resolve/invalidate cycle, resolve workflow is unusable.
-
----
-
-### Pitfall 2: Query Invalidation Race Conditions During Auto-Refresh
-
-**What goes wrong:**
-Auto-refresh polling (every 30s) triggers `queryClient.invalidateQueries(['files'])`. Meanwhile, user starts a long sync operation. During sync:
-1. Auto-refresh timer fires → invalidates queries → starts `p4 fstat`
-2. Sync completes → invalidates queries → starts another `p4 fstat`
-3. Both `p4 fstat` processes run concurrently, race to update cache
-4. Stale data from auto-refresh overwrites fresh data from sync mutation
-5. UI shows incorrect file states
-6. Multiple `p4.exe` processes pile up in Task Manager
-7. Memory grows as zombie processes accumulate
-
-After 10 minutes of auto-refresh with active development: 20+ `p4.exe` processes, 500MB+ memory, UI flickers constantly.
+**Risk:** File annotations show incorrect author/revision data for lines that existed before file was renamed or moved via `p4 integrate`. User sees "Bob added line 42" when actually "Alice added it 2 years ago in the original file."
 
 **Why it happens:**
-TanStack Query v4+ has `invalidateQueries` with `cancelRefetch: true` by default, which should cancel in-flight requests. BUT:
-1. Cancellation only works at HTTP level (fetch/axios)
-2. Rust backend spawns `p4.exe` as OS process, not HTTP request
-3. Query cancellation doesn't reach ProcessManager to kill process
-4. Old `p4.exe` process keeps running, eventually completes, writes to cache
-5. Meanwhile new query started, creating race condition
+Perforce doesn't have a native rename command. Files are renamed by:
+1. `p4 integrate oldPath newPath` (creates newPath#1 with all history attached to oldPath)
+2. `p4 delete oldPath`
+3. `p4 submit`
 
-Additionally, `refetchInterval` in query config runs independently of mutation invalidations, creating duplicate refetches.
+The pitfall: `p4 annotate newPath` only annotates from newPath#1 forward. It does NOT follow the integration history back to oldPath. Result: All lines from oldPath show up as authored by whoever performed the integrate (the "rename author"), not the original authors.
 
-**How to avoid:**
-1. **Disable auto-refresh during active operations:**
-   ```typescript
-   // In Zustand store
-   const useOperationStore = create((set) => ({
-     isOperationActive: false,
-     activeOperations: new Set<string>(),
-     startOperation: (name: string) => set((state) => ({
-       activeOperations: new Set(state.activeOperations).add(name),
-       isOperationActive: true
-     })),
-     endOperation: (name: string) => set((state) => {
-       const ops = new Set(state.activeOperations);
-       ops.delete(name);
-       return { activeOperations: ops, isOperationActive: ops.size > 0 };
-     })
-   }));
+Detecting renames requires parsing `p4 filelog -i` (follow integrations) to find integration records, then manually stitching together annotation across file paths. This is complex, slow, and error-prone.
 
-   // In query config
-   useQuery(['files'], fetchFiles, {
-     enabled: !useOperationStore(s => s.isOperationActive),
-     refetchInterval: autoRefreshEnabled ? 30000 : false
-   });
-   ```
+**Warning Signs:**
+- Entire file shows single author/revision when it clearly has multiple contributors
+- Recent revision number on old code (e.g., 100-line function shows #3 when file is at #3 after rename from file at #87)
+- User reports: "Blame shows wrong person for this code"
+- `p4 filelog` shows integration records (`branch from`, `merge from`)
 
-2. **Track process types in ProcessManager:**
-   ```rust
-   pub struct ProcessManager {
-       processes: Arc<Mutex<HashMap<String, (Child, ProcessType)>>>,
-   }
-   pub enum ProcessType { Sync, Reconcile, Query, Resolve }
-   pub async fn has_active_operation(&self) -> bool {
-       let processes = self.processes.lock().await;
-       processes.values().any(|(_, t)| matches!(t, ProcessType::Sync | ProcessType::Reconcile))
-   }
-   ```
-
-3. **Use staleTime to prevent excessive refetches:**
-   ```typescript
-   useQuery(['files'], fetchFiles, {
-     staleTime: 30_000, // Don't refetch if data <30s old
-     refetchInterval: 60_000, // Poll every 60s, not 30s
-     keepPreviousData: true // Prevent UI flicker
-   });
-   ```
-
-4. **Coordinate auto-refresh with mutations:**
-   ```typescript
-   const syncMutation = useMutation({
-     mutationFn: syncFiles,
-     onMutate: () => {
-       operationStore.startOperation('sync');
-       queryClient.cancelQueries(['files']); // Cancel auto-refresh in-flight
-     },
-     onSettled: () => {
-       operationStore.endOperation('sync');
-       queryClient.invalidateQueries(['files']);
-     }
-   });
-   ```
-
-5. **Cleanup zombie processes:**
-   - In ProcessManager, track process start time
-   - Background task kills processes >5 minutes old
-   - On app shutdown, `kill_all()` (already implemented)
-
-**Warning signs:**
-- Task Manager shows 10+ `p4.exe` processes
-- UI shows loading spinner every 30 seconds even when idle
-- Memory usage grows from 100MB to 500MB+ over 10 minutes
-- Query DevTools shows same query refetching multiple times per minute
-- File list "flashes" or briefly shows stale data during auto-refresh
-- CPU usage spikes every 30 seconds
-
-**Phase to address:**
-**Phase 5 - Auto-Refresh Implementation.** Must coordinate with existing mutation/invalidation pattern established in v2.0.
-
----
-
-### Pitfall 3: Numbered Changelist Files Block Stream Switching
-
-**What goes wrong:**
-User has files checked out in numbered changelist #12345. They click "Switch to Stream Y". UI shows "Switching..." for 2 seconds, then fails with error: "Cannot switch streams. Files opened in numbered changelist."
-
-Workspace is now in inconsistent state:
-- `p4 info` shows old stream (switch failed)
-- File queries start failing with "not in client view"
-- User doesn't know what to do next
-
-Worse case: Partial switch occurs (some files reverted, stream half-switched), leaving workspace unusable.
-
-**Why it happens:**
-Perforce stream switching behavior differs by changelist type:
-
-**Default changelist (CL 0):**
-- P4V/CLI auto-shelves files before switch
-- Auto-unshelves when switching back
-- Switch succeeds automatically
-
-**Numbered changelists (CL #123):**
-- `p4 switch` fails immediately with error
-- No auto-shelving occurs
-- User must manually shelve, switch, then unshelve
-
-The code's existing `apply_connection_args()` handles env var isolation, but there's no pre-flight check for open files before switching.
-
-**How to avoid:**
-1. **Pre-flight validation before any stream/workspace switch:**
-   ```typescript
-   async function validateSwitchPreconditions(targetStream: string): Promise<ValidationResult> {
-     // Check for open files in numbered CLs
-     const openedFiles = await invoke('p4_opened');
-     const numberedCLFiles = openedFiles.filter(f => f.changelist !== 0);
-
-     if (numberedCLFiles.length > 0) {
-       const clNumbers = [...new Set(numberedCLFiles.map(f => f.changelist))];
-       return {
-         canSwitch: false,
-         reason: 'FILES_IN_NUMBERED_CL',
-         affectedCLs: clNumbers,
-         action: 'SHELVE_FIRST'
-       };
-     }
-
-     return { canSwitch: true };
-   }
-   ```
-
-2. **Show shelve-and-switch dialog:**
-   ```tsx
-   <Dialog>
-     <DialogTitle>Cannot Switch Streams</DialogTitle>
-     <DialogContent>
-       You have {fileCount} files in changelist #{clNumber}.
-       Perforce requires shelving these files before switching streams.
-     </DialogContent>
-     <DialogActions>
-       <Button onClick={cancel}>Cancel</Button>
-       <Button onClick={shelveAndSwitch}>Shelve & Switch</Button>
-     </DialogActions>
-   </Dialog>
-   ```
-
-3. **Implement atomic shelve-and-switch:**
-   ```typescript
-   async function shelveAndSwitch(clNumbers: number[], targetStream: string) {
-     try {
-       // Step 1: Shelve all numbered CLs
-       for (const cl of clNumbers) {
-         await invoke('p4_shelve', { changelistId: cl });
-       }
-
-       // Step 2: Switch stream
-       await invoke('p4_switch', { stream: targetStream });
-
-       // Step 3: Verify switch succeeded
-       const info = await invoke('p4_info');
-       if (info.client_stream !== targetStream) {
-         throw new Error(`Switch failed. Still on ${info.client_stream}`);
-       }
-
-       // Step 4: Invalidate ALL queries (entire cache may be wrong)
-       queryClient.clear();
-       queryClient.invalidateQueries();
-
-     } catch (err) {
-       // Rollback: attempt to switch back to original stream
-       await invoke('p4_switch', { stream: originalStream });
-       throw err;
-     }
-   }
-   ```
-
-4. **Handle partial failures:**
-   - If `p4 switch` fails mid-operation, detect with `p4 info`
-   - Show recovery dialog: "Switch failed. Options: (1) Retry (2) Revert to previous stream (3) Manual fix"
-   - Provide "Show P4 Info" debug button to see actual state
-
-5. **Update cache aggressively after switch:**
-   ```typescript
-   // After successful switch, entire file tree changes
-   queryClient.removeQueries(['files']); // Clear cache
-   queryClient.removeQueries(['changelists']);
-   queryClient.removeQueries(['opened']);
-   queryClient.invalidateQueries(['p4-info']); // Refetch immediately
-   ```
-
-**Warning signs:**
-- `p4 switch` command returns non-zero exit code
-- `p4 info` shows `clientStream` doesn't match expected stream
-- File operations fail with "not in client view" after switch
-- UI shows empty file list or missing changelists after switch
-- Queries return errors like "path is not under client's root"
-
-**Phase to address:**
-**Phase 3 - Stream Switching.** Pre-flight checks are essential, not optional. Without them, users will corrupt workspace state.
-
----
-
-### Pitfall 4: Depot Tree Browser Loads Entire Depot Into Memory
-
-**What goes wrong:**
-User clicks "Browse Depot" to explore depot hierarchy. App runs `p4 dirs //...` or `p4 files //...` to fetch entire depot structure (50,000+ files). UI freezes for 30 seconds while:
-1. `p4 dirs` executes (15s on slow network)
-2. Parsing 50k lines of output in Rust (5s)
-3. Sending 5MB JSON blob to frontend (2s)
-4. Building tree data structure in React (8s)
-
-App uses 800MB memory (was 100MB). react-arborist tries to virtualize, but building parent/child pointers for 50k nodes consumes 200MB before rendering starts. UI becomes unresponsive, scrolling is janky, app may crash with OOM.
-
-**Why it happens:**
-Eager loading anti-pattern: Query entire depot structure upfront instead of lazy-loading on expansion. Even with virtualization, you're:
-1. Spawning massive `p4.exe` process
-2. Allocating memory for all nodes in Rust
-3. Serializing/deserializing huge JSON payload
-4. Building in-memory tree with circular references
-5. Rendering (even if virtualized, tree metadata is in memory)
-
-The existing `p4_fstat` command already handles depot paths (e.g., `//stream/main/...`), but there's no incremental loading pattern.
-
-**How to avoid:**
-1. **Lazy load on folder expand (architectural requirement):**
-   ```typescript
-   // Root level: Only load top-level depots
-   const rootQuery = useQuery(['depot', 'root'], async () => {
-     return await invoke('p4_dirs', { path: '//*', depth: 1 });
-     // Returns: ["//depot1", "//depot2", "//depot3"]
-   });
-
-   // On expand: Load children of specific folder
-   const childrenQuery = useQuery(['depot', 'children', path], async () => {
-     return await invoke('p4_dirs', { path: `${path}/*`, depth: 1 });
-     // Returns: ["//depot1/subfolder1", "//depot1/subfolder2"]
-   }, {
-     enabled: isExpanded // Only fetch when user expands
-   });
-   ```
-
-2. **Add new Rust command for scoped directory queries:**
+**Prevention:**
+1. **Detect integration history before annotation:**
    ```rust
    #[tauri::command]
-   pub async fn p4_dirs_scoped(
-       path: String,
-       depth: Option<i32>,
-       server: Option<String>,
-       user: Option<String>,
-       client: Option<String>,
-   ) -> Result<Vec<String>, String> {
-       let mut cmd = Command::new("p4");
-       apply_connection_args(&mut cmd, &server, &user, &client);
+   pub async fn p4_annotate_with_renames(
+       depot_path: String,
+       // ... connection args
+   ) -> Result<Vec<AnnotationLine>, String> {
+       // Step 1: Check if file has integration history
+       let filelog_output = run_p4_command(&["filelog", "-i", "-m", "1", &depot_path])?;
+       let has_integrations = filelog_output.contains("branch from")
+           || filelog_output.contains("merge from");
 
-       // Use -D flag to limit depth (prevents recursive scan)
-       if let Some(d) = depth {
-           cmd.args(["-D", &d.to_string()]);
+       if has_integrations {
+           // Warn user or attempt to follow integration chain
+           return Err("File has rename/integration history. Annotation may be incomplete.".to_string());
        }
 
-       cmd.args(["dirs", &path]);
-
-       let output = cmd.output()
-           .map_err(|e| format!("Failed to execute p4 dirs: {}", e))?;
-
-       // Parse output into Vec<String>
-       let stdout = String::from_utf8_lossy(&output.stdout);
-       let dirs: Vec<String> = stdout.lines().map(|s| s.to_string()).collect();
-
-       Ok(dirs)
+       // Step 2: Run standard p4 annotate
+       run_p4_annotate(&depot_path)
    }
    ```
 
-3. **Virtualize with react-arborist (already in project):**
+2. **Warn user when annotation is incomplete:**
    ```tsx
-   <Tree
-     data={treeData}
-     openByDefault={false} // Don't auto-expand all nodes
-     width={600}
-     height={800}
-     rowHeight={36}
-     overscanCount={10} // Only render visible + 10 buffer
-   >
-     {Node}
-   </Tree>
-   ```
-
-4. **Cache directory listings with long staleTime:**
-   ```typescript
-   useQuery(['depot-dirs', path], fetchDirs, {
-     staleTime: 5 * 60 * 1000, // 5 minutes
-     cacheTime: 30 * 60 * 1000, // 30 minutes
-     // Depot structure changes infrequently
-   });
-   ```
-
-5. **Show loading indicator per folder:**
-   ```tsx
-   {isExpanded && isFetching ? (
-     <div className="pl-4 text-muted-foreground">
-       <Spinner className="h-4 w-4" /> Loading...
-     </div>
-   ) : null}
-   ```
-
-6. **Limit initial depth:**
-   - Load only root depots on mount: `//depot1`, `//depot2`
-   - Load first level children when depot expanded: `//depot1/folder1`
-   - Continue loading on-demand as user explores
-   - Never query `//...` (entire depot)
-
-7. **Add search-to-jump feature:**
-   ```tsx
-   <Input
-     placeholder="Jump to depot path: //depot/main/..."
-     onSubmit={async (path) => {
-       // Expand tree to show this path
-       const parts = path.split('/').filter(Boolean);
-       for (let i = 0; i < parts.length; i++) {
-         const partialPath = '//' + parts.slice(0, i + 1).join('/');
-         await expandNode(partialPath);
-       }
-     }}
-   />
-   ```
-
-**Warning signs:**
-- Initial depot browser open takes >5 seconds
-- Memory usage spikes 500MB+ when opening depot view
-- Scrolling tree is janky (not 60fps)
-- `p4 dirs //...` or `p4 files //...` in command log (entire depot query)
-- UI thread blocks during tree construction
-- react-arborist profiler shows 50k+ nodes in tree data
-
-**Phase to address:**
-**Phase 2 - Depot Browser Foundation.** Lazy loading must be architectural from day 1. Retrofitting later requires complete rewrite.
-
----
-
-### Pitfall 5: Workspace Switching Doesn't Clear P4 Environment Inheritance
-
-**What goes wrong:**
-User switches from Workspace A (`P4CLIENT=workspace-a`) to Workspace B (`P4CLIENT=workspace-b`). App updates settings in Tauri store, but:
-1. `p4 fstat` still returns files from Workspace A
-2. File operations fail with "file(s) not in client view"
-3. UI shows files from wrong workspace
-4. Connection indicator shows Workspace B but data is from Workspace A
-
-The app is in a split-brain state: Settings say Workspace B, but Perforce commands use Workspace A.
-
-**Why it happens:**
-The existing `apply_connection_args()` in `p4.rs` (lines 13-37) does clear `P4CONFIG` and `P4ROOT` when explicit args provided:
-```rust
-if has_explicit {
-    cmd.env("P4CONFIG", "");
-    cmd.env("P4ROOT", "");
-}
-```
-
-BUT there's a gap:
-1. If the Rust process inherits `P4CLIENT` from system environment, and you switch to a workspace with an empty client string (`client: Some("")`), the check `client.as_ref().filter(|s| !s.is_empty())` fails, so `P4CLIENT` env var is NOT cleared.
-2. If `P4CONFIG` file exists in workspace root and sets `P4CLIENT=old-workspace`, Perforce may prefer that over the `-c` flag (depends on P4 version).
-3. After workspace switch, cached queries still contain old workspace data, so UI shows stale state.
-
-**How to avoid:**
-1. **Always clear P4CLIENT when switching workspaces:**
-   ```rust
-   fn apply_connection_args(cmd: &mut Command, server: &Option<String>, user: &Option<String>, client: &Option<String>) {
-       // ALWAYS clear these, even if new values are empty
-       cmd.env("P4CONFIG", "");
-       cmd.env("P4ROOT", "");
-       cmd.env("P4CLIENT", ""); // ADD THIS - clear old value
-
-       if let Some(s) = server.as_ref().filter(|s| !s.is_empty()) {
-           cmd.args(["-p", s]);
-           cmd.env("P4PORT", s);
-       }
-       if let Some(u) = user.as_ref().filter(|s| !s.is_empty()) {
-           cmd.args(["-u", u]);
-           cmd.env("P4USER", u);
-       }
-       if let Some(c) = client.as_ref().filter(|s| !s.is_empty()) {
-           cmd.args(["-c", c]);
-           cmd.env("P4CLIENT", c); // Set new value
-       }
-   }
-   ```
-
-2. **Verify switch succeeded with p4 info:**
-   ```typescript
-   async function switchWorkspace(newWorkspace: string) {
-     // Update settings
-     await updateSettings({ client: newWorkspace });
-
-     // Verify switch
-     const info = await invoke('p4_info', {
-       server: settings.server,
-       user: settings.user,
-       client: newWorkspace
-     });
-
-     if (info.client_name !== newWorkspace) {
-       throw new Error(
-         `Workspace switch failed. Expected ${newWorkspace}, got ${info.client_name}`
-       );
-     }
-
-     return info;
-   }
-   ```
-
-3. **Clear ALL query cache after workspace switch:**
-   ```typescript
-   // Workspace switch invalidates EVERYTHING
-   queryClient.clear(); // Remove all cached queries
-   queryClient.invalidateQueries(); // Refetch active queries
-
-   // Or more surgical:
-   queryClient.removeQueries({ predicate: (query) => {
-       // Remove workspace-specific data
-       return ['files', 'changelists', 'opened', 'shelved'].includes(query.queryKey[0]);
-   }});
-   ```
-
-4. **Show connection state in UI during transition:**
-   ```tsx
-   {isSwitching ? (
-     <div>Switching to {targetWorkspace}...</div>
-   ) : (
-     <div>Connected: {currentWorkspace}</div>
-   )}
-   ```
-
-5. **Test with P4CONFIG file present:**
-   - Create test workspace with P4CONFIG file in root
-   - Set `P4CLIENT=test-workspace` in P4CONFIG
-   - Attempt to switch to different workspace via app
-   - Verify `p4 info` shows new workspace (not P4CONFIG value)
-
-**Warning signs:**
-- `p4 info` returns different client name than UI displays
-- File queries return data from wrong workspace after switch
-- Operations fail with "not in client view" after switch
-- Inconsistent behavior: Fresh app start works, runtime switch fails
-- P4CONFIG file in workspace root causes switch to fail silently
-
-**Phase to address:**
-**Phase 3 - Workspace Switching.** Environment isolation is critical for multi-workspace workflows. Without it, users cannot trust workspace switches.
-
----
-
-### Pitfall 6: E2E Tests Can't Interact With Native System Dialogs
-
-**What goes wrong:**
-E2E test clicks "Browse Depot" button. Test triggers Tauri's file picker dialog (`dialog.open()`). Native Windows file picker opens. WebdriverIO test runner waits for dialog to close. Test cannot interact with native dialog (no WebDriver API for OS-level dialogs). Test hangs for 30 seconds, then times out.
-
-Even with mocked dialogs in test mode, tests can't verify:
-- Actual Tauri IPC communication works
-- File picker returns correct path
-- Error handling for cancelled dialogs
-- Integration between Rust backend and WebView
-
-Tests pass but don't validate the most critical integration points.
-
-**Why it happens:**
-WebdriverIO automates the WebView2 browser instance, not the native Windows application shell. Tauri's dialog APIs (`dialog::open`, `dialog::save`, `dialog::message`) spawn native OS dialogs outside the WebView. These dialogs are separate Win32 windows, not DOM elements. WebDriver protocol has no access to them.
-
-Additionally, tauri-driver (WebDriver bridge for Tauri apps) has known issues:
-- `.click()` and `.setValue()` return `500 Internal Server Error: unsupported operation` (GitHub issue #6541)
-- Workaround requires `browser.execute()` to simulate clicks via JavaScript
-- File picker dialogs can't be automated; must pre-configure selected path
-- Edge WebView2 version must match Edge WebDriver version exactly or tests fail
-
-**How to avoid:**
-1. **Define E2E test scope clearly (architectural decision):**
-   ```markdown
-   ## What E2E Tests Cover
-   - UI component rendering
-   - User interaction flows (click, type, drag-drop)
-   - State management (Zustand stores)
-   - Route navigation
-   - Error boundary handling
-
-   ## What E2E Tests DON'T Cover
-   - Native Tauri dialog APIs (file picker, save dialog)
-   - Tauri IPC communication (invoke/emit)
-   - Rust backend command execution
-   - External tool spawning (diff tool, merge tool)
-   - OS-level permissions and notifications
-
-   ## Coverage Strategy
-   - E2E: UI logic and user flows
-   - Unit tests: Rust backend commands (cargo test)
-   - Integration tests: Mock Tauri APIs, test IPC layer
-   ```
-
-2. **Inject test mode for dialog mocking:**
-   ```typescript
-   // In test setup
-   if (import.meta.env.VITE_TEST_MODE) {
-     window.__TAURI_MOCK__ = {
-       dialog: {
-         open: async () => 'C:\\test\\selected\\file.txt',
-         save: async () => 'C:\\test\\saved\\file.txt',
-         message: async () => true,
-       },
-       invoke: async (cmd, args) => {
-         // Mock Tauri commands in tests
-         return testMockBackend[cmd](args);
-       }
-     };
-   }
-
-   // In production code
-   async function openFilePicker() {
-     if (window.__TAURI_MOCK__) {
-       return await window.__TAURI_MOCK__.dialog.open();
-     }
-     return await dialog.open({ directory: true });
-   }
-   ```
-
-3. **Use browser.execute() workaround for WebdriverIO:**
-   ```javascript
-   // DON'T: await button.click(); // Returns 500 error
-
-   // DO:
-   await browser.execute(() => {
-     document.querySelector('[data-testid="browse-depot-btn"]').click();
-   });
-
-   // For inputs:
-   await browser.execute((value) => {
-     const input = document.querySelector('[data-testid="search-input"]');
-     input.value = value;
-     input.dispatchEvent(new Event('input', { bubbles: true }));
-   }, 'search term');
-   ```
-
-4. **Match WebView2 and WebDriver versions:**
-   ```json
-   // package.json
-   {
-     "devDependencies": {
-       "wdio-edgedriver-service": "^8.39.1"
-     }
-   }
-   ```
-
-   ```javascript
-   // wdio.conf.js
-   export const config = {
-     services: [
-       ['edgedriver', {
-         version: '131.0.2903.112' // Must match WebView2 Runtime
-       }]
-     ]
-   }
-   ```
-
-   Check WebView2 version: `edge://version/` → Match in CI
-
-5. **Cleanup lifecycle management:**
-   ```javascript
-   // wdio.conf.js
-   export const config = {
-     afterEach: async function () {
-       // Cleanup runs even if test fails
-       await browser.execute(() => {
-         window.localStorage.clear();
-         window.sessionStorage.clear();
-       });
-     },
-     afterSession: async function () {
-       // Cleanup runs even if session fails to start
-       // Kill any spawned processes
-       if (tauriProcess) {
-         tauriProcess.kill('SIGTERM');
-       }
-     }
-   }
-   ```
-
-6. **Document E2E test limitations:**
-   ```typescript
-   // tests/e2e/depot-browser.spec.ts
-   /**
-    * E2E Test: Depot Browser UI Flow
-    *
-    * Tests the UI interaction flow for depot browsing.
-    * NOTE: This test uses mocked Tauri dialog APIs.
-    * Actual file picker integration is tested in Rust integration tests.
-    */
-   test('should open depot browser and expand folder', async () => {
-     // Test UI flow with mocks
-   });
-   ```
-
-7. **Separate Rust backend integration tests:**
-   ```rust
-   // src-tauri/tests/integration_test.rs
-   #[cfg(test)]
-   mod tests {
-       use super::*;
-
-       #[tokio::test]
-       async fn test_p4_dirs_scoped() {
-           let result = p4_dirs_scoped(
-               "//depot/*".to_string(),
-               Some(1),
-               Some("localhost:1666".to_string()),
-               Some("testuser".to_string()),
-               Some("testclient".to_string())
-           ).await;
-
-           assert!(result.is_ok());
-       }
-   }
-   ```
-
-**Warning signs:**
-- E2E tests hang on any Tauri dialog API call
-- `.click()` or `.setValue()` returns 500 errors in test logs
-- Tests pass locally but fail in CI with "GL context" errors
-- Tests run but don't validate Tauri backend integration
-- Coverage report shows high frontend coverage but 0% backend coverage
-- Flaky tests that timeout randomly
-
-**Phase to address:**
-**Phase 6 - E2E Testing Setup.** Define scope early: What CAN be tested vs. what SHOULD be unit tested instead. Wrong scope = brittle, unmaintainable test suite.
-
----
-
-### Pitfall 7: Unshelve to Same CL Conflicts With Stream-Switch Auto-Shelve
-
-**What goes wrong:**
-User flow:
-1. Has files in numbered CL #1234 on Stream A
-2. Switches to Stream B (Perforce auto-shelves default CL, but NOT numbered CLs)
-3. Clicks "Unshelve CL #1234" from shelf list
-4. Expected: Files go to CL #1234 on Stream B
-5. Actual: Files go to default CL, OR CL #1234 doesn't exist on Stream B so command fails
-
-User now confused: "Where did my files go?"
-
-**Why it happens:**
-Perforce's `p4 unshelve` behavior is subtle:
-- `p4 unshelve -s 1234` → Unshelves to DEFAULT changelist (not #1234)
-- `p4 unshelve -s 1234 -c 1234` → Unshelves to CL #1234, but CL must exist first
-- After stream switch, numbered CLs from Stream A don't exist on Stream B
-- Stream switching auto-shelves DEFAULT CL only, not numbered CLs
-
-The existing `p4_unshelve` command (lines 1429-1472 in p4.rs) does use `-c` flag:
-```rust
-cmd.arg("-s");
-cmd.arg(changelist_id.to_string());
-cmd.arg("-c");
-cmd.arg(changelist_id.to_string());
-```
-
-But this fails if CL doesn't exist in target workspace/stream.
-
-**How to avoid:**
-1. **Pre-flight check: Does target CL exist?**
-   ```typescript
-   async function unshelveToSameCL(changelistId: number) {
-     // Check if CL exists in current workspace
-     const changelists = await invoke('p4_changes', {
-       status: 'pending',
-       client: settings.client
-     });
-
-     const clExists = changelists.some(cl => cl.id === changelistId);
-
-     if (!clExists) {
-       // Show dialog
-       const action = await showDialog({
-         title: 'Changelist Does Not Exist',
-         message: `CL #${changelistId} doesn't exist in this workspace. Where should files be unshelved?`,
-         options: [
-           { label: 'Create CL #' + changelistId, value: 'create' },
-           { label: 'Unshelve to Default CL', value: 'default' },
-           { label: 'Cancel', value: 'cancel' }
-         ]
-       });
-
-       if (action === 'create') {
-         // Create CL with same number (if possible) or same description
-         const shelf = await invoke('p4_describe_shelved', { changelistId });
-         await invoke('p4_create_change', { description: shelf.description });
-       } else if (action === 'default') {
-         changelistId = 0; // Unshelve to default
-       } else {
-         return; // Cancel
-       }
-     }
-
-     await invoke('p4_unshelve', { changelistId });
-   }
-   ```
-
-2. **Show context after stream switch:**
-   ```tsx
-   {switchedStream && hasShelvedCLs && (
-     <Alert variant="info">
-       You have shelved changelistsNumbers from Stream A.
-       To unshelve them here, we'll create matching CLs or unshelve to default.
-       <Button onClick={viewShelvedCLs}>View Shelved CLs</Button>
+   {fileHasIntegrationHistory && (
+     <Alert variant="warning">
+       This file was renamed/moved. Annotations only show history since {renamedAtRevision}.
+       <Button onClick={() => viewFullHistory()}>View Full History</Button>
      </Alert>
    )}
    ```
 
-3. **Detect conflicts before unshelve:**
+3. **Limit annotation query to recent revisions:**
+   ```bash
+   # Only annotate last 100 revisions to avoid performance issues
+   p4 annotate -i -I file.txt#head,#head-100
+   ```
+
+4. **Cache annotation results aggressively:**
+   ```typescript
+   useQuery(['annotate', depotPath, headRev], fetchAnnotate, {
+     staleTime: 60 * 60 * 1000, // 1 hour - annotations rarely change retroactively
+     cacheTime: 24 * 60 * 60 * 1000, // 24 hours
+   });
+   ```
+
+5. **Surface `p4 filelog` instead for renamed files:**
+   - If integration detected, redirect user to file history viewer
+   - Show integration graph: "File was `oldPath` until #87, then renamed to `newPath`"
+   - Provide "Annotate Original File" button for pre-rename history
+
+**Affects:** File annotations (blame) feature - Phase 1 implementation
+
+---
+
+### Pitfall 2: p4 annotate Hangs on Large Files (>10MB Default Limit)
+
+**Risk:** User opens blame view for 50MB log file. UI shows "Loading annotations..." for 30 seconds, then returns empty result or hangs. Backend spawns `p4 annotate` process that server rejects due to `dm.annotate.maxsize` limit (default 10MB).
+
+**Why it happens:**
+Perforce servers have `dm.annotate.maxsize` configurable (default 10MB) to prevent memory exhaustion. Files exceeding this size are silently ignored by `p4 annotate`. The command returns exit code 0 but outputs no annotation data. GUI doesn't detect this condition and shows "No annotations available" or hangs waiting for data.
+
+Additionally, even below the limit, `p4 annotate` on files with thousands of revisions can take 10+ seconds on slow networks. If run synchronously on UI thread or without timeout, this blocks the app.
+
+**Warning Signs:**
+- Blame view works for small files, fails silently for large files
+- `p4 annotate` command in logs shows no output but exit code 0
+- Server logs show "file too large for annotation" or similar
+- Blame request times out after 30s
+- No error message shown to user, just empty result
+
+**Prevention:**
+1. **Check file size before annotation:**
    ```rust
    #[tauri::command]
-   pub async fn p4_unshelve_preview(
+   pub async fn p4_annotate(
+       depot_path: String,
+       // ... connection args
+   ) -> Result<Vec<AnnotationLine>, String> {
+       // Step 1: Get file size from p4 fstat
+       let fstat_output = run_p4_command(&["-ztag", "fstat", &depot_path])?;
+       let file_size = parse_ztag_field(&fstat_output, "fileSize")
+           .and_then(|s| s.parse::<i64>().ok())
+           .unwrap_or(0);
+
+       // Assume 10MB server limit unless admin configured higher
+       const MAX_ANNOTATE_SIZE: i64 = 10 * 1024 * 1024;
+
+       if file_size > MAX_ANNOTATE_SIZE {
+           return Err(format!(
+               "File too large for annotation ({:.1}MB). Server limit is 10MB.",
+               file_size as f64 / 1024.0 / 1024.0
+           ));
+       }
+
+       // Step 2: Run annotation with timeout
+       run_p4_annotate_with_timeout(&depot_path, 30_000) // 30s timeout
+   }
+   ```
+
+2. **Show progressive loading for large annotations:**
+   ```tsx
+   const AnnotateView = ({ depotPath }) => {
+     const { data, error, isLoading } = useQuery(
+       ['annotate', depotPath],
+       () => invoke('p4_annotate', { depotPath }),
+       { timeout: 30_000 }
+     );
+
+     if (isLoading) {
+       return (
+         <div>
+           <Spinner />
+           <p>Loading annotations... This may take up to 30 seconds for large files.</p>
+           <Button onClick={cancelQuery}>Cancel</Button>
+         </div>
+       );
+     }
+
+     if (error?.includes("too large")) {
+       return (
+         <Alert variant="warning">
+           This file is too large for annotation. Try viewing file history instead.
+           <Button onClick={() => showHistory(depotPath)}>View History</Button>
+         </Alert>
+       );
+     }
+
+     // Render annotations
+   };
+   ```
+
+3. **Use `p4 annotate -I` to limit revision range:**
+   ```bash
+   # Only annotate recent revisions for faster results
+   p4 annotate -I file.txt#head,#head-50
+   ```
+
+4. **Spawn annotation in background, stream results:**
+   ```rust
+   // Don't block on p4 annotate completion
+   // Stream results as they arrive
+   let mut cmd = Command::new("p4")
+       .args(["annotate", "-c", &depot_path])
+       .stdout(Stdio::piped())
+       .spawn()?;
+
+   let stdout = cmd.stdout.take().unwrap();
+   let reader = BufReader::new(stdout);
+
+   // Emit partial results as lines arrive
+   for line in reader.lines() {
+       let line = line?;
+       let annotation = parse_annotation_line(&line)?;
+       app.emit("annotation-line", annotation)?;
+   }
+   ```
+
+**Affects:** File annotations (blame) feature - Phase 1 implementation
+
+---
+
+### Pitfall 3: Workspace File Tree Queries Use Slow p4 fstat Instead of p4 have
+
+**Risk:** App queries workspace file tree to show sync status (have-rev vs head-rev) by running `p4 fstat //...` for 10,000 files. Query takes 15 seconds on cold cache. User clicks "Refresh" and waits 15 seconds again. Auto-refresh every 30s makes app unusable due to constant 15s freezes.
+
+**Why it happens:**
+The existing codebase uses `p4 fstat` for all file queries because it returns rich metadata (status, action, changelist). But for workspace tree sync status, you only need two fields: `haveRev` and `headRev`. `p4 fstat` queries the entire file database with expensive joins. `p4 have` only queries the client's have table, which is 10-100x faster.
+
+Efficiency comparison:
+- `p4 have //...` → Client have table only (fast, 0.5s for 10k files)
+- `p4 fstat -T haveRev,headRev //...` → File database + have table (slow, 15s for 10k files)
+
+**Warning Signs:**
+- Workspace tree load takes >5s with thousands of files
+- `p4 fstat` in logs for simple sync status check
+- Task Manager shows `p4.exe` running for 10+ seconds
+- Users report: "App freezes when refreshing"
+- Query DevTools shows file query taking 10,000ms+
+
+**Prevention:**
+1. **Use `p4 have` for sync status queries:**
+   ```rust
+   #[tauri::command]
+   pub async fn p4_workspace_sync_status(
+       server: Option<String>,
+       user: Option<String>,
+       client: Option<String>,
+   ) -> Result<Vec<FileSyncStatus>, String> {
+       // Step 1: Get have revisions (fast)
+       let have_output = run_p4_command(&["have", "//..."])?;
+       let have_map = parse_have_output(&have_output); // depot_path -> have_rev
+
+       // Step 2: Get head revisions (also fast, server-side query)
+       let files_output = run_p4_command(&["files", "//..."])?;
+       let head_map = parse_files_output(&files_output); // depot_path -> head_rev
+
+       // Step 3: Compare locally
+       let sync_status: Vec<FileSyncStatus> = have_map.iter()
+           .map(|(path, have_rev)| {
+               let head_rev = head_map.get(path).copied().unwrap_or(*have_rev);
+               FileSyncStatus {
+                   depot_path: path.clone(),
+                   have_rev: *have_rev,
+                   head_rev,
+                   status: if *have_rev < head_rev { "outOfDate" } else { "synced" }
+               }
+           })
+           .collect();
+
+       Ok(sync_status)
+   }
+   ```
+
+2. **Lazy load tree sync status on expand:**
+   ```typescript
+   // Don't query entire workspace upfront
+   // Load sync status per folder when user expands
+   const useFolderSyncStatus = (folderPath: string) => {
+     return useQuery(
+       ['sync-status', folderPath],
+       () => invoke('p4_have', { path: `${folderPath}/...` }),
+       { enabled: isFolderExpanded }
+     );
+   };
+   ```
+
+3. **Use `p4 fstat -T` to limit fields when full metadata needed:**
+   ```bash
+   # Only request needed fields, not all 50+ fields
+   p4 fstat -T "depotFile,haveRev,headRev,action" //...
+   ```
+
+4. **Cache workspace sync status with long staleTime:**
+   ```typescript
+   useQuery(['workspace-sync-status'], fetchSyncStatus, {
+     staleTime: 5 * 60 * 1000, // 5 minutes
+     // Sync status changes rarely unless user syncs
+     // Don't refetch constantly
+   });
+   ```
+
+5. **Show diff count, not full tree, for out-of-date indicator:**
+   ```typescript
+   // Instead of full tree with status icons:
+   // "Workspace: 47 files out of date (click to view)"
+   const outOfDateCount = useQuery(
+     ['out-of-date-count'],
+     async () => {
+       const haveMap = await invoke('p4_have');
+       const filesMap = await invoke('p4_files');
+       return countOutOfDate(haveMap, filesMap);
+     },
+     { staleTime: 60_000 } // 1 minute
+   );
+   ```
+
+**Affects:** Workspace file tree with sync status - Phase 2 implementation
+
+---
+
+### Pitfall 4: p4 print Loads Entire Binary File Into Memory
+
+**Risk:** User opens 500MB binary file (asset, video, compiled binary) in file content viewer. Backend runs `p4 print //depot/asset.bin`, loads entire 500MB into Rust process memory, serializes to base64, sends 700MB JSON blob to frontend. App crashes with OOM (Out Of Memory).
+
+**Why it happens:**
+The TODO at `RevisionDetailView.tsx:43` indicates `p4_print` is not yet implemented. When implementing, naive approach is:
+```rust
+let output = Command::new("p4").args(["print", "-o", temp_path, depot_path]).output()?;
+let content = fs::read_to_string(temp_path)?; // Loads entire file into memory
+Ok(content) // Serialize to JSON
+```
+
+This works for small text files but fails catastrophically for large files. `p4 print` also doesn't distinguish binary vs text, so attempting to print binary as UTF-8 string causes decode errors.
+
+Additionally, `p4 -G print` (Python marshalled output) is known to be extremely slow for binary files, grinding servers to a halt.
+
+**Warning Signs:**
+- File viewer works for 1KB files, crashes for 100MB+ files
+- Memory usage spikes 500MB+ when opening file viewer
+- App becomes unresponsive after opening binary file
+- Error: "Failed to decode UTF-8" for binary files
+- Task Manager shows `p4.exe` consuming GBs of memory
+
+**Prevention:**
+1. **Check file type and size before printing:**
+   ```rust
+   #[tauri::command]
+   pub async fn p4_print(
+       depot_path: String,
+       revision: Option<i32>,
+       // ... connection args
+   ) -> Result<FileContent, String> {
+       // Step 1: Get file type and size
+       let rev_spec = revision.map(|r| format!("{}#{}", depot_path, r))
+           .unwrap_or_else(|| depot_path.clone());
+
+       let fstat_output = run_p4_command(&["-ztag", "fstat", &rev_spec])?;
+       let file_type = parse_ztag_field(&fstat_output, "headType").unwrap_or("text");
+       let file_size = parse_ztag_field(&fstat_output, "fileSize")
+           .and_then(|s| s.parse::<i64>().ok())
+           .unwrap_or(0);
+
+       const MAX_VIEWABLE_SIZE: i64 = 10 * 1024 * 1024; // 10MB
+
+       // Step 2: Reject binary files
+       if file_type.starts_with("binary") || file_type.contains("ubinary") {
+           return Err("Cannot view binary files. Use external editor instead.".to_string());
+       }
+
+       // Step 3: Reject large files
+       if file_size > MAX_VIEWABLE_SIZE {
+           return Err(format!(
+               "File too large to view ({:.1}MB). Maximum is 10MB.",
+               file_size as f64 / 1024.0 / 1024.0
+           ));
+       }
+
+       // Step 4: Print to temp file (not memory)
+       let temp_file = create_temp_file()?;
+       run_p4_command(&["print", "-o", temp_file.path(), &rev_spec])?;
+
+       // Step 5: Read with size limit (prevent runaway memory)
+       let content = fs::read_to_string(temp_file.path())
+           .map_err(|e| format!("Failed to read file: {}", e))?;
+
+       Ok(FileContent { content, file_type })
+   }
+   ```
+
+2. **For external editor, use temp file not memory:**
+   ```rust
+   // Open in external editor - don't serialize through IPC
+   #[tauri::command]
+   pub async fn p4_open_in_editor(
+       depot_path: String,
+       revision: Option<i32>,
+       editor_path: String,
+   ) -> Result<(), String> {
+       let temp_file = create_temp_file()?;
+       let rev_spec = revision.map(|r| format!("{}#{}", depot_path, r))
+           .unwrap_or_else(|| depot_path.clone());
+
+       // Print directly to temp file
+       run_p4_command(&["print", "-o", temp_file.path(), &rev_spec])?;
+
+       // Launch editor with temp file path (editor handles large files)
+       Command::new(editor_path)
+           .arg(temp_file.path())
+           .spawn()?;
+
+       Ok(())
+   }
+   ```
+
+3. **Show preview warning for large text files:**
+   ```tsx
+   const FileViewer = ({ depotPath, revision }) => {
+     const { data: fileInfo } = useQuery(['fstat', depotPath], fetchFileInfo);
+
+     const fileSizeMB = (fileInfo?.fileSize || 0) / 1024 / 1024;
+     const canView = fileSizeMB < 10 && !fileInfo?.fileType?.includes('binary');
+
+     if (!canView) {
+       return (
+         <Alert variant="warning">
+           Cannot view {fileInfo?.fileType} file ({fileSizeMB.toFixed(1)}MB).
+           <Button onClick={() => openInExternalEditor()}>Open in External Editor</Button>
+         </Alert>
+       );
+     }
+
+     // Render file content
+   };
+   ```
+
+4. **Stream large files with chunking (advanced):**
+   ```rust
+   // For very large viewable text files, stream in chunks
+   #[tauri::command]
+   pub async fn p4_print_chunked(
+       depot_path: String,
+       app: AppHandle,
+   ) -> Result<(), String> {
+       let temp_file = create_temp_file()?;
+       run_p4_command(&["print", "-o", temp_file.path(), &depot_path])?;
+
+       // Read and emit in 64KB chunks
+       let file = File::open(temp_file.path())?;
+       let reader = BufReader::new(file);
+
+       for (i, chunk) in reader.bytes().chunks(64 * 1024).into_iter().enumerate() {
+           let bytes: Vec<u8> = chunk.collect::<Result<Vec<_>, _>>()?;
+           let text = String::from_utf8_lossy(&bytes);
+           app.emit("file-content-chunk", (i, text.to_string()))?;
+       }
+
+       Ok(())
+   }
+   ```
+
+**Affects:**
+- Open file in external editor - Phase 3 implementation
+- File content viewer - Phase 4 implementation
+
+---
+
+### Pitfall 5: Submit Dialog Description Edit Conflicts With Existing Submit Flow
+
+**Risk:** User edits changelist description in submit dialog preview. They also have the changelist description editor open in main UI (already editable via Edit CL). User clicks Submit in dialog. App submits with dialog description, overwriting main UI edits. Or vice versa: main UI edits overwrite dialog edits. User loses work.
+
+**Why it happens:**
+P4Now already has changelist description editing in the UI (from v2.0). Adding submit dialog with preview/edit creates two concurrent edit paths for same data. Without coordination:
+1. User types in main UI description field → updates local state
+2. User opens submit dialog → initializes with stale description from server
+3. User edits in dialog → dialog has different state
+4. User submits → which state wins? Both are "unsaved edits"
+
+Perforce's `p4 change` saves description server-side, but app's local state may not reflect this. `p4 submit -d` accepts description inline, bypassing `p4 change`. This creates three sources of truth: (1) server state, (2) main UI state, (3) submit dialog state.
+
+**Warning Signs:**
+- User reports: "My changelist description disappeared when I submitted"
+- Description in main UI differs from description in submit dialog
+- Submit succeeds but description is old version
+- Two "Save" buttons (main UI + dialog) confuse user
+- Query cache shows stale description after submit
+
+**Prevention:**
+1. **Single source of truth: Server state via TanStack Query:**
+   ```typescript
+   // Main UI and submit dialog both read from same query
+   const useChangelistDescription = (changelistId: number) => {
+     return useQuery(
+       ['changelist', changelistId, 'description'],
+       () => invoke('p4_describe', { changelistId }),
+       { staleTime: 0 } // Always fresh
+     );
+   };
+   ```
+
+2. **Submit dialog reads only, no editing:**
+   ```tsx
+   // Option 1: Submit dialog shows preview, not editor
+   const SubmitDialog = ({ changelistId }) => {
+     const { data: description } = useChangelistDescription(changelistId);
+
+     return (
+       <Dialog>
+         <DialogTitle>Submit Changelist #{changelistId}</DialogTitle>
+         <DialogContent>
+           <div className="description-preview">
+             <Label>Description:</Label>
+             <pre>{description}</pre>
+             <Button variant="link" onClick={openMainEditor}>
+               Edit Description
+             </Button>
+           </div>
+           <FileList files={files} />
+         </DialogContent>
+         <DialogActions>
+           <Button onClick={submit}>Submit</Button>
+         </DialogActions>
+       </Dialog>
+     );
+   };
+   ```
+
+3. **Lock editing when submit dialog open:**
+   ```typescript
+   // Option 2: Disable main UI editor when dialog open
+   const ChangelistDescriptionEditor = ({ changelistId }) => {
+     const isSubmitDialogOpen = useSubmitDialogStore(s => s.isOpen);
+
+     return (
+       <textarea
+         value={description}
+         onChange={handleChange}
+         disabled={isSubmitDialogOpen}
+         title={isSubmitDialogOpen ? "Close submit dialog to edit" : ""}
+       />
+     );
+   };
+   ```
+
+4. **Optimistic update on description save, invalidate before submit:**
+   ```typescript
+   const saveDescriptionMutation = useMutation({
+     mutationFn: (desc: string) =>
+       invoke('p4_change', { changelistId, description: desc }),
+     onMutate: async (newDesc) => {
+       // Cancel in-flight queries
+       await queryClient.cancelQueries(['changelist', changelistId]);
+
+       // Snapshot current value
+       const snapshot = queryClient.getQueryData(['changelist', changelistId]);
+
+       // Optimistically update
+       queryClient.setQueryData(['changelist', changelistId], {
+         ...snapshot,
+         description: newDesc
+       });
+
+       return { snapshot };
+     },
+     onError: (err, newDesc, context) => {
+       // Rollback on error
+       queryClient.setQueryData(['changelist', changelistId], context.snapshot);
+     },
+     onSettled: () => {
+       // Refetch to ensure consistency
+       queryClient.invalidateQueries(['changelist', changelistId]);
+     }
+   });
+
+   const submitMutation = useMutation({
+     mutationFn: () => invoke('p4_submit', { changelistId }),
+     onMutate: async () => {
+       // CRITICAL: Refetch description before submit to ensure fresh
+       await queryClient.refetchQueries(['changelist', changelistId]);
+     }
+   });
+   ```
+
+5. **Warn if description edited since dialog opened:**
+   ```typescript
+   const SubmitDialog = ({ changelistId }) => {
+     const [initialDescription, setInitialDescription] = useState('');
+     const { data: currentDescription } = useChangelistDescription(changelistId);
+
+     useEffect(() => {
+       setInitialDescription(currentDescription);
+     }, []);
+
+     const hasChanged = currentDescription !== initialDescription;
+
+     return (
+       <Dialog>
+         {hasChanged && (
+           <Alert variant="warning">
+             Description was edited since dialog opened. Current version will be submitted.
+           </Alert>
+         )}
+         {/* ... */}
+       </Dialog>
+     );
+   };
+   ```
+
+**Affects:** Submit dialog with preview/edit - Phase 5 implementation
+
+---
+
+### Pitfall 6: p4 describe Hangs on Large Submitted Changelists (1000+ Files)
+
+**Risk:** User clicks on submitted changelist with 5,000 files. App runs `p4 describe <cl>` to show file list. Command takes 60 seconds, returns 50MB of output with full diffs. App hangs parsing output, frontend times out waiting for response, or UI shows massive lag when rendering 5,000 file rows.
+
+**Why it happens:**
+By default, `p4 describe` returns:
+1. Changelist metadata (description, user, date)
+2. Full file list (depot path, action, revision)
+3. **Full diffs for every file** (can be megabytes per file)
+
+For large CLs, the diff data dominates response size and time. The TODO at `RevisionDetailView.tsx:96` indicates `p4_describe` needs implementation for sibling files. Naive implementation runs full `p4 describe`, including unnecessary diffs.
+
+Additionally, rendering 5,000 file rows in a non-virtualized list causes DOM node count explosion, freezing UI thread.
+
+**Warning Signs:**
+- `p4 describe` command takes >10s in logs
+- Memory usage spikes 100MB+ when viewing submitted CL
+- UI freezes when rendering large CL file list
+- Scroll performance is janky with 1000+ files
+- Query timeout errors for large CLs
+- Task Manager shows `p4.exe` running for 30+ seconds
+
+**Prevention:**
+1. **Use `p4 describe -s` to suppress diffs:**
+   ```rust
+   #[tauri::command]
+   pub async fn p4_describe(
        changelist_id: i32,
        server: Option<String>,
        user: Option<String>,
        client: Option<String>,
-   ) -> Result<UnshelvePreview, String> {
-       // Run p4 unshelve -n (preview mode)
+   ) -> Result<ChangelistDetails, String> {
+       // CRITICAL: Use -s flag to omit diffs, only get file list
        let mut cmd = Command::new("p4");
        apply_connection_args(&mut cmd, &server, &user, &client);
-       cmd.args(["unshelve", "-n", "-s", &changelist_id.to_string()]);
+       cmd.args(["-ztag", "describe", "-s", &changelist_id.to_string()]);
 
        let output = cmd.output()
-           .map_err(|e| format!("Failed to preview unshelve: {}", e))?;
+           .map_err(|e| format!("Failed to execute p4 describe: {}", e))?;
+
+       if !output.status.success() {
+           let stderr = String::from_utf8_lossy(&output.stderr);
+           return Err(format!("p4 describe failed: {}", stderr));
+       }
 
        let stdout = String::from_utf8_lossy(&output.stdout);
-       let has_conflicts = stdout.contains("must resolve");
-
-       Ok(UnshelvePreview {
-           has_conflicts,
-           affected_files: parse_unshelve_output(&stdout),
-       })
+       parse_ztag_describe(&stdout)
    }
    ```
 
-4. **After unshelve, immediately trigger resolve workflow if conflicts:**
+2. **Paginate file list for large CLs:**
    ```typescript
-   const result = await invoke('p4_unshelve', { changelistId });
+   const SubmittedChangelistFiles = ({ changelistId }) => {
+     const { data: files } = useQuery(
+       ['changelist', changelistId, 'files'],
+       () => invoke('p4_describe', { changelistId })
+     );
 
-   if (result.includes('must resolve')) {
-     // Extract conflicted files
-     const conflicted = parseConflictedFiles(result);
+     const [page, setPage] = useState(0);
+     const PAGE_SIZE = 100;
 
-     // Show resolve dialog immediately
-     showResolveDialog({
-       files: conflicted,
-       onResolved: () => queryClient.invalidateQueries(['files'])
+     const pagedFiles = useMemo(() => {
+       const start = page * PAGE_SIZE;
+       return files?.slice(start, start + PAGE_SIZE) || [];
+     }, [files, page]);
+
+     return (
+       <div>
+         <p>Showing {page * PAGE_SIZE + 1}-{Math.min((page + 1) * PAGE_SIZE, files.length)} of {files.length} files</p>
+         <FileList files={pagedFiles} />
+         <Pagination page={page} total={Math.ceil(files.length / PAGE_SIZE)} onPageChange={setPage} />
+       </div>
+     );
+   };
+   ```
+
+3. **Virtualize file list rendering:**
+   ```tsx
+   import { useVirtualizer } from '@tanstack/react-virtual';
+
+   const VirtualizedFileList = ({ files }) => {
+     const parentRef = useRef(null);
+
+     const virtualizer = useVirtualizer({
+       count: files.length,
+       getScrollElement: () => parentRef.current,
+       estimateSize: () => 32, // 32px per row
+       overscan: 10
      });
+
+     return (
+       <div ref={parentRef} style={{ height: '600px', overflow: 'auto' }}>
+         <div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
+           {virtualizer.getVirtualItems().map(virtualRow => (
+             <div
+               key={virtualRow.index}
+               style={{
+                 position: 'absolute',
+                 top: 0,
+                 left: 0,
+                 width: '100%',
+                 height: `${virtualRow.size}px`,
+                 transform: `translateY(${virtualRow.start}px)`
+               }}
+             >
+               <FileRow file={files[virtualRow.index]} />
+             </div>
+           ))}
+         </div>
+       </div>
+     );
+   };
+   ```
+
+4. **Cache describe results aggressively:**
+   ```typescript
+   useQuery(['describe', changelistId], fetchDescribe, {
+     staleTime: Infinity, // Submitted CLs never change
+     cacheTime: 60 * 60 * 1000, // Cache for 1 hour
+   });
+   ```
+
+5. **Show loading indicator with progress:**
+   ```tsx
+   const { data, isLoading } = useQuery(
+     ['describe', changelistId],
+     () => invoke('p4_describe', { changelistId }),
+     { timeout: 30_000 }
+   );
+
+   if (isLoading) {
+     return (
+       <div>
+         <Spinner />
+         <p>Loading changelist details...</p>
+         <p className="text-muted-foreground">Large changelists may take up to 30 seconds.</p>
+       </div>
+     );
    }
    ```
 
-5. **Track CL metadata across streams:**
+6. **Warn user about large CLs:**
+   ```tsx
+   {files.length > 1000 && (
+     <Alert variant="info">
+       This changelist contains {files.length} files. Loading may be slow.
+     </Alert>
+   )}
+   ```
+
+**Affects:**
+- Submitted changelist file list - Phase 6 implementation
+- Sibling files in revision detail view - uses same `p4_describe` command
+
+---
+
+### Pitfall 7: Bookmark Invalid Depot Paths Cause Silent Failures
+
+**Risk:** User bookmarks depot path `//stream/main/src/`. Later, stream is deleted or renamed to `//stream/release/`. User clicks bookmark. App runs `p4 dirs //stream/main/src/` which fails with "no such file(s)". Error is swallowed or shown as cryptic message. Bookmark appears broken but user doesn't know why or how to fix it.
+
+**Why it happens:**
+Bookmarks store static depot paths. Depot structure changes over time (streams deleted, folders renamed, projects archived). Apps typically don't validate bookmarks at save time, and don't handle invalidation at use time.
+
+When bookmark points to non-existent path:
+- `p4` commands return non-zero exit code
+- Error messages are Perforce-specific: "//stream/main/src/... - no such file(s)"
+- User doesn't understand what went wrong
+- No mechanism to "fix" bookmark or remove invalid ones
+
+Additional edge case: Bookmark path uses incorrect syntax (e.g., `C:\workspace\file.txt` instead of `//depot/file.txt`), causing immediate failure.
+
+**Warning Signs:**
+- Bookmark click does nothing or shows error toast
+- Console shows "p4 dirs failed: no such file(s)"
+- Bookmark was working yesterday, broken today (stream deleted)
+- Bookmark list cluttered with old/invalid entries
+- User can't tell which bookmarks are valid
+
+**Prevention:**
+1. **Validate depot path syntax at bookmark creation:**
    ```typescript
-   // When shelving, store metadata
-   const shelvedCLs = {
-     [changelistId]: {
-       description: clDescription,
-       stream: currentStream,
-       workspace: currentWorkspace,
-       shelvedAt: Date.now()
+   const addBookmark = async (path: string, label: string) => {
+     // Validate depot path syntax
+     if (!path.startsWith('//')) {
+       throw new Error('Bookmark path must be depot path starting with //');
+     }
+
+     // Validate path exists
+     const exists = await invoke('p4_dirs_validate', { path });
+     if (!exists) {
+       const confirm = await showDialog({
+         title: 'Path Not Found',
+         message: `${path} does not exist. Bookmark anyway?`,
+         options: ['Cancel', 'Bookmark Anyway']
+       });
+       if (confirm !== 'Bookmark Anyway') return;
+     }
+
+     // Save bookmark
+     await invoke('save_bookmark', { path, label });
+   };
+   ```
+
+2. **Add validation command to check path existence:**
+   ```rust
+   #[tauri::command]
+   pub async fn p4_dirs_validate(
+       path: String,
+       server: Option<String>,
+       user: Option<String>,
+       client: Option<String>,
+   ) -> Result<bool, String> {
+       let mut cmd = Command::new("p4");
+       apply_connection_args(&mut cmd, &server, &user, &client);
+       cmd.args(["dirs", &path]);
+
+       let output = cmd.output()
+           .map_err(|e| format!("Failed to validate path: {}", e))?;
+
+       let stdout = String::from_utf8_lossy(&output.stdout);
+
+       // If path exists, output contains path
+       // If not, output is empty or contains "no such file(s)"
+       Ok(output.status.success() && !stdout.contains("no such file"))
+   }
+   ```
+
+3. **Show bookmark validity status in UI:**
+   ```tsx
+   const BookmarkList = ({ bookmarks }) => {
+     const { data: validityMap } = useQuery(
+       ['bookmark-validity'],
+       async () => {
+         const map = new Map();
+         for (const bookmark of bookmarks) {
+           const isValid = await invoke('p4_dirs_validate', { path: bookmark.path });
+           map.set(bookmark.path, isValid);
+         }
+         return map;
+       },
+       { staleTime: 5 * 60 * 1000 } // 5 minutes
+     );
+
+     return (
+       <div>
+         {bookmarks.map(bookmark => (
+           <div key={bookmark.path} className="bookmark-item">
+             {!validityMap?.get(bookmark.path) && (
+               <AlertTriangle className="text-warning" title="Path no longer exists" />
+             )}
+             <span>{bookmark.label}</span>
+             <Button onClick={() => navigateToBookmark(bookmark)}>Go</Button>
+             <Button onClick={() => deleteBookmark(bookmark)}>Delete</Button>
+           </div>
+         ))}
+       </div>
+     );
+   };
+   ```
+
+4. **Handle invalid bookmark click gracefully:**
+   ```typescript
+   const navigateToBookmark = async (bookmark: Bookmark) => {
+     try {
+       await invoke('p4_dirs', { path: bookmark.path });
+       // Navigate to path
+     } catch (err) {
+       const action = await showDialog({
+         title: 'Bookmark No Longer Valid',
+         message: `${bookmark.path} no longer exists. What would you like to do?`,
+         options: ['Delete Bookmark', 'Edit Path', 'Cancel']
+       });
+
+       if (action === 'Delete Bookmark') {
+         await deleteBookmark(bookmark);
+       } else if (action === 'Edit Path') {
+         await editBookmark(bookmark);
+       }
+     }
+   };
+   ```
+
+5. **Bookmark settings schema migration:**
+   ```typescript
+   // When adding bookmarks feature, migrate settings schema
+   const migrateSettings = async () => {
+     const settings = await invoke('load_settings');
+
+     // v3.0 schema: { server, user, client, ... }
+     // v4.0 schema: { server, user, client, bookmarks: [], ... }
+
+     if (!settings.bookmarks) {
+       settings.bookmarks = [];
+       settings.schemaVersion = 2;
+       await invoke('save_settings', { settings });
      }
    };
 
-   // When unshelving, show context
-   const originalContext = shelvedCLs[changelistId];
-   if (originalContext.stream !== currentStream) {
-     showWarning(`This shelf is from ${originalContext.stream}. You're on ${currentStream}.`);
-   }
+   // On app start
+   useEffect(() => {
+     migrateSettings();
+   }, []);
    ```
 
-**Warning signs:**
-- Files appear in default CL after unshelving numbered CL
-- "Changelist #1234 does not exist" errors when unshelving after stream switch
-- Files split between multiple CLs unexpectedly after unshelve
-- Unshelve succeeds but file count doesn't match expected
-- No resolve dialog appears despite conflicts in unshelve output
+6. **Export/import bookmarks for backup:**
+   ```tsx
+   const BookmarkManager = () => {
+     const exportBookmarks = async () => {
+       const bookmarks = await invoke('get_bookmarks');
+       const json = JSON.stringify(bookmarks, null, 2);
+       // Save to file via Tauri dialog
+       await save({ contents: json, defaultPath: 'p4now-bookmarks.json' });
+     };
 
-**Phase to address:**
-**Phase 4 - Bug Fixes (unshelve to same CL).** This bug requires understanding the interaction between numbered CLs, shelving, and stream switching. Can't fix in isolation.
+     const importBookmarks = async () => {
+       const file = await open({ filters: [{ name: 'JSON', extensions: ['json'] }] });
+       const json = await readTextFile(file);
+       const bookmarks = JSON.parse(json);
+       await invoke('import_bookmarks', { bookmarks });
+     };
+
+     return (
+       <div>
+         <Button onClick={exportBookmarks}>Export Bookmarks</Button>
+         <Button onClick={importBookmarks}>Import Bookmarks</Button>
+       </div>
+     );
+   };
+   ```
+
+**Affects:** Bookmarks/favorites feature - Phase 7 implementation
+
+---
+
+## Integration Pitfalls
+
+### Integration Pitfall 1: New Commands Don't Use Existing apply_connection_args Pattern
+
+**Risk:** Implementing `p4_print`, `p4_describe`, `p4_annotate` commands without calling `apply_connection_args()` function. Commands fail in DVCS setups or when user switches workspaces because `P4CONFIG`, `P4CLIENT` env vars pollute command execution.
+
+**Why it happens:**
+The existing codebase has `apply_connection_args()` helper (lines 13-42 in `p4.rs`) that clears `P4CONFIG`, `P4ROOT` and sets `-p`, `-u`, `-c` flags explicitly. This ensures command isolation. New commands might skip this pattern, causing env var inheritance issues that only manifest in specific environments (DVCS, multiple workspaces).
+
+**Prevention:**
+- All new p4 commands MUST call `apply_connection_args(&mut cmd, &server, &user, &client)` before `.args()`
+- Add unit test verifying env vars are cleared for each command
+- Code review checklist: "Does this command call apply_connection_args?"
+
+**Affects:** All v4.0 commands (`p4_print`, `p4_describe`, `p4_annotate`)
+
+---
+
+### Integration Pitfall 2: TanStack Query Cache Pollution From New Queries
+
+**Risk:** Adding new query keys (`['annotate', ...]`, `['describe', ...]`, `['print', ...]`) without coordinating invalidation with existing mutations. Example: User submits changelist, but `['describe', changelistId]` cache isn't invalidated. User views submitted CL and sees stale data (status: "pending" instead of "submitted").
+
+**Why it happens:**
+Existing mutations invalidate known query keys:
+```typescript
+onSettled: () => {
+  queryClient.invalidateQueries(['files']);
+  queryClient.invalidateQueries(['changelists']);
+  queryClient.invalidateQueries(['opened']);
+}
+```
+
+New queries aren't added to invalidation lists, so they stay stale after mutations.
+
+**Prevention:**
+1. **Audit all mutation onSettled hooks, add new query keys:**
+   ```typescript
+   const submitMutation = useMutation({
+     mutationFn: submitChangelist,
+     onSettled: () => {
+       queryClient.invalidateQueries(['files']);
+       queryClient.invalidateQueries(['changelists']);
+       queryClient.invalidateQueries(['opened']);
+       // ADD THESE for v4.0:
+       queryClient.invalidateQueries(['describe']); // Submitted CL details
+       queryClient.invalidateQueries(['annotate']); // File blame may change
+     }
+   });
+   ```
+
+2. **Use query key prefixes for bulk invalidation:**
+   ```typescript
+   // Query key structure: ['p4-command', ...args]
+   // Example: ['p4-describe', 12345]
+   //          ['p4-annotate', '//depot/file.txt']
+
+   // Invalidate all p4 queries after workspace switch:
+   queryClient.invalidateQueries({ predicate: (query) =>
+     query.queryKey[0]?.toString().startsWith('p4-')
+   });
+   ```
+
+3. **Document query invalidation requirements in PLAN files:**
+   - Each feature plan should list "Queries to invalidate after X mutation"
+
+**Affects:** All v4.0 features - cache coordination with existing v3.0 mutations
+
+---
+
+### Integration Pitfall 3: Stale File Type Detection After p4 print Implementation
+
+**Risk:** `p4_print` implementation doesn't check file type, attempts to print binary files as text. User clicks "Open This Revision" on binary file (compiled binary, image, video). Backend runs `p4 print -o temp.bin //depot/binary`, then tries `fs::read_to_string(temp.bin)` which fails with UTF-8 decode error. Or worse: Decodes partially, shows garbled text in viewer.
+
+**Why it happens:**
+File type is available from `p4 fstat -T headType`, but `p4_print` implementation might skip this check for speed. Binary files should either:
+1. Reject with error: "Cannot view binary files"
+2. Auto-launch external editor instead of viewer
+3. Show binary preview (hex dump, metadata)
+
+**Prevention:**
+- `p4_print` must call `p4_fstat` first to check `headType`
+- If `headType` contains "binary", "ubinary", "apple", "resource", return error or auto-open external editor
+- Show warning in UI before printing large text files (>1MB)
+
+**Affects:** Open file in external editor, File content viewer
+
+---
+
+### Integration Pitfall 4: Auto-Refresh Conflicts With Long-Running p4 annotate
+
+**Risk:** User opens blame view for large file. `p4 annotate` runs for 20 seconds. Meanwhile, auto-refresh timer fires (every 30s from v3.0). Auto-refresh runs `p4 fstat //...` which spawns new `p4.exe` process. Now two `p4.exe` processes compete for server resources, slowing both. Annotate takes 40s instead of 20s. Auto-refresh cascades, spawning more processes.
+
+**Why it happens:**
+v3.0 auto-refresh disables during operations via `useOperationStore` (from v3.0 PITFALLS.md, lines 98-120). But new operations (`p4_annotate`, `p4_describe`) aren't registered as "active operations", so auto-refresh doesn't disable.
+
+**Prevention:**
+1. **Register new commands as operations:**
+   ```typescript
+   const annotateQuery = useQuery(
+     ['annotate', depotPath],
+     async () => {
+       operationStore.startOperation('annotate'); // ADD THIS
+       try {
+         return await invoke('p4_annotate', { depotPath });
+       } finally {
+         operationStore.endOperation('annotate'); // ADD THIS
+       }
+     }
+   );
+   ```
+
+2. **Or use query status to disable auto-refresh:**
+   ```typescript
+   const hasActiveAnnotate = queryClient.getQueryState(['annotate'])?.fetchStatus === 'fetching';
+
+   useQuery(['files'], fetchFiles, {
+     enabled: !hasActiveAnnotate, // Disable auto-refresh during annotate
+     refetchInterval: 30_000
+   });
+   ```
+
+**Affects:** All long-running v4.0 queries (annotate, describe large CLs)
+
+---
+
+## Feature-Specific Edge Cases
+
+### Edge Case 1: Annotate Shows Gaps For Deleted/Restored Lines
+
+**Scenario:** File has line deleted in #5, restored in #10. User views blame at #15. Annotation shows:
+- Lines 1-10: #3 (original author)
+- Lines 11-50: [gap, no annotation]
+- Lines 51-100: #7 (different author)
+
+Lines 11-50 have no blame data because they were deleted/restored, confusing `p4 annotate` logic.
+
+**Impact:** User confused why some lines have no author/revision data.
+
+**Mitigation:** Show "(line history complex)" for lines without annotation. Provide "View Full History" link to file history viewer.
+
+---
+
+### Edge Case 2: Submit Dialog Preview Doesn't Show Shelved Files Warning
+
+**Scenario:** User has changelist with 5 regular files + 3 shelved files. Submit dialog shows 5 files in preview. User clicks Submit. Perforce shows error: "Cannot submit changelist with shelved files. Delete or unshelve first."
+
+**Impact:** Submit fails unexpectedly, user doesn't know why.
+
+**Mitigation:**
+1. Query shelved files before showing submit dialog
+2. Show warning: "This changelist has 3 shelved files. Unshelve or delete before submitting."
+3. Provide "View Shelved Files" button
+
+---
+
+### Edge Case 3: Workspace Sync Status Shows Wrong Icons After Partial Sync
+
+**Scenario:** User starts sync of 1000 files. Sync completes 500 files, then user cancels. Workspace tree still shows old sync status (out-of-date for all 1000 files). Manually refresh doesn't update because query cache still fresh (staleTime: 5 min).
+
+**Impact:** Incorrect sync status indicators, user confused about what's synced.
+
+**Mitigation:**
+1. Invalidate sync status queries after sync mutation (even if cancelled)
+2. Show "Refreshing sync status..." after partial sync
+3. Add "Force Refresh Sync Status" button
+
+---
+
+### Edge Case 4: Bookmark Points To File Instead of Folder
+
+**Scenario:** User bookmarks specific file `//depot/file.txt`. Clicks bookmark. App runs `p4 dirs //depot/file.txt` which fails (p4 dirs only works on folders). Error: "//depot/file.txt - must refer to client 'client'."
+
+**Impact:** Bookmark fails, cryptic error message.
+
+**Mitigation:**
+1. Detect if bookmark path is file vs folder at save time
+2. For file bookmarks, navigate to parent folder and highlight file
+3. Or run `p4 fstat` instead of `p4 dirs` for file paths
+
+---
+
+## "Looks Done But Isn't" Checklist
+
+- [ ] **p4_annotate:** Often missing file rename detection — Verify: Renamed file shows correct author history, or clear warning about rename
+- [ ] **p4_annotate:** Often missing large file size check — Verify: 50MB file shows "too large" error, not 30s hang
+- [ ] **p4_have vs p4_fstat:** Often use slow fstat for sync status — Verify: Workspace tree loads in <2s for 10k files
+- [ ] **p4_print binary check:** Often missing file type validation — Verify: Binary file shows error, not garbled text or crash
+- [ ] **p4_print memory handling:** Often load entire file into memory — Verify: 100MB file doesn't crash app or spike memory
+- [ ] **Submit dialog coordination:** Often conflict with main UI editor — Verify: Description edits in both places don't overwrite each other
+- [ ] **p4_describe -s flag:** Often missing, includes diffs — Verify: Large CL query takes <5s, not 60s
+- [ ] **Submitted CL file list:** Often missing virtualization — Verify: 5000 file CL renders smoothly, no janky scroll
+- [ ] **Bookmark validation:** Often missing path existence check — Verify: Invalid bookmark shows clear error with fix options
+- [ ] **Query cache invalidation:** Often missing new query keys in mutations — Verify: Submit invalidates describe cache, not stale
 
 ---
 
@@ -880,131 +1123,88 @@ But this fails if CL doesn't exist in target workspace/stream.
 
 | Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
 |----------|-------------------|----------------|-----------------|
-| Spawn merge tool without waiting | Faster UI response, non-blocking | Resolve state never updates, requires manual refresh | **Never** - breaks resolve workflow entirely |
-| Load entire depot tree upfront | Simpler code (one query) | Memory exhaustion, 30s freeze on large depots | Only for tiny demos (<100 files) |
-| Auto-refresh with no operation gating | Always fresh data | Process leaks, race conditions, memory growth | **Never** - causes instability over time |
-| Skip pre-flight checks for stream switch | Faster switch operation | Silent failures, corrupted workspace state | **Never** - failures are catastrophic |
-| Mock all Tauri APIs in E2E tests | Fast, reliable tests | Not testing actual integration | **Acceptable** if Rust integration tests exist |
-| Use relative paths in Tauri commands | Shorter code | Breaks when cwd changes between calls | **Never** - Tauri resets cwd per command |
-| Invalidate all queries after every mutation | Simple invalidation logic | Excessive refetches, poor performance | Only during prototyping, refine for production |
-| Global refetchInterval in QueryClient | Consistent auto-refresh across app | Refetches inactive/background queries | **Never** - use per-query `enabled` flag |
+| Skip file type check in p4_print | Faster implementation | Crashes on binary files, garbled output | **Never** - file type check is 1 line |
+| Use p4 fstat instead of p4 have for sync status | Simpler code (one command) | 10x slower queries, poor scalability | Only for prototypes with <100 files |
+| Load entire p4 print output into memory | Simpler code (fs::read_to_string) | OOM crashes on large files | Only if file size check enforces <1MB limit |
+| Submit dialog allows description editing | Feature parity with P4V | Conflicts with main UI, data loss risk | **Never** - coordination cost is lower than data loss risk |
+| p4 describe without -s flag | Complete data (includes diffs) | 100x slower for large CLs, memory spikes | Only if CL guaranteed <10 files |
+| Skip bookmark path validation | Faster bookmark creation | Silent failures, user confusion | **Never** - validation is async, doesn't block UX |
+| Non-virtualized file list rendering | Simpler code (map over array) | UI freeze with >1000 files | Only if file count guaranteed <100 |
+| p4 annotate without rename detection | Simpler implementation | Wrong author/revision data | **Acceptable** if clear warning shown |
 
-## Integration Gotchas
-
-| Integration | Common Mistake | Correct Approach |
-|-------------|----------------|------------------|
-| External merge tool | Spawn without waiting for exit | Use `child.wait()`, capture exit code, verify result file exists before `p4 resolve -am` |
-| P4 resolve state | Click "Mark Resolved" without `p4 resolve -am` | Always run `p4 resolve -am <file>` after merge tool succeeds |
-| WebdriverIO + Tauri | Use `.click()` and `.setValue()` | Use `browser.execute()` workaround, match WebView2/WebDriver versions exactly |
-| Stream switching | Run `p4 switch` without checking open files | Pre-flight: detect numbered CL files, prompt to shelve first, verify success with `p4 info` |
-| Workspace switching | Update settings, assume p4 uses them | Clear `P4CLIENT` env var explicitly, verify with `p4 info`, clear query cache |
-| TanStack Query polling | Set `refetchInterval` globally | Disable during mutations with `enabled` flag, use `staleTime` to prevent thrashing |
-| Depot tree loading | `p4 dirs //...` to load full tree | Lazy load on expand (1 level at a time), virtualize with react-arborist |
-| Unshelve after stream switch | `p4 unshelve -s CL` assumes CL exists | Check CL exists first, offer to create or unshelve to default, detect conflicts |
-
-## Performance Traps
-
-| Trap | Symptoms | Prevention | When It Breaks |
-|------|----------|------------|----------------|
-| Eager depot tree loading | 30s freeze, 500MB+ memory spike | Lazy load on folder expand, limit to 1-2 levels per query | Depots >1,000 files |
-| Concurrent p4.exe processes | Memory growth, 10+ p4.exe in Task Manager | Gate auto-refresh during operations, track in ProcessManager | Auto-refresh + long sync |
-| Query invalidation storms | UI flickers, constant loading spinners | Use `staleTime: 30s`, disable polling during mutations, `keepPreviousData: true` | `refetchInterval` <30s with active mutations |
-| Non-virtualized tree rendering | Janky scrolling, slow expand/collapse | Use react-arborist (already in project) with `openByDefault: false` | Tree >1,000 visible nodes |
-| Unbounded file history queries | 10s load time, 100MB response for old files | Use `p4 filelog -m 100` to limit revisions, paginate with "Load More" | Files >500 revisions |
-| Polling without cleanup | Memory leaks, zombie processes | Clear intervals on unmount, `ProcessManager.kill_all()` on app close | Long sessions >30 min |
-| Waiting for external tool with `.wait()` | App freezes until tool closes | Spawn in background, show "Waiting..." UI, allow cancel | Merge tool open >1 minute |
-
-## UX Pitfalls
-
-| Pitfall | User Impact | Better Approach |
-|---------|-------------|-----------------|
-| Silent stream switch failures | User thinks they switched, operations fail with cryptic errors | Pre-flight validation, show shelve prompt for numbered CLs, verify success with `p4 info` |
-| Merge tool spawns with no feedback | User doesn't know tool launched, clicks button again, spawns duplicate | Show "P4Merge is open. Waiting for you to close it..." with disable button state |
-| Depot browser loads entire depot | 30s freeze, "Application Not Responding" dialog | Lazy load with skeleton loaders per folder, show "Loading..." per expanded node |
-| Auto-refresh with no indicator | User confused when data changes unexpectedly | Show "Updated 5s ago" timestamp, subtle pulse animation during refresh |
-| Resolve state not reflected in UI | File shows "needs resolve" after resolving in merge tool | Invalidate file queries immediately after `p4 resolve -am`, optimistic update in UI |
-| Unshelve goes to wrong CL | User loses track of which CL contains what | Confirm dialog: "Unshelve CL #1234 to: [Dropdown: Default / Create #1234 / Cancel]" |
-| Search results not actionable | User finds file but can't do anything with it | Context menu on results: View History, Diff, Open in Explorer, Checkout, Sync |
-| No visual feedback during switch | User clicks "Switch Stream", waits, nothing happens | Loading overlay: "Shelving files... Switching stream... Refreshing workspace..." |
-
-## "Looks Done But Isn't" Checklist
-
-- [ ] **Resolve workflow:** Often missing `p4 resolve -am` after merge tool closes — Verify: Close merge tool, run `p4 opened`, file shows as "edit" not "resolve"
-- [ ] **Stream switching:** Often missing pre-flight check for numbered CLs — Verify: Open file in CL #123, switch stream, shelve prompt appears
-- [ ] **Auto-refresh:** Often missing operation gating — Verify: Start sync, auto-refresh pauses, memory stable over 10 minutes
-- [ ] **Depot browser:** Often missing lazy loading — Verify: 10k file depot, initial load <1s, folders expand on-demand
-- [ ] **Workspace switching:** Often missing env var clearing — Verify: P4CONFIG file present, switch works, `p4 info` shows new workspace
-- [ ] **E2E tests:** Often missing Tauri API mocking — Verify: Tests don't hang on `dialog.open()`, test mode uses mocks
-- [ ] **External merge tool:** Often missing exit code validation — Verify: Cancel merge tool (exit 1), file NOT marked resolved
-- [ ] **Query invalidation:** Often missing mutation coordination — Verify: No duplicate `p4.exe` processes during auto-refresh
-- [ ] **Unshelve destination:** Often missing CL existence check — Verify: Unshelve from different stream, prompted for CL creation
+---
 
 ## Recovery Strategies
 
 | Pitfall | Recovery Cost | Recovery Steps |
 |---------|---------------|----------------|
-| Resolve state stuck | **LOW** | Show "Force Refresh" button → runs `p4 opened`, invalidates all file queries |
-| Auto-refresh process leak | **MEDIUM** | Add "Kill All P4 Processes" debug command, restart auto-refresh interval |
-| Depot tree OOM crash | **HIGH** | **Requires app restart** — prevention is critical (lazy loading from day 1) |
-| Stream switch partial failure | **MEDIUM** | Detect with `p4 info` mismatch, offer "Revert to previous stream" or "Complete switch" |
-| Workspace switch env pollution | **HIGH** | **Requires app restart** to clear inherited env vars — prevention is critical |
-| E2E test hang on dialog | **LOW** | Kill test process, add test timeout, enable mock mode (`TEST_MODE=true`) |
-| Query invalidation race | **LOW** | Manual refresh button, or wait for next auto-refresh cycle to self-heal |
-| Unshelve wrong destination | **LOW** | Run `p4 reopen -c <correct-cl>` to move files, show recovery toast with action |
+| Annotate shows wrong author (rename) | **LOW** | Show warning, link to full file history, document limitation |
+| Annotate hangs on large file | **LOW** | Kill process via ProcessManager, show error with size limit |
+| Workspace tree query slow (fstat) | **HIGH** | Replace with p4 have + p4 files (different query logic, requires refactor) |
+| p4 print crashes on binary file | **MEDIUM** | Add file type pre-check, reject binary files early |
+| Submit dialog conflicts with main UI | **HIGH** | Refactor to single source of truth (query), lock one editor when other open |
+| p4 describe hangs on large CL | **LOW** | Add -s flag to command args (one-line fix) |
+| Bookmark points to non-existent path | **LOW** | Show error dialog with "Delete Bookmark" option, validate on click |
+| Query cache stale after new feature | **MEDIUM** | Audit all mutations, add new query keys to invalidation lists |
+
+---
 
 ## Pitfall-to-Phase Mapping
 
 | Pitfall | Prevention Phase | Verification Method |
 |---------|------------------|---------------------|
-| Resolve state inconsistency | **Phase 1 - Resolve Workflow** | Test: Merge file, close tool, verify `p4 opened` shows resolved, UI updates without refresh |
-| Auto-refresh race conditions | **Phase 5 - Auto-Refresh** | Test: Start 5-minute sync, verify polling stops, check Task Manager for single p4.exe, memory stable |
-| Numbered CL blocks stream switch | **Phase 3 - Stream Switching** | Test: Open file in CL #123, click switch stream, verify shelve prompt appears with CL list |
-| Depot tree loads entire depot | **Phase 2 - Depot Browser** | Test: 10k file depot, measure initial load <1s, memory delta <50MB, folders lazy-load |
-| Workspace switch env pollution | **Phase 3 - Workspace Switching** | Test: Create P4CONFIG file with P4CLIENT, switch workspace via app, verify `p4 info` shows new client |
-| E2E tests hang on dialogs | **Phase 6 - E2E Testing Setup** | Test: Enable `TEST_MODE=true`, verify Tauri APIs mocked, tests complete without timeouts |
-| Unshelve wrong CL destination | **Phase 4 - Bug Fixes** | Test: Shelve CL #123, switch stream, unshelve, verify destination prompt with options |
-| Query invalidation during mutation | **Phase 5 - Auto-Refresh** | Test: Enable auto-refresh, trigger sync, verify queries disabled during operation, re-enabled after |
+| Annotate wrong author (rename) | **Phase 1 - Blame View** | Test: Rename file, verify annotation shows warning or follows rename |
+| Annotate hangs on large file | **Phase 1 - Blame View** | Test: 50MB file, verify size check rejects with clear error |
+| Workspace tree uses slow fstat | **Phase 2 - Sync Status Tree** | Test: 10k file workspace, measure load time <2s |
+| p4 print binary file crash | **Phase 3 - External Editor, Phase 4 - File Viewer** | Test: Binary file, verify error or auto-open external editor |
+| p4 print memory exhaustion | **Phase 3 - External Editor, Phase 4 - File Viewer** | Test: 100MB text file, verify size check or chunking |
+| Submit dialog description conflict | **Phase 5 - Submit Dialog Preview** | Test: Edit in both places, verify no data loss |
+| p4 describe hangs on large CL | **Phase 6 - Submitted CL Files** | Test: 1000 file CL, verify -s flag used, query <5s |
+| Bookmark invalid path | **Phase 7 - Bookmarks** | Test: Bookmark deleted path, verify clear error with fix options |
+| Query cache pollution | **All phases** | Test: Submit CL, verify describe/annotate queries invalidated |
+| Auto-refresh during long queries | **Phase 1, 6** | Test: Start annotate, verify auto-refresh disabled during operation |
+
+---
 
 ## Sources
 
-**Perforce Resolve Workflows:**
-- [Perforce: Resolving Conflicts](https://www.perforce.com/perforce/doc.091/manuals/p4guide/05_resolve.html) - Official resolve workflow documentation
-- [p4 resolve Command Reference](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_resolve.html) - Command syntax and flags
-- [Merging to resolve conflicts](https://help.perforce.com/helix-core/server-apps/p4guide/2024.2/Content/P4Guide/merging-to-resolve-conflicts.html) - Conflict resolution patterns
+**Perforce Annotate and Blame:**
+- [p4 annotate - Perforce Command Reference](https://help.perforce.com/helix-core/server-apps/cmdref/2024.2/Content/CmdRef/p4_annotate.html) - Official annotate command documentation
+- [p4 annotate - Perforce r16.2 Reference](https://ftp.perforce.com/perforce/r16.2/doc/manuals/cmdref/p4_annotate.html) - 10MB default size limit documentation
+- [p4-blame doesn't take advantage of p4 annotate - GitHub Issue](https://github.com/gareth-rees/p4.el/issues/19) - Performance improvement discussion
+- [Integrating while keeping history? - Perforce Forums](https://perforce-user.perforce.narkive.com/Y8IdlQvu/integrating-while-keeping-history) - File rename history preservation
 
-**Tauri E2E Testing:**
-- [WebdriverIO | Tauri v2 Docs](https://v2.tauri.app/develop/tests/webdriver/example/webdriverio/) - Official WebdriverIO integration guide
-- [WebDriver Tauri GitHub Issue #10670](https://github.com/tauri-apps/tauri/issues/10670) - WebDriver setup issues and workarounds
-- [tauri-driver .click() bug #6541](https://github.com/tauri-apps/tauri/issues/6541) - Known limitation requiring browser.execute() workaround
+**Perforce Workspace Sync and File Queries:**
+- [p4 status - Perforce Command Reference](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_status.html) - Workspace sync status detection
+- [Tuning Perforce for Performance](https://perforce.com/manuals/v15.1/p4sag/chapter.performance.html) - Performance optimization guide
+- [p4 fstat - Perforce Command Reference](https://www.perforce.com/manuals/v15.1/cmdref/p4_fstat.html) - fstat command reference
 
-**TanStack Query Invalidation:**
-- [Query Invalidation | TanStack Query Docs](https://tanstack.com/query/latest/docs/framework/react/guides/query-invalidation) - Official invalidation guide
-- [useQuery + invalidateQueries stale UI Discussion #6953](https://github.com/TanStack/query/discussions/6953) - Race condition discussion
-- [refetch vs invalidating query Discussion #2468](https://github.com/TanStack/query/discussions/2468) - Difference between invalidate and refetch
+**Perforce Print and Binary Files:**
+- [p4 print - Perforce Command Reference](https://www.perforce.com/manuals/v17.1/cmdref/Content/CmdRef/p4_print.html) - Print command documentation
+- [PATCH: git-p4 improve performance with large files](https://git.vger.kernel.narkive.com/rsxDKpsR/patch-p4-improve-performance-with-large-files) - Memory performance issues with large files
+- [Very large Perforce clientspecs (>3GB) - JetBrains TeamCity](https://teamcity-support.jetbrains.com/hc/en-us/community/posts/206224689-Very-large-Perforce-clientspecs-3-GB) - p4 print performance issues
 
-**Stream/Workspace Switching:**
-- [Perforce: Switch between streams](https://www.perforce.com/manuals/dvcs/Content/DVCS/streams.switch.html) - Stream switching documentation
-- [p4 switch Command Reference](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_switch.html) - Command syntax and constraints
-- [Create and manage workspaces](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/using.workspaces.html) - Workspace management
+**Perforce File Type Detection:**
+- [Helix Core file type detection and Unicode](https://www.perforce.com/manuals/v17.1/p4guide/Content/P4Guide/filetypes.unicode.detection.html) - Binary vs text detection
+- [Helix Server file type detection](https://help.perforce.com/helix-core/server-apps/p4guide/2023.2/Content/P4Guide/filetypes.unicode.detection.html) - File type detection algorithm
 
-**Tree Virtualization:**
-- [Rendering 10000 Items in React Efficiently](https://namastedev.com/blog/rendering-10000-items-in-react-efficiently/) - Virtualization techniques
-- [React Tree View Components 2026](https://reactscript.com/best-tree-view/) - Library comparison including react-arborist
-- [Handling 1M DOM Nodes with Virtualization](https://medium.com/@bhagyarana80/handling-1m-dom-nodes-in-react-virtualization-without-sacrificing-ux-99c5bec3914b) - Performance patterns
+**Perforce Submit and Changelists:**
+- [p4 submit - Perforce Command Reference](https://help.perforce.com/helix-core/server-apps/cmdref/current/Content/CmdRef/p4_submit.html) - Submit command documentation
+- [How to submit changelist with multiple lines? - Perforce Forums](https://perforce-user.perforce.narkive.com/nCQBslAF/p4-how-to-submit-changelist-with-change-description-of-multiple-lines) - Multiline description handling
+- [Submit (Check in) files - P4V User Guide](https://www.perforce.com/manuals/p4v/Content/P4V/files.submit.html) - Submit dialog edge cases
 
-**Depot Performance:**
-- [Tuning Perforce for Performance](https://www.perforce.com/perforce/doc.092/manuals/p4sag/07_perftune.html) - Server performance tuning
-- [10 Tips To Supercharge Perforce Performance](https://get.assembla.com/blog/how-to-maximize-perforce-performance/) - Client-side optimization
+**Perforce Describe and Large Changelists:**
+- [p4 describe - Perforce Command Reference](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_describe.html) - Describe command with -s flag
+- [p4 changes - Perforce Command Reference](https://help.perforce.com/helix-core/server-apps/cmdref/current/Content/CmdRef/p4_changes.html) - Changelist queries
+- [Changelist and affected files report - Perforce Forums](https://perforce-user.perforce.narkive.com/noS3CZ8X/p4-changelist-and-affected-files-report) - Performance with large CLs
 
-**Auto-Refresh and Memory:**
-- [Preventing Memory Leaks in Windows Applications](https://learn.microsoft.com/en-us/windows/win32/win7appqual/preventing-memory-leaks-in-windows-applications) - Windows memory management
-- [Top Mobile App Performance Metrics 2026](https://medium.com/@testwithblake/top-mobile-app-performance-metrics-every-product-team-should-monitor-in-2026-bb7cc4f45136) - Performance monitoring including memory and CPU
-
-**External Tool Integration:**
-- [Integrating with Source Control - Araxis Merge](https://www.araxis.com/merge/documentation-windows/integrating-with-other-applications.en) - External tool integration patterns
-- [Custom Merge Tool Bug #2529](https://github.com/fork-dev/TrackerWin/issues/2529) - Exit code handling issues
+**Perforce Bookmarks:**
+- [Bookmarking files - P4V User Guide](https://www.perforce.com/manuals/v18.3/p4v/Content/P4V/using.bookmarks.html) - Bookmark functionality
+- [Bookmark files and folders - P4V User Guide](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/using.bookmarks.html) - Bookmark path syntax
+- [P4 Client Error Handling - Perforce Support Portal](https://portal.perforce.com/s/article/3505) - Path validation errors
 
 ---
-*Pitfalls research for: P4Now v3.0 feature additions to existing v2.0 system*
-*Researched: 2026-01-29*
-*Focus: Integration pitfalls when adding resolve, depot browser, workspace/stream switching, auto-refresh, and E2E testing*
+
+*Pitfalls research for: P4Now v4.0 P4V parity feature additions*
+*Researched: 2026-02-03*
+*Focus: Integration pitfalls when adding blame, sync status, file viewer, submit preview, submitted CL files, and bookmarks to existing v3.0 system*
