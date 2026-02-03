@@ -138,10 +138,12 @@ Plans:
   5. Files in submitted CL show action indicators (add, edit, delete, integrate)
   6. User can click file in submitted CL to view that revision
   7. Addresses p4_describe tech debt from RevisionDetailView
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 18-01: TBD
+- [ ] 18-01-PLAN.md - Sync status overlays with folder aggregation
+- [ ] 18-02-PLAN.md - Backend p4_describe command for submitted CL files
+- [ ] 18-03-PLAN.md - Submitted CL file list display and navigation
 
 #### Phase 19: Submit Enhancement
 **Goal**: User can preview changelist before submitting
