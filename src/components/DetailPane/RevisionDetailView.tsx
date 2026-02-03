@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { P4Revision } from '@/lib/tauri';
 import { useDiff } from '@/hooks/useDiff';
 import { Button } from '@/components/ui/button';
+import { FileContentViewer } from './FileContentViewer';
 
 interface RevisionDetailViewProps {
   depotPath: string;
@@ -16,6 +18,7 @@ interface RevisionDetailViewProps {
  */
 export function RevisionDetailView({ depotPath, localPath, revision }: RevisionDetailViewProps) {
   const { diffRevisions, diffAgainstWorkspace } = useDiff();
+  const [showContent, setShowContent] = useState(false);
 
   // Extract filename from depot path
   const fileName = depotPath.split('/').pop() || depotPath;
@@ -40,11 +43,8 @@ export function RevisionDetailView({ depotPath, localPath, revision }: RevisionD
     diffAgainstWorkspace(depotPath, localPath, revision.rev);
   };
 
-  // TODO: Add p4_print command to backend to open specific revision
-  const handleOpenRevision = () => {
-    // Placeholder for opening this revision in editor
-    // Will need invokeP4Print backend command
-    alert('Open This Revision - Not yet implemented (needs p4_print backend)');
+  const toggleContent = () => {
+    setShowContent(!showContent);
   };
 
   return (
@@ -82,11 +82,16 @@ export function RevisionDetailView({ depotPath, localPath, revision }: RevisionD
         <Button
           variant="outline"
           size="sm"
-          onClick={handleOpenRevision}
+          onClick={toggleContent}
         >
-          Open This Revision
+          {showContent ? 'Hide Content' : 'View File Content'}
         </Button>
       </div>
+
+      {/* File content viewer */}
+      {showContent && (
+        <FileContentViewer depotPath={depotPath} revision={revision.rev} />
+      )}
 
       {/* Sibling files section - placeholder */}
       <div>
