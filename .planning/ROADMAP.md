@@ -122,9 +122,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 17-01-PLAN.md - Backend p4_annotate command, useFileAnnotations hook, parsing/color utilities
-- [ ] 17-02-PLAN.md - FileAnnotationViewer and AnnotationGutter with virtualization and heatmap
-- [ ] 17-03-PLAN.md - Interactive features: tooltip, keyboard nav, CL click, blame prior revision
+- [x] 17-01-PLAN.md - Backend p4_annotate command, useFileAnnotations hook, parsing/color utilities
+- [x] 17-02-PLAN.md - FileAnnotationViewer and AnnotationGutter with virtualization and heatmap
+- [x] 17-03-PLAN.md - Interactive features: tooltip, keyboard nav, CL click, blame prior revision
 
 #### Phase 18: Table Stakes UI Features
 **Goal**: Workspace sync status and submitted changelist file lists
@@ -179,6 +179,6 @@ Plans:
 | 14. Depot Browser | v3.0 | 3/3 | Complete | 2026-02-01 |
 | 15. Resolve Workflow | v3.0 | 2/2 | Complete | 2026-02-01 |
 | 16. File Content Viewer | v4.0 | 3/3 | Complete | 2026-02-03 |
-| 17. File Annotations | v4.0 | 0/3 | Planned | - |
+| 17. File Annotations | v4.0 | 3/3 | Complete | 2026-02-03 |
 | 18. Table Stakes UI | v4.0 | 0/TBD | Not started | - |
 | 19. Submit Enhancement | v4.0 | 0/TBD | Not started | - |

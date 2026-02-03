@@ -15,12 +15,12 @@ Requirements for P4V parity milestone. Each maps to roadmap phases.
 
 ### File Annotations (Blame)
 
-- [ ] **BLAME-01**: User can view per-line author, revision, and date for a file
-- [ ] **BLAME-02**: User can click annotation to view that revision's changelist
-- [ ] **BLAME-03**: User can navigate annotations with keyboard (up/down between changes)
-- [ ] **BLAME-04**: Annotations show age heatmap coloring (recent = hot, old = cold)
-- [ ] **BLAME-05**: User can hover annotation to see full commit message tooltip
-- [ ] **BLAME-06**: User can "blame prior revision" to peel back history layers
+- [x] **BLAME-01**: User can view per-line author, revision, and date for a file
+- [x] **BLAME-02**: User can click annotation to view that revision's changelist
+- [x] **BLAME-03**: User can navigate annotations with keyboard (up/down between changes)
+- [x] **BLAME-04**: Annotations show age heatmap coloring (recent = hot, old = cold)
+- [x] **BLAME-05**: User can hover annotation to see full commit message tooltip
+- [x] **BLAME-06**: User can "blame prior revision" to peel back history layers
 
 ### Workspace Sync Status
 
@@ -93,12 +93,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | VIEWER-01 | Phase 16 | Complete |
 | VIEWER-02 | Phase 16 | Complete |
 | VIEWER-03 | Phase 16 | Complete |
-| BLAME-01 | Phase 17 | Pending |
-| BLAME-02 | Phase 17 | Pending |
-| BLAME-03 | Phase 17 | Pending |
-| BLAME-04 | Phase 17 | Pending |
-| BLAME-05 | Phase 17 | Pending |
-| BLAME-06 | Phase 17 | Pending |
+| BLAME-01 | Phase 17 | Complete |
+| BLAME-02 | Phase 17 | Complete |
+| BLAME-03 | Phase 17 | Complete |
+| BLAME-04 | Phase 17 | Complete |
+| BLAME-05 | Phase 17 | Complete |
+| BLAME-06 | Phase 17 | Complete |
 | SYNC-01 | Phase 18 | Pending |
 | SYNC-02 | Phase 18 | Pending |
 | SYNC-03 | Phase 18 | Pending |
