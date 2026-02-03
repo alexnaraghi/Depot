@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 
 Milestone: v4.0 Road to P4V Killer
 Phase: 16 of 19 (File Content Viewer)
-Plan: 02 of TBD (just completed 16-02-PLAN.md)
+Plan: 03 of TBD (just completed 16-03-PLAN.md)
 Status: Phase 16 in progress
-Last activity: 2026-02-03 — Completed 16-02: File Content Viewer UI
+Last activity: 2026-02-03 — Completed 16-03: File Size Validation
 
-Progress: [████████░░░░░░░░░░░░] 60/TBD plans complete (v3.0: 58/58, v4.0: 2/TBD)
+Progress: [████████░░░░░░░░░░░░] 61/TBD plans complete (v3.0: 58/58, v4.0: 3/TBD)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 60 (14 v1.0 + 17 v2.0 + 27 v3.0 + 2 v4.0)
+- Total plans completed: 61 (14 v1.0 + 17 v2.0 + 27 v3.0 + 3 v4.0)
 - Quick tasks completed: 8 (007 partial)
 - Average duration: 5 min
-- Total execution time: ~418 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 34 quick + 8 v4.0)
+- Total execution time: ~424 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 34 quick + 14 v4.0)
 
 **By Phase (v3.0):**
 
@@ -42,7 +42,7 @@ Progress: [████████░░░░░░░░░░░░] 60/TBD 
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 16 | 2 | 8 min | 4 min |
+| 16 | 3 | 14 min | 5 min |
 
 *Updated after each plan completion*
 
@@ -67,13 +67,14 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Blockers/Concerns
 
-None — Phase 16 Plan 02 complete, file content viewer functional. Ready to move to next phase.
+**Phase 16 Plan 03 complete** — File size validation implemented with two-stage loading. External editor integration pending for binary files and files >10MB.
 
 **Research notes:**
 - Use p4 have + p4 files (not p4 fstat) for sync status (10-100x faster)
 - Use p4 describe -s to suppress diffs (critical for large CLs)
 - New libraries: prism-react-renderer (syntax highlighting, INSTALLED ✓), react-virtuoso (blame virtualization)
 - Size checks before p4 print and p4 annotate (10MB limits, IMPLEMENTED ✓)
+- P4FileInfo struct doesn't include fileSize — parse p4 -ztag fstat directly in frontend hooks
 
 ### Quick Tasks Completed
 
@@ -86,8 +87,8 @@ None — Phase 16 Plan 02 complete, file content viewer functional. Ready to mov
 ## Session Continuity
 
 Last session: 2026-02-03
-Stopped at: Completed 16-02-PLAN.md
+Stopped at: Completed 16-03-PLAN.md (File Size Validation)
 Resume file: None
 
 ---
-**Next step:** Phase 16 complete - File Content Viewer functional. Ready to move to Phase 17 (File Annotations) or Phase 18 (CL File List + Sync Status).
+**Next step:** Phase 16 has more plans (file history integration, external editor, etc.). Check ROADMAP.md for remaining Phase 16 plans or move to Phase 17 (File Annotations) or Phase 18 (CL File List + Sync Status).
