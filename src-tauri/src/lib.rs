@@ -33,6 +33,7 @@ pub fn run() {
             commands::p4_edit_change_description,
             commands::p4_filelog,
             commands::p4_print_to_file,
+            commands::p4_print_content,
             commands::launch_diff_tool,
             commands::p4_changes_submitted,
             commands::p4_shelve,

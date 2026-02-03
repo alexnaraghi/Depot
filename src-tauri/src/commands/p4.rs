@@ -1229,6 +1229,103 @@ pub async fn p4_print_to_file(
     Ok(persistent_path.to_string_lossy().to_string())
 }
 
+/// Maximum file size for in-app content viewing (10MB)
+const MAX_CONTENT_SIZE: u64 = 10 * 1024 * 1024;
+
+/// Print a specific revision of a file and return its content as a string
+#[tauri::command]
+pub async fn p4_print_content(
+    depot_path: String,
+    revision: i32,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<String, String> {
+    // First, check file size using p4 fstat to prevent memory exhaustion
+    let mut fstat_cmd = Command::new("p4");
+    apply_connection_args(&mut fstat_cmd, &server, &user, &client);
+    fstat_cmd.args(["-ztag", "fstat"]);
+    fstat_cmd.arg(format!("{}#{}", depot_path, revision));
+
+    let fstat_output = fstat_cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 fstat: {}", e))?;
+
+    if !fstat_output.status.success() {
+        let stderr = String::from_utf8_lossy(&fstat_output.stderr);
+        return Err(format!("Failed to get file info: {}", stderr));
+    }
+
+    let fstat_stdout = String::from_utf8_lossy(&fstat_output.stdout);
+    let records = parse_ztag_records(&fstat_stdout);
+
+    if records.is_empty() {
+        return Err("File not found".to_string());
+    }
+
+    let file_info = &records[0];
+
+    // Check if file is binary
+    if let Some(file_type) = file_info.get("headType") {
+        if file_type.contains("binary") {
+            return Err(format!("Cannot view binary file (type: {})", file_type));
+        }
+    }
+
+    // Check file size
+    if let Some(file_size_str) = file_info.get("fileSize") {
+        if let Ok(file_size) = file_size_str.parse::<u64>() {
+            if file_size > MAX_CONTENT_SIZE {
+                return Err(format!(
+                    "File too large to view: {:.1}MB (maximum: {}MB)",
+                    file_size as f64 / 1024.0 / 1024.0,
+                    MAX_CONTENT_SIZE / 1024 / 1024
+                ));
+            }
+        }
+    }
+
+    // Create temp file with matching extension
+    let extension = depot_path
+        .rsplit('.')
+        .next()
+        .filter(|ext| !ext.contains('/'))
+        .map(|ext| format!(".{}", ext))
+        .unwrap_or_else(|| ".txt".to_string());
+
+    let temp_file = Builder::new()
+        .suffix(&extension)
+        .tempfile()
+        .map_err(|e| format!("Failed to create temp file: {}", e))?;
+
+    let temp_path = temp_file.path().to_string_lossy().to_string();
+
+    // Print file to temp location
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+
+    cmd.args(["print", "-q", "-o", &temp_path]);
+    cmd.arg(format!("{}#{}", depot_path, revision));
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 print: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.to_string());
+    }
+
+    // Read the temp file content using tokio (async I/O)
+    let content = tokio::fs::read_to_string(temp_file.path())
+        .await
+        .map_err(|e| format!("Failed to read file content: {}", e))?;
+
+    // Note: temp_file is automatically cleaned up when it goes out of scope
+
+    Ok(content)
+}
+
 /// Launch external diff tool
 #[tauri::command]
 pub async fn launch_diff_tool(

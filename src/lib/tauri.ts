@@ -267,6 +267,17 @@ export async function invokeP4PrintToFile(
 }
 
 /**
+ * Print a specific revision of a file and return its content as a string.
+ * Automatically checks file size and rejects binary files or files >10MB.
+ */
+export async function invokeP4PrintContent(
+  depotPath: string,
+  revision: number
+): Promise<string> {
+  return invoke<string>('p4_print_content', { depotPath, revision, ...getConnectionArgs() });
+}
+
+/**
  * Launch external diff tool with two file paths.
  */
 export async function invokeLaunchDiffTool(
