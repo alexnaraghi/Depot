@@ -7,7 +7,7 @@ interface AnnotationGutterProps {
   minTimestamp: number;
   maxTimestamp: number;
   onAnnotationClick?: (changelistId: number) => void;
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
   highlightedBlockIndex?: number;
 }
 

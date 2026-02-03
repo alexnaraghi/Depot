@@ -3,6 +3,7 @@ import { P4Revision } from '@/lib/tauri';
 import { useDiff } from '@/hooks/useDiff';
 import { Button } from '@/components/ui/button';
 import { FileContentViewer } from './FileContentViewer';
+import { FileAnnotationViewer } from './FileAnnotationViewer';
 
 interface RevisionDetailViewProps {
   depotPath: string;
@@ -19,6 +20,7 @@ interface RevisionDetailViewProps {
 export function RevisionDetailView({ depotPath, localPath, revision }: RevisionDetailViewProps) {
   const { diffRevisions, diffAgainstWorkspace } = useDiff();
   const [showContent, setShowContent] = useState(false);
+  const [showAnnotations, setShowAnnotations] = useState(false);
 
   // Extract filename from depot path
   const fileName = depotPath.split('/').pop() || depotPath;
@@ -45,6 +47,21 @@ export function RevisionDetailView({ depotPath, localPath, revision }: RevisionD
 
   const toggleContent = () => {
     setShowContent(!showContent);
+    if (!showContent) {
+      setShowAnnotations(false); // Hide annotations when showing content
+    }
+  };
+
+  const toggleAnnotations = () => {
+    setShowAnnotations(!showAnnotations);
+    if (!showAnnotations) {
+      setShowContent(false); // Hide content when showing annotations
+    }
+  };
+
+  const handleAnnotationClick = (changelistId: number) => {
+    // TODO: Navigate to changelist detail in Plan 03
+    console.log('Clicked changelist:', changelistId);
   };
 
   return (
@@ -86,11 +103,27 @@ export function RevisionDetailView({ depotPath, localPath, revision }: RevisionD
         >
           {showContent ? 'Hide Content' : 'View File Content'}
         </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={toggleAnnotations}
+        >
+          {showAnnotations ? 'Hide Annotations' : 'View Annotations'}
+        </Button>
       </div>
 
       {/* File content viewer */}
       {showContent && (
         <FileContentViewer depotPath={depotPath} revision={revision.rev} />
+      )}
+
+      {/* File annotation viewer */}
+      {showAnnotations && (
+        <FileAnnotationViewer
+          depotPath={depotPath}
+          revision={revision.rev}
+          onChangelistClick={handleAnnotationClick}
+        />
       )}
 
       {/* Sibling files section - placeholder */}
