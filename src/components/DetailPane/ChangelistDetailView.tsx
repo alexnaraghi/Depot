@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { P4Changelist, FileAction } from '@/types/p4';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
 import { useShelvedFilesQuery, useShelve } from '@/hooks/useShelvedFiles';
+import { useChangelistFiles } from '@/hooks/useChangelistFiles';
 import { invokeP4DeleteChange } from '@/lib/tauri';
 import { useOperationStore } from '@/store/operation';
 import { useQueryClient } from '@tanstack/react-query';
@@ -16,6 +17,37 @@ import toast from 'react-hot-toast';
 interface ChangelistDetailViewProps {
   changelist: P4Changelist;
 }
+
+/**
+ * Get badge color for file action
+ */
+const getActionBadgeColor = (action?: FileAction | string): string => {
+  const actionLower = typeof action === 'string' ? action.toLowerCase() : action;
+  switch (actionLower) {
+    case FileAction.Edit:
+    case 'edit':
+      return 'bg-blue-900/30 text-blue-300';
+    case FileAction.Add:
+    case 'add':
+      return 'bg-green-900/30 text-green-300';
+    case FileAction.Delete:
+    case 'delete':
+      return 'bg-red-900/30 text-red-300';
+    case FileAction.Branch:
+    case 'branch':
+      return 'bg-purple-900/30 text-purple-300';
+    case FileAction.Integrate:
+    case 'integrate':
+      return 'bg-yellow-900/30 text-yellow-300';
+    case FileAction.MoveAdd:
+    case 'move/add':
+    case FileAction.MoveDelete:
+    case 'move/delete':
+      return 'bg-orange-900/30 text-orange-300';
+    default:
+      return 'bg-muted text-muted-foreground';
+  }
+};
 
 /**
  * Detail view for changelist selection
@@ -34,6 +66,12 @@ export function ChangelistDetailView({ changelist }: ChangelistDetailViewProps) 
 
   const isPending = changelist.status === 'pending';
   const isSubmitted = changelist.status === 'submitted';
+
+  // Fetch file list for submitted changelists (pending CLs already have files)
+  const { data: submittedCLData, isLoading: filesLoading } = useChangelistFiles(
+    changelist.id,
+    isSubmitted
+  );
   const hasFiles = changelist.files.length > 0;
   const isNumbered = changelist.id > 0;
   const isEmpty = !hasFiles;
@@ -78,24 +116,20 @@ export function ChangelistDetailView({ changelist }: ChangelistDetailViewProps) 
     }
   };
 
-  const getActionBadgeColor = (action?: FileAction): string => {
-    switch (action) {
-      case FileAction.Edit:
-        return 'bg-blue-900/30 text-blue-300';
-      case FileAction.Add:
-        return 'bg-green-900/30 text-green-300';
-      case FileAction.Delete:
-        return 'bg-red-900/30 text-red-300';
-      case FileAction.Branch:
-        return 'bg-purple-900/30 text-purple-300';
-      case FileAction.Integrate:
-        return 'bg-yellow-900/30 text-yellow-300';
-      case FileAction.MoveAdd:
-      case FileAction.MoveDelete:
-        return 'bg-orange-900/30 text-orange-300';
-      default:
-        return 'bg-muted text-muted-foreground';
-    }
+  const handleSubmittedFileClick = (depotPath: string, revision: number) => {
+    // Navigate to revision detail view
+    // Need to get localPath from depot path - use empty string as placeholder
+    // RevisionDetailView will handle showing content via depot path
+    useDetailPaneStore.getState().drillToRevision(depotPath, '', {
+      rev: revision,
+      action: 'edit', // Will be refined when viewing
+      file_type: '',
+      change: changelist.id,
+      user: changelist.user,
+      client: changelist.client,
+      time: 0, // Unknown from describe
+      desc: changelist.description,
+    });
   };
 
   return (
@@ -154,7 +188,7 @@ export function ChangelistDetailView({ changelist }: ChangelistDetailViewProps) 
         </Button>
       </div>
 
-      {/* File list */}
+      {/* File list for pending changelists */}
       {hasFiles && (
         <div>
           <h3 className="text-sm font-semibold mb-2 text-muted-foreground">
@@ -193,6 +227,56 @@ export function ChangelistDetailView({ changelist }: ChangelistDetailViewProps) 
               );
             })}
           </div>
+        </div>
+      )}
+
+      {/* File list for submitted changelists */}
+      {isSubmitted && (
+        <div>
+          <h3 className="text-sm font-semibold mb-2 text-muted-foreground">
+            FILES {submittedCLData ? `(${submittedCLData.files.length})` : ''}
+          </h3>
+          {filesLoading ? (
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-8 bg-slate-700/50 rounded animate-pulse" />
+              ))}
+            </div>
+          ) : submittedCLData?.files.length ? (
+            <div className="space-y-1">
+              {submittedCLData.files.map((file) => {
+                const fileName = file.depotPath.split('/').pop() || file.depotPath;
+
+                return (
+                  <div
+                    key={file.depotPath}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2 rounded cursor-pointer',
+                      'hover:bg-accent transition-colors'
+                    )}
+                    onClick={() => handleSubmittedFileClick(file.depotPath, file.revision)}
+                  >
+                    {/* Action badge */}
+                    <Badge
+                      className={cn('px-2 py-0.5 text-xs', getActionBadgeColor(file.action))}
+                    >
+                      {file.action || 'edit'}
+                    </Badge>
+
+                    {/* Filename */}
+                    <span className="flex-1 truncate text-sm">{fileName}</span>
+
+                    {/* Revision */}
+                    <span className="text-xs text-muted-foreground">
+                      #{file.revision}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">No files in changelist</p>
+          )}
         </div>
       )}
 
