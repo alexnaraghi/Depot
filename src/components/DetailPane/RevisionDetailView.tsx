@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { P4Revision, invokeP4Changes } from '@/lib/tauri';
 import { useDiff } from '@/hooks/useDiff';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
+import { useChangelistFiles } from '@/hooks/useChangelistFiles';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { FileContentViewer } from './FileContentViewer';
 import { FileAnnotationViewer } from './FileAnnotationViewer';
+import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 interface RevisionDetailViewProps {
@@ -24,6 +27,12 @@ export function RevisionDetailView({ depotPath, localPath, revision }: RevisionD
   const { selectChangelist } = useDetailPaneStore();
   const [showContent, setShowContent] = useState(false);
   const [showAnnotations, setShowAnnotations] = useState(false);
+
+  // Fetch sibling files for this revision's changelist
+  const { data: changelistData, isLoading: siblingFilesLoading } = useChangelistFiles(
+    revision.change || 0,
+    !!revision.change
+  );
 
   // Extract filename from depot path
   const fileName = depotPath.split('/').pop() || depotPath;
@@ -85,6 +94,33 @@ export function RevisionDetailView({ depotPath, localPath, revision }: RevisionD
     } catch (error) {
       console.error('Failed to load changelist:', error);
       toast.error('Failed to load changelist');
+    }
+  };
+
+  const handleSiblingClick = (siblingDepotPath: string, siblingRevision: number) => {
+    // Navigate to the sibling file's revision view
+    useDetailPaneStore.getState().drillToRevision(siblingDepotPath, '', {
+      rev: siblingRevision,
+      action: 'edit',
+      file_type: '',
+      change: revision.change,
+      user: revision.user,
+      client: revision.client,
+      time: revision.time,
+      desc: revision.desc,
+    });
+  };
+
+  const getActionColor = (action: string): string => {
+    switch (action.toLowerCase()) {
+      case 'edit': return 'text-blue-400 border-blue-400/30';
+      case 'add': return 'text-green-400 border-green-400/30';
+      case 'delete': return 'text-red-400 border-red-400/30';
+      case 'branch': return 'text-purple-400 border-purple-400/30';
+      case 'integrate': return 'text-yellow-400 border-yellow-400/30';
+      case 'move/add':
+      case 'move/delete': return 'text-orange-400 border-orange-400/30';
+      default: return 'text-muted-foreground';
     }
   };
 
@@ -150,15 +186,53 @@ export function RevisionDetailView({ depotPath, localPath, revision }: RevisionD
         />
       )}
 
-      {/* Sibling files section - placeholder */}
+      {/* Sibling files section */}
       <div>
         <h3 className="text-sm font-semibold mb-2 text-muted-foreground">
           FILES IN THIS SUBMIT
+          {changelistData && ` (${changelistData.files.length})`}
         </h3>
-        {/* TODO: Add p4_describe command to backend to fetch files in a submitted changelist */}
-        <p className="text-sm text-muted-foreground italic">
-          Sibling files not yet available (needs p4 describe backend)
-        </p>
+        {siblingFilesLoading ? (
+          <div className="space-y-2">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-6 bg-slate-700/50 rounded animate-pulse" />
+            ))}
+          </div>
+        ) : changelistData?.files.length ? (
+          <div className="space-y-1 max-h-48 overflow-y-auto">
+            {changelistData.files.map((file) => {
+              const fileName = file.depotPath.split('/').pop() || file.depotPath;
+              const isCurrent = file.depotPath === depotPath;
+
+              return (
+                <div
+                  key={file.depotPath}
+                  className={cn(
+                    'flex items-center gap-2 px-2 py-1 rounded text-sm',
+                    !isCurrent && 'cursor-pointer hover:bg-accent',
+                    isCurrent && 'bg-accent/50'
+                  )}
+                  onClick={() => !isCurrent && handleSiblingClick(file.depotPath, file.revision)}
+                >
+                  <Badge
+                    variant="outline"
+                    className={cn('px-1 py-0 text-xs', getActionColor(file.action))}
+                  >
+                    {file.action}
+                  </Badge>
+                  <span className={cn('flex-1 truncate', isCurrent && 'font-medium')}>
+                    {fileName}
+                  </span>
+                  <span className="text-xs text-muted-foreground">#{file.revision}</span>
+                </div>
+              );
+            })}
+          </div>
+        ) : revision.change ? (
+          <p className="text-sm text-muted-foreground italic">No files found</p>
+        ) : (
+          <p className="text-sm text-muted-foreground italic">Changelist unknown</p>
+        )}
       </div>
     </div>
   );
