@@ -1541,6 +1541,29 @@ pub struct P4ShelvedFile {
     pub revision: i32,
 }
 
+/// File info from p4 describe output
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct P4DescribeFile {
+    pub depot_path: String,
+    pub revision: i32,
+    pub action: String,
+    pub file_type: String,
+}
+
+/// Result of p4 describe for a submitted changelist
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct P4ChangelistDescription {
+    pub id: i32,
+    pub user: String,
+    pub client: String,
+    pub time: i64,
+    pub description: String,
+    pub status: String,
+    pub files: Vec<P4DescribeFile>,
+}
+
 /// Reconcile preview information from p4 reconcile -n
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -1655,6 +1678,94 @@ fn parse_ztag_describe_shelved(output: &str) -> Result<Vec<P4ShelvedFile>, Strin
     }
 
     Ok(files)
+}
+
+/// Describe a submitted changelist (metadata and file list, no diffs)
+/// Uses -s flag to suppress diff output for performance with large changelists
+#[tauri::command]
+pub async fn p4_describe(
+    changelist_id: i32,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<P4ChangelistDescription, String> {
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+    // -ztag for structured output, -s to suppress diffs (critical for large CLs)
+    cmd.args(["-ztag", "describe", "-s", &changelist_id.to_string()]);
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 describe: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    parse_describe_output(&stdout, changelist_id)
+}
+
+/// Parse p4 describe -ztag output into P4ChangelistDescription
+/// The output contains numbered fields for each file:
+/// depotFile0, rev0, action0, type0, depotFile1, rev1, action1, type1, ...
+fn parse_describe_output(output: &str, changelist_id: i32) -> Result<P4ChangelistDescription, String> {
+    let records = parse_ztag_records(output);
+
+    if records.is_empty() {
+        return Err(format!("No data returned for changelist {}", changelist_id));
+    }
+
+    let record = &records[0];
+
+    // Extract basic metadata
+    let user = record.get("user").cloned().unwrap_or_default();
+    let client = record.get("client").cloned().unwrap_or_default();
+    let time_str = record.get("time").cloned().unwrap_or_default();
+    let time = time_str.parse::<i64>().unwrap_or(0);
+    let description = record.get("desc").cloned().unwrap_or_default();
+    let status = record.get("status").cloned().unwrap_or_else(|| "submitted".to_string());
+
+    // Extract files from numbered fields
+    let mut files = Vec::new();
+    let mut index = 0;
+
+    loop {
+        let depot_file_key = format!("depotFile{}", index);
+        let rev_key = format!("rev{}", index);
+        let action_key = format!("action{}", index);
+        let type_key = format!("type{}", index);
+
+        if let Some(depot_path) = record.get(&depot_file_key) {
+            let revision = record
+                .get(&rev_key)
+                .and_then(|r| r.parse::<i32>().ok())
+                .unwrap_or(0);
+            let action = record.get(&action_key).cloned().unwrap_or_default();
+            let file_type = record.get(&type_key).cloned().unwrap_or_default();
+
+            files.push(P4DescribeFile {
+                depot_path: depot_path.clone(),
+                revision,
+                action,
+                file_type,
+            });
+            index += 1;
+        } else {
+            break;
+        }
+    }
+
+    Ok(P4ChangelistDescription {
+        id: changelist_id,
+        user,
+        client,
+        time,
+        description,
+        status,
+        files,
+    })
 }
 
 /// Unshelve files from a changelist
