@@ -505,3 +505,25 @@ export async function invokeP4Dirs(
 ): Promise<string[]> {
   return invoke<string[]>('p4_dirs', { depotPath, includeDeleted, ...getConnectionArgs() });
 }
+
+/**
+ * Annotation line from p4 annotate (blame).
+ */
+export interface P4AnnotationLine {
+  lineNumber: number;
+  changelistId: number;
+  user: string;
+  date: string;
+  lineContent: string;
+}
+
+/**
+ * Get file annotations (blame) showing who last modified each line.
+ * Automatically checks file size and rejects binary files or files >10MB.
+ */
+export async function invokeP4Annotate(
+  depotPath: string,
+  revision: number
+): Promise<P4AnnotationLine[]> {
+  return invoke<P4AnnotationLine[]>('p4_annotate', { depotPath, revision, ...getConnectionArgs() });
+}

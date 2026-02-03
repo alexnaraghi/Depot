@@ -1326,6 +1326,129 @@ pub async fn p4_print_content(
     Ok(content)
 }
 
+/// Annotation line information from p4 annotate -u -c
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct P4AnnotationLine {
+    pub line_number: i32,
+    pub changelist_id: i32,
+    pub user: String,
+    pub date: String,
+    pub line_content: String,
+}
+
+/// Get file annotations (blame) showing who last modified each line
+#[tauri::command]
+pub async fn p4_annotate(
+    depot_path: String,
+    revision: i32,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<Vec<P4AnnotationLine>, String> {
+    // First, check file size using p4 fstat to prevent memory exhaustion
+    let mut fstat_cmd = Command::new("p4");
+    apply_connection_args(&mut fstat_cmd, &server, &user, &client);
+    fstat_cmd.args(["-ztag", "fstat"]);
+    fstat_cmd.arg(format!("{}#{}", depot_path, revision));
+
+    let fstat_output = fstat_cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 fstat: {}", e))?;
+
+    if !fstat_output.status.success() {
+        let stderr = String::from_utf8_lossy(&fstat_output.stderr);
+        return Err(format!("Failed to get file info: {}", stderr));
+    }
+
+    let fstat_stdout = String::from_utf8_lossy(&fstat_output.stdout);
+    let records = parse_ztag_records(&fstat_stdout);
+
+    if records.is_empty() {
+        return Err("File not found".to_string());
+    }
+
+    let file_info = &records[0];
+
+    // Check if file is binary
+    if let Some(file_type) = file_info.get("headType") {
+        if file_type.contains("binary") {
+            return Err(format!("Cannot annotate binary file (type: {})", file_type));
+        }
+    }
+
+    // Check file size
+    if let Some(file_size_str) = file_info.get("fileSize") {
+        if let Ok(file_size) = file_size_str.parse::<u64>() {
+            if file_size > MAX_CONTENT_SIZE {
+                return Err(format!(
+                    "File too large to annotate: {:.1}MB (maximum: {}MB)",
+                    file_size as f64 / 1024.0 / 1024.0,
+                    MAX_CONTENT_SIZE / 1024 / 1024
+                ));
+            }
+        }
+    }
+
+    // Execute p4 annotate -u -c
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+    cmd.args(["annotate", "-u", "-c"]);
+    cmd.arg(format!("{}#{}", depot_path, revision));
+
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute p4 annotate: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(stderr.to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    parse_annotate_output(&stdout)
+}
+
+/// Parse p4 annotate -u -c output into P4AnnotationLine structs
+/// Output format: "CL#: USER DATE CONTENT"
+/// Example: "320: mjones 2017/05/06 sr->w.digest.Clear();"
+fn parse_annotate_output(output: &str) -> Result<Vec<P4AnnotationLine>, String> {
+    use regex::Regex;
+
+    let re = Regex::new(r"^(\d+):\s+(\S+)\s+(\d{4}/\d{2}/\d{2})\s+(.*)$")
+        .map_err(|e| format!("Failed to compile regex: {}", e))?;
+
+    let mut annotations = Vec::new();
+    let mut line_number = 1;
+
+    for line in output.lines() {
+        if let Some(captures) = re.captures(line) {
+            let changelist_id = captures[1]
+                .parse::<i32>()
+                .map_err(|e| format!("Failed to parse changelist ID: {}", e))?;
+            let user = captures[2].to_string();
+            let date = captures[3].to_string();
+            let line_content = captures[4].to_string();
+
+            annotations.push(P4AnnotationLine {
+                line_number,
+                changelist_id,
+                user,
+                date,
+                line_content,
+            });
+
+            line_number += 1;
+        } else if !line.trim().is_empty() {
+            // Handle lines that don't match the pattern (possibly errors or empty lines)
+            // Skip silently to handle edge cases gracefully
+            continue;
+        }
+    }
+
+    Ok(annotations)
+}
+
 /// Launch external diff tool
 #[tauri::command]
 pub async fn launch_diff_tool(

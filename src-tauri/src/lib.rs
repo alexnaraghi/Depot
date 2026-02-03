@@ -52,6 +52,7 @@ pub fn run() {
             commands::p4_update_client_stream,
             commands::p4_dirs,
             commands::p4_depots,
+            commands::p4_annotate,
         ])
         .setup(|app| {
             // Get process manager for cleanup
