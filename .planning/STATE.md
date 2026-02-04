@@ -5,15 +5,15 @@
 See: .planning/PROJECT.md (updated 2026-02-03)
 
 **Core value:** The user is never blocked — operations are always cancellable, errors are non-blocking, and the app remains responsive even during network issues or long-running operations.
-**Current focus:** v4.0 Road to P4V Killer - COMPLETE
+**Current focus:** v4.0 Road to P4V Killer - Phase 20 (Bug Fixes & UI Polish)
 
 ## Current Position
 
 Milestone: v4.0 Road to P4V Killer
-Phase: 19 of 19 (Submit Enhancement)
-Plan: 2 of 2
-Status: MILESTONE COMPLETE
-Last activity: 2026-02-03 — Completed 19-02-PLAN.md (File Click Navigation)
+Phase: 20 of 20 (Bug Fixes & UI Polish)
+Plan: 0 of ?
+Status: NOT PLANNED
+Last activity: 2026-02-03 — Phase 20 added (Bug Fixes & UI Polish)
 
 Progress: [████████████████████] 69/69 plans complete (v1.0: 14, v2.0: 17, v3.0: 27, v4.0: 11)
 
@@ -99,8 +99,9 @@ Stopped at: Completed 19-02-PLAN.md (File Click Navigation) - v4.0 MILESTONE COM
 Resume file: None
 
 ---
-**v4.0 Complete!** All "Road to P4V Killer" features implemented:
-- Phase 16: File Content Viewer
-- Phase 17: File Annotations
-- Phase 18: Table Stakes UI Features (sync status, CL file lists)
-- Phase 19: Submit Enhancement (action badges + file click navigation in submit preview)
+**v4.0 Features Complete** — now stabilizing:
+- Phase 16: File Content Viewer ✅
+- Phase 17: File Annotations ✅
+- Phase 18: Table Stakes UI Features ✅
+- Phase 19: Submit Enhancement ✅
+- Phase 20: Bug Fixes & UI Polish ← current (11 todos, addressing regressions + UX issues)

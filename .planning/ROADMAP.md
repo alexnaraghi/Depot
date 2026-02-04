@@ -5,7 +5,7 @@
 - ✅ **v1.0 MVP** - Phases 01-02 (shipped 2026-01-28)
 - ✅ **v2.0 Feature Complete** - Phases 03-08 (shipped 2026-01-30)
 - ✅ **v3.0 Daily Driver** - Phases 09-15 (shipped 2026-02-01)
-- ✅ **v4.0 Road to P4V Killer** - Phases 16-19 (shipped 2026-02-03)
+- 🔄 **v4.0 Road to P4V Killer** - Phases 16-20 (features shipped 2026-02-03, stabilizing)
 
 ## Phases
 
@@ -89,7 +89,7 @@
 </details>
 
 <details>
-<summary>✅ v4.0 Road to P4V Killer (Phases 16-19) - SHIPPED 2026-02-03</summary>
+<summary>🔄 v4.0 Road to P4V Killer (Phases 16-20) - Features shipped, stabilizing</summary>
 
 **Milestone Goal:** Close the most visible daily-use gaps versus P4V — file content viewer, file annotations (blame), workspace sync status, submitted changelist file list, and submit preview dialog.
 
@@ -162,6 +162,40 @@ Plans:
 - [x] 19-01-PLAN.md — Extract action badge utility, replace SubmitDialog with Dialog-based component
 - [x] 19-02-PLAN.md — Add file click navigation from submit preview to detail pane
 
+#### Phase 20: Bug Fixes & UI Polish
+**Goal**: Fix regressions and UX issues found during testing, unify loading behavior
+**Depends on**: Phase 19
+**Success Criteria** (what must be TRUE):
+  1. Connection dialog only shows when no saved connection exists
+  2. Shelve/unshelve operations update UI and shelved files list loads correctly
+  3. CL details panel shows correct file count (regression fixed)
+  4. Depot browser survives accordion collapse/expand without losing data
+  5. File selection in any panel updates contextual toolbar icons
+  6. Client spec loads successfully (root field parsing fixed)
+  7. Top toolbar order is: Stream, Workspace, Client Spec
+  8. Unified async loading indicator in status bar for all operations
+  9. Depot directory loading shows progress without requiring double-click
+  10. Settings menu is scrollable when content overflows
+  11. Accordion headers always visible regardless of content size
+  12. Default CL description edit moves files to new numbered CL
+**Plans**: 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 20 to break down)
+
+**Todos addressed:**
+- 2026-02-03: connection-dialog-shows-on-startup
+- 2026-02-03: shelve-unshelve-no-ui-update
+- 2026-02-03: cl-details-shows-zero-files
+- 2026-02-03: depots-disappear-after-accordion-toggle
+- 2026-02-03: file-click-no-toolbar-update
+- 2026-02-03: client-spec-missing-root-field
+- 2026-02-03: toolbar-layout-order
+- 2026-02-03: unify-async-loading-indicators
+- 2026-02-02: settings-menu-scrollable-layout
+- 2026-02-01: fix-depot-accordion-header-visibility
+- 2026-01-29: move-files-when-editing-default-cl-description
+
 </details>
 
 ## Progress
@@ -188,3 +222,4 @@ Plans:
 | 17. File Annotations | v4.0 | 3/3 | Complete | 2026-02-03 |
 | 18. Table Stakes UI | v4.0 | 3/3 | Complete | 2026-02-03 |
 | 19. Submit Enhancement | v4.0 | 2/2 | Complete | 2026-02-03 |
+| 20. Bug Fixes & UI Polish | v4.0 | 0/? | Not Planned | - |
