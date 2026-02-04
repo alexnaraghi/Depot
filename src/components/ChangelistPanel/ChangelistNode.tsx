@@ -8,6 +8,7 @@ import { useUnshelve, useDeleteShelf } from '@/hooks/useShelvedFiles';
 import { cn } from '@/lib/utils';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
 import { useSearchFilterStore } from '@/stores/searchFilterStore';
+import { useFileTreeStore } from '@/stores/fileTreeStore';
 import Highlighter from 'react-highlight-words';
 
 interface ChangelistNodeProps extends NodeRendererProps<ChangelistTreeNode> {
@@ -198,6 +199,8 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
       )}
       onClick={() => {
         if (dimmed) return;
+        // Update shared selection state for toolbar
+        useFileTreeStore.getState().setSelectedFile(file);
         // Update detail pane to show file
         useDetailPaneStore.getState().selectFile(file.depotPath, file.localPath, fromClId);
         // Clear filter after navigating to file

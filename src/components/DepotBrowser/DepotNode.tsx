@@ -3,6 +3,8 @@ import { FolderOpen, Folder, Loader2, FileIcon, Database } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DepotNodeData } from './useDepotTree';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
+import { useFileTreeStore } from '@/stores/fileTreeStore';
+import { FileStatus } from '@/types/p4';
 
 export interface DepotNodeProps extends NodeRendererProps<DepotNodeData> {
   loadingPaths: Set<string>;
@@ -24,6 +26,16 @@ export function DepotNode({ node, style, loadingPaths, onContextMenu }: DepotNod
       // Folders toggle expand/collapse
       node.toggle();
     } else {
+      // Update shared selection state for toolbar
+      useFileTreeStore.getState().setSelectedFile({
+        depotPath: node.data.id,
+        localPath: '',
+        status: FileStatus.Synced,
+        revision: 0,
+        headRevision: 0,
+        fileType: '',
+        isDirectory: false,
+      });
       // Files show in detail pane (depot-only, no localPath)
       useDetailPaneStore.getState().selectFile(node.data.id, '');
     }

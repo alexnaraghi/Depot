@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { invokeP4Depots, invokeP4Dirs, invokeP4Files } from '@/lib/tauri';
 import { getShowDeletedDepotFiles } from '@/lib/settings';
+import { useOperationStore } from '@/store/operation';
 
 export interface DepotNodeData {
   id: string;           // Depot path (e.g., "//depot/projects")
@@ -71,6 +72,11 @@ export function useDepotTree() {
 
     setLoadingPaths(prev => new Set(prev).add(depotPath));
 
+    // Show loading in status bar
+    const { startOperation, completeOperation } = useOperationStore.getState();
+    const opId = `depot-load-${depotPath}`;
+    startOperation(opId, `dirs "${depotPath}/*"`);
+
     try {
       const showDeleted = await getShowDeletedDepotFiles();
 
@@ -115,8 +121,11 @@ export function useDepotTree() {
         };
         return updateNode(prevTree);
       });
+
+      completeOperation(true);
     } catch (err) {
       console.error(`Failed to load children for ${depotPath}:`, err);
+      completeOperation(false, String(err));
     } finally {
       setLoadingPaths(prev => {
         const next = new Set(prev);
