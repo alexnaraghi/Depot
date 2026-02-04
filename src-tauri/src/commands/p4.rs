@@ -2212,41 +2212,37 @@ fn parse_ztag_client_spec(output: &str) -> Result<P4ClientSpec, String> {
     let records = parse_ztag_records(output);
     let fields = records.into_iter().next().unwrap_or_default();
 
+    // Case-insensitive field lookup helper
+    let get_field = |name: &str| -> Option<String> {
+        fields.get(name).cloned().or_else(|| {
+            let lower = name.to_lowercase();
+            fields.iter()
+                .find(|(k, _)| k.to_lowercase() == lower)
+                .map(|(_, v)| v.clone())
+        })
+    };
+
     // Extract View mapping lines (View0, View1, View2, ...) from the flat record
     let mut view_lines: Vec<String> = Vec::new();
     let mut view_idx = 0;
     loop {
         let key = format!("View{}", view_idx);
-        if let Some(value) = fields.get(&key) {
-            view_lines.push(value.clone());
+        if let Some(value) = get_field(&key) {
+            view_lines.push(value);
             view_idx += 1;
         } else {
             break;
         }
     }
 
-    let client = fields
-        .get("Client")
-        .ok_or("Missing Client field")?
-        .clone();
-    let root = fields.get("Root").ok_or("Missing Root field")?.clone();
-    let stream = fields.get("Stream").cloned();
-    let owner = fields.get("Owner").ok_or("Missing Owner field")?.clone();
-    let description = fields
-        .get("Description")
-        .cloned()
-        .unwrap_or_else(|| "".to_string());
-    let options = fields
-        .get("Options")
-        .cloned()
-        .unwrap_or_else(|| "".to_string());
-    let host = fields
-        .get("Host")
-        .cloned()
-        .unwrap_or_else(|| "".to_string());
-    let submit_options = fields
-        .get("SubmitOptions")
-        .cloned()
+    let client = get_field("Client").ok_or("Missing Client field")?;
+    let root = get_field("Root").unwrap_or_default();  // Optional for virtual-root workspaces
+    let stream = get_field("Stream");
+    let owner = get_field("Owner").ok_or("Missing Owner field")?;
+    let description = get_field("Description").unwrap_or_default();
+    let options = get_field("Options").unwrap_or_default();
+    let host = get_field("Host").unwrap_or_default();
+    let submit_options = get_field("SubmitOptions")
         .unwrap_or_else(|| "submitunchanged".to_string());
 
     Ok(P4ClientSpec {
