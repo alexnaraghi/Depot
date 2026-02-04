@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 
 Milestone: v4.0 Road to P4V Killer
 Phase: 19 of 19 (Submit Enhancement)
-Plan: 1 of 1
+Plan: 2 of 2
 Status: MILESTONE COMPLETE
-Last activity: 2026-02-03 — Completed 19-01-PLAN.md (Submit Enhancement)
+Last activity: 2026-02-03 — Completed 19-02-PLAN.md (File Click Navigation)
 
-Progress: [████████████████████] 68/68 plans complete (v1.0: 14, v2.0: 17, v3.0: 27, v4.0: 10)
+Progress: [████████████████████] 69/69 plans complete (v1.0: 14, v2.0: 17, v3.0: 27, v4.0: 11)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 68 (14 v1.0 + 17 v2.0 + 27 v3.0 + 10 v4.0)
+- Total plans completed: 69 (14 v1.0 + 17 v2.0 + 27 v3.0 + 11 v4.0)
 - Quick tasks completed: 8 (007 partial)
 - Average duration: 5 min
-- Total execution time: ~483 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 34 quick + 73 v4.0)
+- Total execution time: ~488 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 34 quick + 78 v4.0)
 
 **By Phase (v3.0):**
 
@@ -45,7 +45,7 @@ Progress: [████████████████████] 68/68 p
 | 16 | 3 | 14 min | 5 min |
 | 17 | 3 | 41 min | 14 min |
 | 18 | 3 | 14 min | 5 min |
-| 19 | 1 | 4 min | 4 min |
+| 19 | 2 | 9 min | 5 min |
 
 *Updated after each plan completion*
 
@@ -64,6 +64,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 **Phase 19 Decisions:**
 - Use Dialog instead of AlertDialog for workflow-style submit confirmation
 - Extract getActionBadgeColor to shared utility for DRY
+- Use drillToFile from detailPaneStore for file navigation from submit dialog
 
 ### Pending Todos
 
@@ -95,7 +96,7 @@ None — v4.0 "Road to P4V Killer" milestone complete!
 ## Session Continuity
 
 Last session: 2026-02-03
-Stopped at: Completed 19-01-PLAN.md (Submit Enhancement) - v4.0 MILESTONE COMPLETE
+Stopped at: Completed 19-02-PLAN.md (File Click Navigation) - v4.0 MILESTONE COMPLETE
 Resume file: None
 
 ---
@@ -103,4 +104,4 @@ Resume file: None
 - Phase 16: File Content Viewer
 - Phase 17: File Annotations
 - Phase 18: Table Stakes UI Features (sync status, CL file lists)
-- Phase 19: Submit Enhancement (action badges in submit preview)
+- Phase 19: Submit Enhancement (action badges + file click navigation in submit preview)
