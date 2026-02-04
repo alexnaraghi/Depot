@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 
 Milestone: v4.0 Road to P4V Killer
 Phase: 20 of 20 (Bug Fixes & UI Polish)
-Plan: 2 of ?
+Plan: 3 of ?
 Status: In progress
-Last activity: 2026-02-04 — Completed 20-02-PLAN.md (Query Invalidation Fixes)
+Last activity: 2026-02-04 — Completed 20-01-PLAN.md (MainLayout Bug Fixes)
 
-Progress: [████████████████████] 71/71 plans complete (v1.0: 14, v2.0: 17, v3.0: 27, v4.0: 13)
+Progress: [████████████████████] 72/72 plans complete (v1.0: 14, v2.0: 17, v3.0: 27, v4.0: 14)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 71 (14 v1.0 + 17 v2.0 + 27 v3.0 + 13 v4.0)
+- Total plans completed: 72 (14 v1.0 + 17 v2.0 + 27 v3.0 + 14 v4.0)
 - Quick tasks completed: 9 (007 partial)
 - Average duration: 5 min
-- Total execution time: ~494 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 34 quick + 84 v4.0)
+- Total execution time: ~498 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 34 quick + 88 v4.0)
 
 **By Phase (v3.0):**
 
@@ -46,7 +46,7 @@ Progress: [████████████████████] 71/71 p
 | 17 | 3 | 41 min | 14 min |
 | 18 | 3 | 14 min | 5 min |
 | 19 | 2 | 9 min | 5 min |
-| 20 | 2 | 6 min | 3 min |
+| 20 | 3 | 10 min | 3 min |
 
 *Updated after each plan completion*
 
@@ -68,6 +68,8 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Use drillToFile from detailPaneStore for file navigation from submit dialog
 
 **Phase 20 Decisions:**
+- Plan 01: Use initialCheckDone state with 500ms timeout to prevent dialog flash on startup
+- Plan 01: Add flex-shrink-0 to accordion headers to prevent flex layout from shrinking them
 - Plan 02: All TanStack Query mutation onSuccess handlers must be async and await invalidations
 - Plan 02: Fire-and-forget Promise.all/invalidateQueries prevents UI updates - always await
 - Plan 03: Move setTreeData from queryFn to useEffect to handle both fresh fetches and cached data
@@ -105,7 +107,7 @@ None — v4.0 "Road to P4V Killer" milestone complete!
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Completed 20-02-PLAN.md (Query Invalidation Fixes)
+Stopped at: Completed 20-01-PLAN.md (MainLayout Bug Fixes)
 Resume file: None
 
 ---
