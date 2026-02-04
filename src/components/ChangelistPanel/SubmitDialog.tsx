@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { getActionBadgeColor } from '@/lib/actionBadges';
 import { cn } from '@/lib/utils';
 import { useFileOperations } from '@/hooks/useFileOperations';
+import { useDetailPaneStore } from '@/stores/detailPaneStore';
 import { P4Changelist } from '@/types/p4';
 
 interface SubmitDialogProps {
@@ -36,6 +37,7 @@ export function SubmitDialog({
   onSubmitted,
 }: SubmitDialogProps) {
   const { submit } = useFileOperations();
+  const drillToFile = useDetailPaneStore(s => s.drillToFile);
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -60,6 +62,12 @@ export function SubmitDialog({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleFileClick = (depotPath: string, localPath: string, changelistId: number) => {
+    // Navigate to file in detail pane, keep dialog open
+    drillToFile(depotPath, localPath, changelistId);
+    // Dialog stays open - user can review files and return to submit
   };
 
   if (!changelist) return null;
@@ -114,7 +122,14 @@ export function SubmitDialog({
                     >
                       {file.action || 'edit'}
                     </Badge>
-                    <span className="flex-1 truncate text-sm">{fileName}</span>
+                    <button
+                      type="button"
+                      className="flex-1 text-left truncate text-sm hover:underline focus:outline-none focus:ring-1 focus:ring-ring rounded"
+                      onClick={() => handleFileClick(file.depotPath, file.localPath, changelist.id)}
+                      data-testid={`submit-file-${fileName}`}
+                    >
+                      {fileName}
+                    </button>
                   </div>
                 );
               })}
