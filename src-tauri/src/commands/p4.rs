@@ -1620,19 +1620,36 @@ pub async fn p4_describe_shelved(
 
     cmd.arg("-ztag");
     cmd.arg("describe");
-    cmd.arg("-S");
+    cmd.arg("-s");  // suppress diffs
+    cmd.arg("-S");  // show shelved files
     cmd.arg(changelist_id.to_string());
 
     let output = cmd
         .output()
         .map_err(|e| format!("Failed to execute p4 describe: {}", e))?;
 
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+
+    // Diagnostic logging
+    eprintln!("[shelved] CL {}: exit={}, stdout_len={}, stderr_len={}",
+        changelist_id, output.status.success(), stdout.len(), stderr.len());
+
+    // CLs without shelved files may return non-zero exit with "no shelved files" message
+    // Treat this as empty result, not error
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stderr_lower = stderr.to_lowercase();
+        if stderr_lower.contains("no shelved files")
+            || stderr_lower.contains("not shelved")
+            || stderr_lower.contains("no shelf")
+            || (stdout.trim().is_empty() && stderr.trim().is_empty())
+        {
+            eprintln!("[shelved] CL {} has no shelved files (treating as empty)", changelist_id);
+            return Ok(vec![]);
+        }
         return Err(stderr.to_string());
     }
 
-    let stdout = String::from_utf8_lossy(&output.stdout);
     parse_ztag_describe_shelved(&stdout)
 }
 
@@ -1677,6 +1694,7 @@ fn parse_ztag_describe_shelved(output: &str) -> Result<Vec<P4ShelvedFile>, Strin
         }
     }
 
+    eprintln!("[shelved] parsed {} shelved files", files.len());
     Ok(files)
 }
 
