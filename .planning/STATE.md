@@ -68,9 +68,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Pending Todos
 
-15 pending — see `.planning/todos/pending/`
+16 pending — see `.planning/todos/pending/`
 - 7 from previous sessions
 - 8 new from testing (2026-02-03): connection dialog, shelve/unshelve UI, CL details regression, depot disappearing, toolbar context, client spec error, toolbar layout, async loading indicators
+- 1 new: Add standard file menu bar (File, Edit, View, Help)
 
 ### Blockers/Concerns
 
