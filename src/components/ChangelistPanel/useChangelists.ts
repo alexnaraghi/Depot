@@ -158,16 +158,21 @@ export function useChangelists(): {
         const { addOutputLine } = useOperationStore.getState();
         const verbose = await getVerboseLogging();
         if (verbose) addOutputLine(`p4 describe -S ${clId}`, false);
-        const result = await invokeP4DescribeShelved(
-          clId
-        );
-        if (verbose) addOutputLine(`... returned ${result.length} items`, false);
-        return result;
+        try {
+          const result = await invokeP4DescribeShelved(clId);
+          if (verbose) addOutputLine(`... returned ${result.length} shelved items`, false);
+          return result;
+        } catch (error) {
+          // CL may not have shelved files - return empty array instead of throwing
+          if (verbose) addOutputLine(`... no shelved files (${error})`, false);
+          return [] as P4ShelvedFile[];
+        }
       },
       enabled: isConnected,
       staleTime: 30000,
       refetchOnWindowFocus: false,
       refetchInterval: refetchIntervalValue,
+      retry: 1,
     })),
   });
 
@@ -180,6 +185,9 @@ export function useChangelists(): {
         map.set(clId, query.data);
       }
     });
+    if (map.size > 0) {
+      console.log(`[shelved] ${map.size} CL(s) have shelved files:`, [...map.entries()].map(([id, files]) => `CL ${id}: ${files.length} files`));
+    }
     return map;
   }, [numberedClIds, shelvedQueries]);
 

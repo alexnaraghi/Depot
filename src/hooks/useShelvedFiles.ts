@@ -27,11 +27,18 @@ export function useShelvedFilesQuery(changelistId: number) {
       const { addOutputLine } = useOperationStore.getState();
       const verbose = await getVerboseLogging();
       if (verbose) addOutputLine(`p4 describe -S ${changelistId}`, false);
-      const result = await invokeP4DescribeShelved(changelistId);
-      if (verbose) addOutputLine(`... returned ${result.length} items`, false);
-      return result;
+      try {
+        const result = await invokeP4DescribeShelved(changelistId);
+        if (verbose) addOutputLine(`... returned ${result.length} shelved items`, false);
+        return result;
+      } catch (error) {
+        // CL may not have shelved files - return empty array instead of throwing
+        if (verbose) addOutputLine(`... no shelved files (${error})`, false);
+        return [];
+      }
     },
     enabled: changelistId > 0 && !!p4port && !!p4user && !!p4client,
+    retry: 1,
   });
 }
 
