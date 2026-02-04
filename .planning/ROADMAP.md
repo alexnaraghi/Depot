@@ -5,7 +5,7 @@
 - ✅ **v1.0 MVP** - Phases 01-02 (shipped 2026-01-28)
 - ✅ **v2.0 Feature Complete** - Phases 03-08 (shipped 2026-01-30)
 - ✅ **v3.0 Daily Driver** - Phases 09-15 (shipped 2026-02-01)
-- 🚧 **v4.0 Road to P4V Killer** - Phases 16-19 (in progress)
+- ✅ **v4.0 Road to P4V Killer** - Phases 16-19 (shipped 2026-02-03)
 
 ## Phases
 
@@ -88,7 +88,8 @@
 
 </details>
 
-### 🚧 v4.0 Road to P4V Killer (In Progress)
+<details>
+<summary>✅ v4.0 Road to P4V Killer (Phases 16-19) - SHIPPED 2026-02-03</summary>
 
 **Milestone Goal:** Close the most visible daily-use gaps versus P4V — file content viewer, file annotations (blame), workspace sync status, submitted changelist file list, and submit preview dialog.
 
@@ -158,8 +159,10 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 19-01-PLAN.md — Extract action badge utility, replace SubmitDialog with Dialog-based component
-- [ ] 19-02-PLAN.md — Add file click navigation from submit preview to detail pane
+- [x] 19-01-PLAN.md — Extract action badge utility, replace SubmitDialog with Dialog-based component
+- [x] 19-02-PLAN.md — Add file click navigation from submit preview to detail pane
+
+</details>
 
 ## Progress
 
@@ -184,4 +187,4 @@ Plans:
 | 16. File Content Viewer | v4.0 | 3/3 | Complete | 2026-02-03 |
 | 17. File Annotations | v4.0 | 3/3 | Complete | 2026-02-03 |
 | 18. Table Stakes UI | v4.0 | 3/3 | Complete | 2026-02-03 |
-| 19. Submit Enhancement | v4.0 | 0/TBD | Not started | - |
+| 19. Submit Enhancement | v4.0 | 2/2 | Complete | 2026-02-03 |

@@ -30,10 +30,10 @@ Requirements for P4V parity milestone. Each maps to roadmap phases.
 
 ### Submit Dialog Preview
 
-- [ ] **SUBMIT-01**: Submit action shows preview dialog before executing
-- [ ] **SUBMIT-02**: Preview dialog shows changelist description
-- [ ] **SUBMIT-03**: Preview dialog shows list of files to be submitted
-- [ ] **SUBMIT-04**: User can cancel, edit description, or proceed with submit
+- [x] **SUBMIT-01**: Submit action shows preview dialog before executing
+- [x] **SUBMIT-02**: Preview dialog shows changelist description
+- [x] **SUBMIT-03**: Preview dialog shows list of files to be submitted
+- [x] **SUBMIT-04**: User can cancel, edit description, or proceed with submit
 
 ### Submitted Changelist File List
 
@@ -102,10 +102,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SYNC-01 | Phase 18 | Complete |
 | SYNC-02 | Phase 18 | Complete |
 | SYNC-03 | Phase 18 | Complete |
-| SUBMIT-01 | Phase 19 | Pending |
-| SUBMIT-02 | Phase 19 | Pending |
-| SUBMIT-03 | Phase 19 | Pending |
-| SUBMIT-04 | Phase 19 | Pending |
+| SUBMIT-01 | Phase 19 | Complete |
+| SUBMIT-02 | Phase 19 | Complete |
+| SUBMIT-03 | Phase 19 | Complete |
+| SUBMIT-04 | Phase 19 | Complete |
 | CLFILE-01 | Phase 18 | Complete |
 | CLFILE-02 | Phase 18 | Complete |
 | CLFILE-03 | Phase 18 | Complete |
