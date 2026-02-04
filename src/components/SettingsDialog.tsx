@@ -91,7 +91,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[525px]">
+      <DialogContent className="sm:max-w-[525px] max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
           <DialogDescription>
@@ -100,7 +100,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         </DialogHeader>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col min-h-0 flex-1">
+            <div className="space-y-4 overflow-y-auto flex-1 pr-1">
             <div>
               <h3 className="text-sm font-medium text-foreground mb-3">Diff Tool</h3>
 
@@ -271,8 +272,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 )}
               />
             </div>
+            </div>
 
-            <DialogFooter>
+            <DialogFooter className="mt-4 flex-shrink-0">
               <Button
                 type="button"
                 variant="outline"
