@@ -50,6 +50,7 @@ export function MainLayout() {
   const [connectionDialogOpen, setConnectionDialogOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [reconcileDialogOpen, setReconcileDialogOpen] = useState(false);
+  const [initialCheckDone, setInitialCheckDone] = useState(false);
   const selectedFile = useFileTreeStore(s => s.selectedFile);
   const connectionStatus = useConnectionStore(s => s.status);
   const queryClient = useQueryClient();
@@ -184,12 +185,25 @@ export function MainLayout() {
   // Listen for 'open-connection' command to open connection dialog
   useCommand('open-connection', () => setConnectionDialogOpen(true));
 
-  // Auto-open connection dialog when disconnected on mount
+  // Wait for initial connection check to complete
   useEffect(() => {
-    if (connectionStatus === 'disconnected') {
+    if (connectionStatus === 'connecting') {
+      // Connection attempt started - will resolve to connected/error/disconnected
+      setInitialCheckDone(true);
+    }
+    // If status never goes to 'connecting' (empty settings),
+    // we still need to open dialog after a brief delay
+    const timer = setTimeout(() => setInitialCheckDone(true), 500);
+    return () => clearTimeout(timer);
+  }, [connectionStatus]);
+
+  // Open dialog after initial check if not connected
+  useEffect(() => {
+    if (!initialCheckDone) return;
+    if (connectionStatus !== 'connected') {
       setConnectionDialogOpen(true);
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [initialCheckDone, connectionStatus]);
 
   const handleLeftResize = () => {
     setResizingColumn('left');
