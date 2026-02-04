@@ -5,7 +5,7 @@
 - ✅ **v1.0 MVP** - Phases 01-02 (shipped 2026-01-28)
 - ✅ **v2.0 Feature Complete** - Phases 03-08 (shipped 2026-01-30)
 - ✅ **v3.0 Daily Driver** - Phases 09-15 (shipped 2026-02-01)
-- 🔄 **v4.0 Road to P4V Killer** - Phases 16-20 (features shipped 2026-02-03, stabilizing)
+- ✅ **v4.0 Road to P4V Killer** - Phases 16-20 (shipped 2026-02-03)
 
 ## Phases
 
@@ -89,7 +89,7 @@
 </details>
 
 <details>
-<summary>🔄 v4.0 Road to P4V Killer (Phases 16-20) - Features shipped, stabilizing</summary>
+<summary>✅ v4.0 Road to P4V Killer (Phases 16-20) - SHIPPED 2026-02-03</summary>
 
 **Milestone Goal:** Close the most visible daily-use gaps versus P4V — file content viewer, file annotations (blame), workspace sync status, submitted changelist file list, and submit preview dialog.
 
@@ -181,11 +181,11 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
-- [ ] 20-01-PLAN.md — Fix toolbar order, accordion headers, and connection dialog auto-open
-- [ ] 20-02-PLAN.md — Fix query invalidation in shelve/unshelve and edit description
-- [ ] 20-03-PLAN.md — Fix depot browser data persistence and loading progress
-- [ ] 20-04-PLAN.md — Fix client spec parsing and settings dialog scrollability
-- [ ] 20-05-PLAN.md — Fix file selection toolbar update and CL file count display
+- [x] 20-01-PLAN.md — Fix toolbar order, accordion headers, and connection dialog auto-open
+- [x] 20-02-PLAN.md — Fix query invalidation in shelve/unshelve and edit description
+- [x] 20-03-PLAN.md — Fix depot browser data persistence and loading progress
+- [x] 20-04-PLAN.md — Fix client spec parsing and settings dialog scrollability
+- [x] 20-05-PLAN.md — Fix file selection toolbar update and CL file count display
 
 **Todos addressed:**
 - 2026-02-03: connection-dialog-shows-on-startup
@@ -226,4 +226,4 @@ Plans:
 | 17. File Annotations | v4.0 | 3/3 | Complete | 2026-02-03 |
 | 18. Table Stakes UI | v4.0 | 3/3 | Complete | 2026-02-03 |
 | 19. Submit Enhancement | v4.0 | 2/2 | Complete | 2026-02-03 |
-| 20. Bug Fixes & UI Polish | v4.0 | 0/5 | Planned | - |
+| 20. Bug Fixes & UI Polish | v4.0 | 5/5 | Complete | 2026-02-03 |
