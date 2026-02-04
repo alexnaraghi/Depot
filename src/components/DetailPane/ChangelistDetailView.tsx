@@ -42,7 +42,7 @@ export function ChangelistDetailView({ changelist }: ChangelistDetailViewProps) 
     changelist.id,
     isSubmitted
   );
-  const hasFiles = changelist.files.length > 0;
+  const hasFiles = changelist.fileCount > 0;
   const isNumbered = changelist.id > 0;
   const isEmpty = !hasFiles;
 
@@ -162,7 +162,7 @@ export function ChangelistDetailView({ changelist }: ChangelistDetailViewProps) 
       {hasFiles && (
         <div>
           <h3 className="text-sm font-semibold mb-2 text-muted-foreground">
-            FILES ({changelist.files.length})
+            FILES ({changelist.fileCount})
           </h3>
           <div className="space-y-1">
             {changelist.files.map((file) => {
