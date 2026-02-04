@@ -21,9 +21,9 @@ Progress: [████████████████████] 74/74 p
 
 **Velocity:**
 - Total plans completed: 74 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0)
-- Quick tasks completed: 9 (007 partial)
+- Quick tasks completed: 10 (007 partial)
 - Average duration: 5 min
-- Total execution time: ~504 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 34 quick + 94 v4.0)
+- Total execution time: ~506 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0)
 
 **By Phase (v3.0):**
 
@@ -76,6 +76,13 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Plan 03: Use operation store for depot loading to show progress in status bar
 - Plan 05: Use fileCount as source of truth for CL file count instead of files.length
 
+**Quick Task 009 Decisions:**
+- Backend: Return Ok(vec![]) for CLs without shelved files instead of Err
+- Backend: Check stderr for "no shelved files" patterns before treating as error
+- Backend: Add -s flag to p4 describe to suppress diffs for performance
+- Frontend: Catch errors in queryFn and return [] instead of throwing
+- Frontend: Set retry: 1 to reduce from default 3 retries
+
 ### Pending Todos
 
 19 pending — see `.planning/todos/pending/`
@@ -106,11 +113,12 @@ None — v4.0 "Road to P4V Killer" milestone complete!
 | 006 | Architecture report short-term fixes | 2026-02-02 | 9b2e63b | [006-architecture-report-short-term-fixes](./quick/006-architecture-report-short-term-fixes/) |
 | 007 | Address "now" architecture improvements | 2026-02-02 | e481331 | [007-address-now-architecture-improvements](./quick/007-address-now-architecture-improvements/) |
 | 008 | Large depot scalability analysis | 2026-02-03 | 584ef65 | [008-analyze-large-depot-scalability-report](./quick/008-analyze-large-depot-scalability-report/) |
+| 009 | Fix shelved file lists not showing up | 2026-02-04 | cdb4d35 | [009-shelved-file-lists-still-do-not-show-up-](./quick/009-shelved-file-lists-still-do-not-show-up-/) |
 
 ## Session Continuity
 
-Last session: 2026-02-03
-Stopped at: Phase 20 complete — v4.0 milestone complete
+Last session: 2026-02-04
+Stopped at: Quick task 009 complete — Fixed shelved file lists
 Resume file: None
 
 ---
