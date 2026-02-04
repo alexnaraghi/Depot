@@ -51,16 +51,21 @@ The user is never blocked — operations are always cancellable, errors are non-
 - ✓ Manual refresh button — v3.0
 - ✓ Client spec viewer (read-only) — v3.0
 - ✓ Actionable search results with context menus — v3.0
+- ✓ File content viewer with syntax highlighting — v4.0
+- ✓ File annotations (blame) with heatmap, tooltips, keyboard nav — v4.0
+- ✓ Workspace file tree sync status (have-rev vs head-rev) — v4.0
+- ✓ Submit dialog with changelist preview and edit — v4.0
+- ✓ Submitted changelist full file list view — v4.0
 
 ### Active
 
-- [ ] Submit dialog with changelist description preview and edit
-- [ ] File annotations (blame) — per-line author, revision, date
-- [ ] Workspace file tree showing sync status (have-rev vs head-rev indicators)
-- [ ] Open file in configured external editor (workspace and depot revisions)
-- [ ] Submitted changelist full file list view
-- [ ] File content viewer (view any revision without external tool)
-- [ ] Bookmark/favorite paths in depot and workspace trees
+- [ ] Streaming fstat with incremental frontend merge (10K+ files without UI freeze)
+- [ ] File tree filter performance (persistent fuzzy index, debounce, no full tree walks)
+- [ ] Scalable unified search architecture (workspace index, streaming server search, unified UI)
+- [ ] Incremental tree builder with structural sharing (avoid full rebuild on refresh)
+- [ ] Batch shelved file queries (eliminate N+1 p4 describe per changelist)
+- [ ] Async backend commands (tokio::process::Command, unblock thread pool)
+- [ ] Batch file tree store updates (eliminate Map copy per file during sync)
 
 ### Out of Scope
 
@@ -120,18 +125,18 @@ Tech stack: Tauri 2.0, React 19, TanStack Query, Zustand, shadcn/ui, Tailwind CS
 | Lazy loading for depot browser | Load subdirectories on toggle to prevent memory exhaustion | ✓ Good |
 | spawn_blocking for merge tool | Doesn't block async runtime while waiting for external process | ✓ Good |
 
-## Current Milestone: v4.0 Road to P4V Killer
+## Current Milestone: v5.0 Large Depot Scale
 
-**Goal:** Close the most visible daily-use gaps versus P4V — submit preview, blame view, workspace sync status, file viewer, and bookmarks.
+**Goal:** Make P4Now work smoothly with 10,000+ file depots by fixing all P0 and P1 scalability bottlenecks identified in the large depot analysis.
 
 **Target features:**
-- Submit dialog with changelist description preview/edit
-- File annotations (blame) with per-line author/revision/date
-- Workspace file tree showing have-rev vs head-rev sync status
-- Open file in external editor (fixes p4_print tech debt)
-- Submitted changelist full file list (fixes p4_describe tech debt)
-- File content viewer for any revision
-- Bookmark/favorite paths for quick navigation
+- Streaming fstat with incremental frontend merge (no more full workspace load on every refresh)
+- Persistent fuzzy index and debounced filtering (instant search at any scale)
+- Scalable unified search: Rust-side workspace index, streaming server search, single search UI
+- Incremental tree builder with structural sharing (avoid full rebuild every 30 seconds)
+- Batch shelved file queries (eliminate N+1 p4 describe per changelist)
+- Async backend commands via tokio::process::Command (unblock thread pool)
+- Batch file tree store updates (eliminate Map copy per file during sync)
 
 ## Milestones
 
@@ -140,9 +145,10 @@ Tech stack: Tauri 2.0, React 19, TanStack Query, Zustand, shadcn/ui, Tailwind CS
 | v1.0 MVP | Complete | 2026-01-28 |
 | v2.0 Feature Complete | Complete | 2026-01-30 |
 | v3.0 Daily Driver | Complete | 2026-02-01 |
-| v4.0 Road to P4V Killer | In Progress | — |
+| v4.0 Road to P4V Killer | Complete | 2026-02-03 |
+| v5.0 Large Depot Scale | In Progress | — |
 
 See `.planning/milestones/` for archived roadmaps and requirements.
 
 ---
-*Last updated: 2026-02-03 after v4.0 milestone start*
+*Last updated: 2026-02-04 after v5.0 milestone start*
