@@ -103,6 +103,7 @@ export function DepotBrowser() {
         rowHeight={28}
         height={containerHeight}
         overscanCount={10}
+        openByDefault={false}
         disableDrag
         disableDrop
         disableEdit

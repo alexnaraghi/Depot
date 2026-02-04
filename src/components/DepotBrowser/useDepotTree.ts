@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { invokeP4Depots, invokeP4Dirs, invokeP4Files } from '@/lib/tauri';
-import { getShowDeletedDepotFiles } from '@/lib/settings';
+import { getShowDeletedDepotFiles, getVerboseLogging } from '@/lib/settings';
 import { useOperationStore } from '@/store/operation';
 
 export interface DepotNodeData {
@@ -32,7 +32,11 @@ export function useDepotTree() {
   const { data: depotRoots, isLoading, error } = useQuery({
     queryKey: ['depot', 'roots', p4port, p4user],
     queryFn: async () => {
+      const { addOutputLine } = useOperationStore.getState();
+      const verbose = await getVerboseLogging();
+      if (verbose) addOutputLine('p4 depots', false);
       const depots = await invokeP4Depots();
+      if (verbose) addOutputLine(`... ${depots.length} depots`, false);
 
       const roots: DepotNodeData[] = depots.map(depot => ({
         id: `//${depot.name}`,
@@ -73,11 +77,14 @@ export function useDepotTree() {
     setLoadingPaths(prev => new Set(prev).add(depotPath));
 
     // Show loading in status bar
-    const { startOperation, completeOperation } = useOperationStore.getState();
+    const { startOperation, completeOperation, addOutputLine } = useOperationStore.getState();
     const opId = `depot-load-${depotPath}`;
     startOperation(opId, `dirs "${depotPath}/*"`);
 
     try {
+      const verbose = await getVerboseLogging();
+      if (verbose) addOutputLine(`p4 dirs "${depotPath}/*"`, false);
+
       const showDeleted = await getShowDeletedDepotFiles();
 
       const [dirs, fileResults] = await Promise.all([
@@ -107,6 +114,7 @@ export function useDepotTree() {
           return { id: path, name, isFolder: false };
         });
       const children = [...dirNodes, ...fileNodes];
+      if (verbose) addOutputLine(`... ${dirs.length} dirs, ${fileResults.length} files`, false);
 
       setTreeData(prevTree => {
         const updateNode = (nodes: DepotNodeData[]): DepotNodeData[] => {
@@ -136,7 +144,7 @@ export function useDepotTree() {
   }, []);
 
   return {
-    treeData,
+    treeData: treeData.length > 0 ? treeData : (depotRoots ?? []),
     isLoading,
     error,
     loadChildren,

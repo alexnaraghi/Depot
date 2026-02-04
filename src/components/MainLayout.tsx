@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useQueryClient } from '@tanstack/react-query';
 import { FileTree } from '@/components/FileTree/FileTree';
@@ -50,7 +50,7 @@ export function MainLayout() {
   const [connectionDialogOpen, setConnectionDialogOpen] = useState(false);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [reconcileDialogOpen, setReconcileDialogOpen] = useState(false);
-  const [initialCheckDone, setInitialCheckDone] = useState(false);
+  const hasSeenConnecting = useRef(false);
   const selectedFile = useFileTreeStore(s => s.selectedFile);
   const connectionStatus = useConnectionStore(s => s.status);
   const queryClient = useQueryClient();
@@ -185,25 +185,28 @@ export function MainLayout() {
   // Listen for 'open-connection' command to open connection dialog
   useCommand('open-connection', () => setConnectionDialogOpen(true));
 
-  // Wait for initial connection check to complete
+  // Open connection dialog when not connected, accounting for initial connection attempt
   useEffect(() => {
     if (connectionStatus === 'connecting') {
-      // Connection attempt started - will resolve to connected/error/disconnected
-      setInitialCheckDone(true);
+      hasSeenConnecting.current = true;
+      return; // Wait for connection result
     }
-    // If status never goes to 'connecting' (empty settings),
-    // we still need to open dialog after a brief delay
-    const timer = setTimeout(() => setInitialCheckDone(true), 500);
-    return () => clearTimeout(timer);
-  }, [connectionStatus]);
+    if (connectionStatus === 'connected') return; // Don't open dialog
 
-  // Open dialog after initial check if not connected
-  useEffect(() => {
-    if (!initialCheckDone) return;
-    if (connectionStatus !== 'connected') {
+    // Status is 'disconnected' or 'error'
+    if (hasSeenConnecting.current) {
+      // Connection attempt finished with failure — open immediately
       setConnectionDialogOpen(true);
+    } else {
+      // Initial state — wait for useSettings to start
+      const timer = setTimeout(() => {
+        if (!hasSeenConnecting.current && useConnectionStore.getState().status !== 'connected') {
+          setConnectionDialogOpen(true);
+        }
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  }, [initialCheckDone, connectionStatus]);
+  }, [connectionStatus]);
 
   const handleLeftResize = () => {
     setResizingColumn('left');

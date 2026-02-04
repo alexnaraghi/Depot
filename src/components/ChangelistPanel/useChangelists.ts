@@ -187,7 +187,7 @@ export function useChangelists(): {
   const treeData = useMemo(() => {
     const clArray = Array.from(changelists.values());
     // Always show default CL (id === 0), and numbered CLs with files or description
-    const visible = clArray.filter(cl => cl.id === 0 || cl.fileCount > 0 || cl.description);
+    const visible = clArray.filter(cl => cl.id === 0 || cl.fileCount > 0 || cl.description || shelvedFilesMap.has(cl.id));
     // Sort: default CL first, then numbered CLs by ID ascending
     const sorted = visible.sort((a, b) => {
       if (a.id === 0) return -1;

@@ -3,7 +3,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Loader2, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useConnectionStore } from '@/stores/connectionStore';
+import { useFileTreeStore } from '@/stores/fileTreeStore';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
+import { useOperationStore } from '@/store/operation';
 import { invokeListWorkspaces, invokeP4Info, P4Workspace } from '@/lib/tauri';
 import {
   Select,
@@ -47,7 +49,12 @@ export function WorkspaceSwitcher() {
     if (!p4port || !p4user || newClient === p4client) return;
 
     setIsSwitching(true);
+    const { startOperation, completeOperation } = useOperationStore.getState();
+    startOperation('workspace-switch', `switch -c ${newClient}`);
     try {
+      // Update p4client BEFORE calling info so it targets new workspace
+      useConnectionStore.setState({ p4client: newClient });
+
       // Validate new workspace and get updated info
       const info = await invokeP4Info();
 
@@ -62,15 +69,18 @@ export function WorkspaceSwitcher() {
         p4client: newClient,
       });
 
-      // Invalidate all queries to refresh data
-      queryClient.invalidateQueries();
+      // Clear file tree (workspace-specific) and invalidate queries to refresh all data
+      useFileTreeStore.setState({ files: new Map(), selectedFile: null });
+      await queryClient.invalidateQueries();
 
       // Reset detail pane to workspace summary
       clear();
 
+      completeOperation(true);
       toast.success(`Switched to workspace ${newClient}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      completeOperation(false, message);
       toast.error(`Failed to switch workspace: ${message}`);
     } finally {
       setIsSwitching(false);

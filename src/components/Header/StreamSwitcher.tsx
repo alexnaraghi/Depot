@@ -3,7 +3,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useConnectionStore } from '@/stores/connectionStore';
+import { useFileTreeStore } from '@/stores/fileTreeStore';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
+import { useOperationStore } from '@/store/operation';
 import {
   invokeP4ListStreams,
   invokeP4Opened,
@@ -66,6 +68,8 @@ export function StreamSwitcher() {
     if (!pendingStream || !p4port || !p4user || !p4client || !workspace) return;
 
     setIsShelving(true);
+    const { startOperation, completeOperation } = useOperationStore.getState();
+    startOperation('stream-switch', `switch stream to ${getStreamShortName(pendingStream)}`);
     try {
       // Group files by changelist
       const filesByChangelist = openFiles.reduce((acc, file) => {
@@ -114,12 +118,14 @@ export function StreamSwitcher() {
         p4client,
       });
 
-      // Invalidate all queries to refresh data
-      queryClient.invalidateQueries();
+      // Clear file tree (workspace-specific) and invalidate queries to refresh all data
+      useFileTreeStore.setState({ files: new Map(), selectedFile: null });
+      await queryClient.invalidateQueries();
 
       // Reset detail pane
       clear();
 
+      completeOperation(true);
       toast.success(`Switched to stream ${getStreamShortName(pendingStream)}`);
 
       // Close dialog and reset state
@@ -128,6 +134,7 @@ export function StreamSwitcher() {
       setOpenFiles([]);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      completeOperation(false, message);
       toast.error(`Failed to switch stream: ${message}`);
     } finally {
       setIsShelving(false);
@@ -153,6 +160,9 @@ export function StreamSwitcher() {
         // Don't set isSwitching to false - keeps dropdown disabled until shelve completes or cancels
       } else {
         // No open files - switch directly
+        const { startOperation, completeOperation } = useOperationStore.getState();
+        startOperation('stream-switch', `switch stream to ${getStreamShortName(newStream)}`);
+
         await invokeP4UpdateClientStream(workspace, newStream);
 
         // Get fresh info and update connection store
@@ -167,12 +177,14 @@ export function StreamSwitcher() {
           p4client,
         });
 
-        // Invalidate all queries to refresh data
-        queryClient.invalidateQueries();
+        // Clear file tree (workspace-specific) and invalidate queries to refresh all data
+        useFileTreeStore.setState({ files: new Map(), selectedFile: null });
+        await queryClient.invalidateQueries();
 
         // Reset detail pane
         clear();
 
+        completeOperation(true);
         toast.success(`Switched to stream ${getStreamShortName(newStream)}`);
         setIsSwitching(false);
         setPendingStream(null);
