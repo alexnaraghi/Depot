@@ -76,7 +76,7 @@ export function EditDescriptionDialog({
         }
 
         // Invalidate both changes and opened queries
-        Promise.all([
+        await Promise.all([
           queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] }),
           queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
         ]);
@@ -88,7 +88,7 @@ export function EditDescriptionDialog({
         );
         addOutputLine(`Change ${changelist.id} updated.`, false);
         toast.success(`Updated changelist #${changelist.id}`);
-        queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
+        await queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] });
       }
       onOpenChange(false);
     } catch (error) {
