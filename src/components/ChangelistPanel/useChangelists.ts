@@ -185,9 +185,6 @@ export function useChangelists(): {
         map.set(clId, query.data);
       }
     });
-    if (map.size > 0) {
-      console.log(`[shelved] ${map.size} CL(s) have shelved files:`, [...map.entries()].map(([id, files]) => `CL ${id}: ${files.length} files`));
-    }
     return map;
   }, [numberedClIds, shelvedQueries]);
 

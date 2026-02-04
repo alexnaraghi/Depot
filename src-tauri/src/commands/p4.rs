@@ -1631,9 +1631,6 @@ pub async fn p4_describe_shelved(
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
 
-    // Diagnostic logging
-    eprintln!("[shelved] CL {}: exit={}, stdout_len={}, stderr_len={}",
-        changelist_id, output.status.success(), stdout.len(), stderr.len());
 
     // CLs without shelved files may return non-zero exit with "no shelved files" message
     // Treat this as empty result, not error
@@ -1644,7 +1641,6 @@ pub async fn p4_describe_shelved(
             || stderr_lower.contains("no shelf")
             || (stdout.trim().is_empty() && stderr.trim().is_empty())
         {
-            eprintln!("[shelved] CL {} has no shelved files (treating as empty)", changelist_id);
             return Ok(vec![]);
         }
         return Err(stderr.to_string());
@@ -1657,7 +1653,12 @@ pub async fn p4_describe_shelved(
 /// Similar to filelog parsing - uses indexed fields (depotFile0, action0, type0, rev0, etc.)
 fn parse_ztag_describe_shelved(output: &str) -> Result<Vec<P4ShelvedFile>, String> {
     let records = parse_ztag_records(output);
-    let fields = records.into_iter().next().unwrap_or_default();
+    // p4 describe output can split into multiple records due to blank lines in description fields.
+    // Merge all records into one since they all describe the same changelist.
+    let mut fields = HashMap::new();
+    for record in records {
+        fields.extend(record);
+    }
 
     // Extract shelved files by index
     let mut files = Vec::new();
@@ -1694,7 +1695,6 @@ fn parse_ztag_describe_shelved(output: &str) -> Result<Vec<P4ShelvedFile>, Strin
         }
     }
 
-    eprintln!("[shelved] parsed {} shelved files", files.len());
     Ok(files)
 }
 
@@ -1735,7 +1735,12 @@ fn parse_describe_output(output: &str, changelist_id: i32) -> Result<P4Changelis
         return Err(format!("No data returned for changelist {}", changelist_id));
     }
 
-    let record = &records[0];
+    // p4 describe output can split into multiple records due to blank lines in description fields.
+    // Merge all records into one since they all describe the same changelist.
+    let mut record = HashMap::new();
+    for r in &records {
+        record.extend(r.iter().map(|(k, v)| (k.clone(), v.clone())));
+    }
 
     // Extract basic metadata
     let user = record.get("user").cloned().unwrap_or_default();
@@ -3188,6 +3193,36 @@ mod tests {
         assert_eq!(files[2].depot_path, "//depot/main/file3.cpp");
         assert_eq!(files[2].action, "delete");
         assert_eq!(files[2].revision, 3);
+    }
+
+    #[test]
+    fn test_parse_ztag_describe_shelved_with_metadata_split() {
+        // Real p4 output: blank line in description causes record split
+        let input = r#"... change 16
+... user anaraghi
+... client test-client
+... time 1770178673
+... desc New CL
+
+... status pending
+... changeType public
+... shelved
+... depotFile0 //streamsDepot/main/README.md
+... action0 edit
+... type0 text
+... rev0 5
+... fileSize0 39
+... digest0 BE6588900FD5E04F0136C1872BE13DDD
+"#;
+        let result = parse_ztag_describe_shelved(input);
+        assert!(result.is_ok());
+        let files = result.unwrap();
+        assert_eq!(files.len(), 1);
+
+        assert_eq!(files[0].depot_path, "//streamsDepot/main/README.md");
+        assert_eq!(files[0].action, "edit");
+        assert_eq!(files[0].file_type, "text");
+        assert_eq!(files[0].revision, 5);
     }
 
     #[test]
