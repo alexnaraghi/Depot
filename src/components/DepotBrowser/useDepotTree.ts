@@ -28,7 +28,7 @@ export function useDepotTree() {
   const loadedPaths = useRef<Set<string>>(new Set());
 
   // Fetch depot roots on mount
-  const { isLoading, error } = useQuery({
+  const { data: depotRoots, isLoading, error } = useQuery({
     queryKey: ['depot', 'roots', p4port, p4user],
     queryFn: async () => {
       const depots = await invokeP4Depots();
@@ -41,14 +41,21 @@ export function useDepotTree() {
         children: [], // Empty until expanded
       }));
 
-      loadedPaths.current.clear();
-      setTreeData(roots);
       return roots;
     },
     enabled: isConnected,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+
+  // Sync depot roots from query cache to local state
+  // This runs both on initial fetch AND when component remounts with cached data
+  useEffect(() => {
+    if (depotRoots) {
+      loadedPaths.current.clear();
+      setTreeData(depotRoots);
+    }
+  }, [depotRoots]);
 
   // Clear local state when disconnected
   useEffect(() => {
