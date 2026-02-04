@@ -1,283 +1,190 @@
 # Project Research Summary
 
-**Project:** P4Now v4.0 - Road to P4V Killer
-**Domain:** Desktop Perforce GUI (Tauri 2.0 + React 19)
-**Researched:** 2026-02-03
+**Project:** P4Now v5.0 -- Large Depot Scalability
+**Domain:** Desktop GUI (Tauri 2.0 + React 19) -- Perforce version control client
+**Researched:** 2026-02-04
 **Confidence:** HIGH
 
 ## Executive Summary
 
-The v4.0 P4V parity features represent the final gaps preventing P4Now from being a daily driver replacement for P4V. Research shows these six features (file annotations/blame, workspace sync status, file content viewer, submit preview, submitted changelist file list, bookmarks) are all table-stakes functionality that users expect from any serious Perforce client. The good news: all integrate cleanly into P4Now's existing architecture with minimal stack additions - only two lightweight libraries needed (prism-react-renderer for syntax highlighting, react-virtuoso for blame virtualization). All features follow established patterns: new Rust commands in p4.rs, TanStack Query hooks, and detail pane views.
+P4Now v5.0 addresses 7 scalability bottlenecks (3 P0, 4 P1) that make the application unusable with depots exceeding 10K files. The core problem is architectural: all Perforce commands block the async runtime, data flows are all-or-nothing with no streaming, and both search and tree rendering rebuild from scratch on every change. The good news is that P4Now's existing stack already contains every foundation needed -- Tauri Channels (proven in p4_sync), TanStack Query caching, tokio 1.x runtime, react-arborist virtualization, and Zustand stores. The fix requires **extending existing patterns**, not replacing them.
 
-The recommended approach prioritizes foundational features first. File content viewer and annotations must come early because they unlock other features - submit preview depends on content viewer, and annotations establish the pattern for long-running P4 commands. Architecture research shows all features fit the existing command-query-detail pattern with no structural changes needed. The backend uses standard `p4.exe` CLI integration with new output format parsers.
+The recommended approach adds only two new dependencies (nucleo for Rust fuzzy matching, @tanstack/react-pacer for debounced search input) and enables two existing tokio feature flags (process, io-util). The most impactful change is generalizing the proven p4_sync streaming pattern to p4_fstat, which transforms the worst bottleneck (5-15 second blocking fstat on 10K files) into progressive rendering with first data in under 500ms. All other fixes compose on top of this streaming foundation: the FileIndex populates during streaming, the tree builder incrementally updates from streamed batches, and debounce prevents wasted computation during user input.
 
-Critical risks center on Perforce command performance traps: `p4 annotate` can blame the wrong author after file renames and hangs on files over 10MB; `p4 fstat` for workspace sync is 10-100x slower than `p4 have`; `p4 print` can exhaust memory on large binary files; `p4 describe` without the `-s` flag includes massive diffs that hang on large changelists. Every feature has a well-documented mitigation strategy - size checks, `-s` flags, lazy loading, virtualization. The existing codebase already handles similar challenges (ProcessManager for cancellation, auto-refresh coordination), so integration risk is low.
+The primary risks are operational, not architectural. Zombie process accumulation from improperly awaited tokio child processes will crash the app after hours of use. Tauri Channel backpressure from large payloads will freeze the UI if sends are not batched. TanStack Query race conditions between streaming updates and auto-refresh invalidations will cause data flickering. All three have well-documented prevention patterns (explicit wait, batched sends via spawn_blocking, mutation guards against concurrent invalidation). The 13-14 day estimate from architecture research is realistic given that the codebase already has the right primitives and no fundamental rewrites are needed.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The existing Tauri 2.0 + React 19 foundation handles most v4.0 requirements. Only two new dependencies needed:
+The existing stack (Tauri 2.0, React 19, TanStack Query 5, Zustand, react-arborist) requires minimal additions. No replacements needed. See [STACK.md](./STACK.md) for full rationale and code patterns.
 
-**Core additions:**
-- **prism-react-renderer** (^2.4.1+): Lightweight syntax highlighting for file content viewer - vendored Prism with no runtime dependencies, 11KB gzipped, more performant than react-syntax-highlighter for large files
-- **react-virtuoso** (^4.13.0+): Virtualized rendering for blame annotations and large file lists - auto-handles variable line heights (annotations include metadata), simpler API than react-window, proven with 10k+ items
+**Additions:**
+- **tokio features `process` + `io-util`**: Enable async process spawning and line-by-line stdout parsing. Near-identical API to std::process::Command. Prevents executor starvation during long p4 commands. ~50KB binary increase.
+- **nucleo 0.5**: Rust fuzzy matcher used by helix-editor. 6x faster than alternatives, handles 100K file paths in <5ms. Required for Tier 2 workspace search (in-memory index on backend).
+- **@tanstack/react-pacer 1.x**: Official TanStack debounce/throttle hooks. Prevents redundant search operations during rapid typing. ~10KB bundle increase. Newer library (Jan 2026) but simple API with easy fallback to lodash.debounce.
 
-**What NOT to add:**
-- Monaco Editor: 6MB+ bundle size overkill for read-only file viewer
-- react-diff-viewer: Not needed, P4Now uses external diff tools (P4Merge, VS Code)
-- New Rust crates: All P4 commands use existing `Command::new("p4")` pattern
-
-**Integration pattern:**
-All features follow the same Rust backend pattern established in v3.0 - spawn `p4.exe` processes with connection args injected, parse `-ztag` output into typed structs, cache with TanStack Query on frontend. No architectural changes required.
+**What NOT to add:** Monaco editor (5MB overkill for read-only viewing), custom streaming libraries (Tauri Channels suffice), lodash (react-pacer covers debounce needs), additional fuzzy matchers (nucleo backend + microfuzz frontend is correct split).
 
 ### Expected Features
 
-**Must have (table stakes) - Block v4.0 ship:**
-- **File Content Viewer** - Fixes critical tech debt (p4_print), unblocks submit preview
-- **Submitted CL File List** - Fixes critical tech debt (p4_describe), unblocks search workflow
-- **Submit Dialog Preview** - High-value, low-complexity, closes gap vs P4V
-- **Workspace Sync Status** - High-visibility feature, users expect this (have-rev vs head-rev indicators)
+The v5.0 feature landscape covers 8 table stakes, 4 differentiators, and 5 anti-features specific to large depot support. See [large-depot-scalability/FEATURES.md](./large-depot-scalability/FEATURES.md) for complete categorization with complexity estimates and dependency chains.
 
-**Should have (ship if time allows):**
-- **File Annotations (basic)** - Implement `p4 annotate -u` with simple inline display; defer gutter mode, heatmaps, filters
-- **Bookmarks (basic)** - Simple bookmark list without folders/shortcuts/import-export; defer organization features
+**Must fix (P0 -- app unusable without):**
+- **TS-1: Streaming fstat** to replace blocking 5-15s full-workspace query (Medium, 3-4 days)
+- **TS-3: Debounced search with persistent index** to replace per-keystroke filter rebuilds (Low, 1-2 days)
+- **TS-8: Background async execution** via tokio::process to unblock runtime (Low, 1-2 days)
 
-**Defer to post-v4.0:**
-- File Annotations (advanced) - Gutter mode, color heatmaps, filter by author
-- Bookmarks (advanced) - Folders, keyboard shortcuts, import/export, recent history
-- Workspace Sync Status (advanced) - Batch indicators, filter by status, real-time updates
+**Must fix (P1 -- poor experience without):**
+- **TS-2: Delta refresh** -- query only opened/shelved files on 30s refresh instead of full fstat (Medium, 2-3 days)
+- **TS-6: Batch shelved queries** to eliminate N+1 p4 describe calls (Low, 1 day)
+- **TS-7: Progress indicators** with cancellation for operations > 2 seconds (Low, 1 day)
+- **TS-4: Workspace-restricted depot view** -- P4V's single most impactful performance feature (Medium, 1-2 days)
+- **TS-5: Server-side result limiting** with `-m` flag and "Load More" pagination (Low, 1 day)
 
-**Anti-features (do NOT build):**
-- Time-lapse slider (P4V's animated revision playback) - Complex UI, limited value
-- Inline file editing in viewer - Duplicates IDE functionality, not core workflow
-- Binary file preview - Scope creep, external tools better for images/PDFs
-- Job attachment workflow - Enterprise feature, rarely used, out of scope
+**Differentiators (where P4Now exceeds P4V):**
+- **DIFF-1: Unified search** with streaming results across workspace, depot, and changelists (High, 5-7 days -- defer to post-core)
+- **DIFF-2: Incremental tree updates** via structural sharing (Medium, 2-3 days -- include in core milestone)
+- **DIFF-3: Scoped reconcile** for directory-level operations (Low, 1 day -- defer)
+- **DIFF-4: Virtualized code viewer** for large files (Medium, 1-2 days -- defer)
+
+**Explicitly avoid (anti-features):**
+- Full-text content search / grep across workspace (prohibitively expensive)
+- Real-time file system watching (no Perforce protocol for it)
+- Offline mode / local caching (Perforce is server-authoritative)
+- Automatic background syncing (dangerous, user should always initiate)
+- Client-side changelist history beyond 500 CLs (diminishing returns)
 
 ### Architecture Approach
 
-All six features integrate into the existing discriminated union detail pane pattern with no structural changes. The architecture extends cleanly:
+The 7 core fixes integrate into the existing architecture through three migration patterns: (A) wrap short commands in `spawn_blocking`, (B) convert streaming commands to `tokio::process` with Tauri Channel output, and (C) add new managed state (`FileIndex`) alongside existing `ProcessManager`. The architecture preserves backward compatibility by adding new streaming variants (e.g., `p4_fstat_stream`) alongside existing commands rather than replacing them. See [ARCHITECTURE.md](./ARCHITECTURE.md) for integration map, data flow diagrams, and file-level change inventory (~1,400 lines across 17 files).
 
-**Major components:**
-1. **New Rust commands** (`p4_annotate`, `p4_print`, `p4_describe`) - Follow existing command wrapper pattern with `apply_connection_args()`, parse `-ztag` output, return typed structs
-2. **New detail pane views** (`FileAnnotationView`, `FileContentView`) - Extend `DetailSelection` union with `annotation` and `content` types, reuse existing navigation/back patterns
-3. **Enhanced existing views** (`FileTree` sync status badges, `SubmitDialog` preview, `ChangelistDetailView` file list for submitted CLs) - Minimal modifications to existing components
-
-**Data flow pattern (unchanged):**
-User action → TanStack Query hook → Tauri command via `tauri.ts` wrapper → Rust spawns `p4.exe` with connection args → Parse output → Frontend receives typed response → Invalidate queries → UI updates
-
-**Integration points:**
-- FileDetailView action bar: New "Annotations" and "View Content" buttons
-- FileTree nodes: Add out-of-date badge when `revision < headRevision`
-- SubmitDialog: Expand file list to show clickable files for content preview
-- ChangelistDetailView: Check `status === 'submitted'` and fetch via `p4_describe`
-- Left sidebar: New collapsible "Bookmarks" section
-
-**Key architectural insight:** All features identified in Phase 1 build order (ARCHITECTURE.md) - file content viewer and annotations are foundational, must come first. Submit preview depends on content viewer. Everything else is independent.
+**Major components and changes:**
+1. **p4_fstat_stream (new Rust command)** -- Streams fstat results in batches of 100 via Tauri Channel, modeled on existing p4_sync pattern
+2. **FileIndex (new managed state)** -- In-memory nucleo-powered fuzzy index of all workspace depot paths, rebuilt after fstat completes, searched in <5ms
+3. **ProcessManager (extended)** -- Support both std::process::Child and tokio::process::Child for kill/cleanup operations
+4. **useFileTree (modified hook)** -- Accumulates streaming batches, triggers single tree build on completion, uses incremental builder for subsequent updates
+5. **treeBuilder (new incremental mode)** -- Detects changes between old/new file sets, applies incremental updates for <10% changes, falls back to full rebuild otherwise
+6. **p4_describe_shelved_batch (new Rust command)** -- Single backend call for all shelved file queries, sequential execution with per-CL error isolation
+7. **useDebounce hook / react-pacer integration** -- 150ms debounce on filter inputs, keeps stores pure and debounce at hook level
 
 ### Critical Pitfalls
 
-1. **p4 annotate blames wrong author after file rename** - When files are renamed via `p4 integrate`, annotations only show history from rename forward, not original file authorship. Perforce doesn't have native rename tracking. **Mitigation:** Check `p4 filelog -i` for integration history before annotating, warn user if file was renamed, link to full history viewer. Cache annotation results aggressively (staleTime: 1 hour).
+Top 5 pitfalls that must be addressed during implementation. See [PITFALLS.md](./PITFALLS.md) for all 11 pitfalls with code examples and detection strategies.
 
-2. **p4 annotate hangs on large files (>10MB default limit)** - Perforce servers have `dm.annotate.maxsize` configurable (default 10MB). Files exceeding this return empty result with exit code 0, causing silent failures or 30s hangs. **Mitigation:** Check file size via `p4 fstat` before annotating, reject files over 10MB with clear error message, show progressive loading with timeout (30s), provide cancel button.
-
-3. **Workspace sync status queries use slow p4 fstat instead of p4 have** - `p4 fstat` queries entire file database with expensive joins (15s for 10k files). `p4 have` only queries client have table (0.5s for 10k files). **Mitigation:** Use `p4 have //...` + `p4 files //...` and compare locally, lazy load sync status per folder on expand, cache with long staleTime (5 min).
-
-4. **p4 print loads entire binary file into memory** - Naive implementation loads 500MB asset into Rust memory, serializes to base64, crashes with OOM. **Mitigation:** Check file type via `p4 fstat headType` before printing, reject binary files, enforce 10MB size limit, print to temp file not memory, stream large files in chunks.
-
-5. **Submit dialog description edit conflicts with existing submit flow** - P4Now already has changelist description editing in main UI. Adding submit dialog editor creates two concurrent edit paths, risking data loss. **Mitigation:** Submit dialog shows preview only (read-only), "Edit Description" button opens main editor, or lock main UI editor when dialog open. Always refetch description before submit to ensure fresh data.
-
-6. **p4 describe hangs on large submitted changelists (1000+ files)** - Default `p4 describe` returns full diffs (50MB+ for large CLs), takes 60s. Rendering 5000 file rows without virtualization freezes UI. **Mitigation:** Use `p4 describe -s` flag to suppress diffs, virtualize file list rendering with react-virtuoso or pagination (100 files per page), cache submitted CLs indefinitely (immutable data).
+1. **Zombie process accumulation** -- Forgetting to `.await` tokio child processes creates zombies that exhaust PIDs after hours. Prevention: explicit `child.wait().await` or background reaping via `tokio::spawn`. Detection: orphaned p4.exe in Task Manager.
+2. **Tauri Channel backpressure freezes UI** -- Sending >1MB payloads through Channels blocks the tokio executor for 30-50ms per send. Prevention: batch into 100-file chunks, use `spawn_blocking` for channel sends. Detection: "Application Not Responding" on Windows.
+3. **TanStack Query race conditions** -- Streaming `setQueryData` updates racing with auto-refresh `invalidateQueries` causes data flickering. Prevention: check `isMutating` before invalidation, use mutation keys to guard streaming state.
+4. **Structural sharing breaks tree node references** -- TanStack Query structural sharing creates new object references for unchanged subtrees, causing react-arborist to re-render all 10K nodes and lose scroll/focus state. Prevention: disable structural sharing for tree queries or use custom deep-merge that preserves references.
+5. **Batch query error isolation** -- Single failure in batched shelved file query hides which changelist caused the error. Prevention: execute describe commands sequentially with per-CL try/catch, skip failures without failing the batch.
 
 ## Implications for Roadmap
 
-Based on combined research, suggested phase structure prioritizes foundational features first, then table-stakes, then enhancements:
+Based on dependency analysis from ARCHITECTURE.md and feature prioritization from FEATURES.md, the work groups into 5 phases. Phase 1 items have zero dependencies (parallelizable), Phases 2-3 form the critical path, and Phases 4-5 are independent optimizations. Total P0 effort: 5-8 days. Total P0+P1 effort: 12-17 days.
 
-### Phase 1: Foundational Features
-**Rationale:** File content viewer and annotations provide building blocks for other features. Content viewer unblocks submit preview. Annotations establish pattern for long-running P4 commands with loading states and timeouts.
+### Phase 1: Async Foundation
+**Rationale:** ProcessManager and debounce hook have zero dependencies and unblock all subsequent phases. Must happen first because streaming fstat (Phase 2) requires tokio::process support in ProcessManager.
+**Delivers:** Updated ProcessManager supporting tokio Child processes, CommandExt trait for generic connection args, useDebounce utility hook, tokio feature flags enabled in Cargo.toml.
+**Addresses:** TS-8 (async execution), TS-3 partial (debounce infrastructure)
+**Avoids:** Pitfall 1 (mutex across await -- already fixed, verify), Pitfall 2 (zombie processes -- add reaping)
+**Estimated effort:** 1-1.5 days
 
-**Delivers:**
-- File Content Viewer with syntax highlighting (prism-react-renderer)
-- File Annotations (blame) with basic inline display (react-virtuoso)
-- New detail pane view types (content, annotation)
-- `p4_print` and `p4_annotate` Rust commands
+### Phase 2: Streaming fstat + Progress
+**Rationale:** The single highest-impact change. Transforms the worst bottleneck (TS-1: 5-15s blocking fstat) into progressive rendering. Depends on Phase 1 ProcessManager update. Progress indicators (TS-7) are a natural byproduct of streaming -- the batch count provides progress data for free.
+**Delivers:** `p4_fstat_stream` Rust command, frontend streaming accumulator in useFileTree, progress bar during load with cancellation.
+**Addresses:** TS-1 (incremental loading), TS-7 (progress indicators)
+**Avoids:** Pitfall 3 (channel backpressure -- batch sends of 100 files), Pitfall 4 (race conditions -- guard invalidation during streaming)
+**Uses:** tokio::process, Tauri Channel (existing pattern from p4_sync)
+**Estimated effort:** 3-4 days
 
-**Addresses features:**
-- File Content Viewer (must-have)
-- File Annotations basic (should-have)
+### Phase 3: FileIndex and Search
+**Rationale:** The FileIndex can be populated during streaming fstat from Phase 2, providing the data foundation for fast workspace search. Depends on Phase 2 for the data pipeline.
+**Delivers:** FileIndex managed state with nucleo, `search_workspace_files` and `rebuild_file_index` Tauri commands, useWorkspaceSearch hook, persistent fuzzy index for filter.
+**Addresses:** TS-3 (debounced search with persistent index), partial DIFF-1 (workspace search tier)
+**Avoids:** Pitfall 8 (memory leak from string slices -- use owned Strings in index)
+**Uses:** nucleo, Tauri managed state pattern
+**Estimated effort:** 2-3 days
 
-**Avoids pitfalls:**
-- Pitfall 4: File type check before p4 print, size limit enforcement
-- Pitfall 1: Warn on file renames in annotations
-- Pitfall 2: Size check and timeout for annotations
+### Phase 4: Tree Performance + Delta Refresh
+**Rationale:** With streaming data flowing (Phase 2) and search working (Phase 3), optimize the tree rendering pipeline. Incremental builder (DIFF-2) prevents full tree rebuild on every update. Delta refresh (TS-2) makes the 30-second auto-refresh cheap by querying only opened/shelved files.
+**Delivers:** Incremental tree builder with structural sharing, debounced filter in FileTree and ChangelistPanel, batch FileTreeStore updates, delta refresh via `p4 fstat -Ro` for opened files only.
+**Addresses:** DIFF-2 (incremental tree updates), TS-2 (delta refresh), P1-7 (Map copy per file update)
+**Avoids:** Pitfall 6 (structural sharing breaks tree refs -- custom merge preserving references), Pitfall 10 (non-virtualized operations on large trees)
+**Estimated effort:** 3-5 days
 
-**Estimate:** 5-7 days
-
----
-
-### Phase 2: Table Stakes UI Features
-**Rationale:** These are high-visibility features users expect from any P4 client. Low complexity, high impact. Builds confidence with quick wins before tackling more complex features.
-
-**Delivers:**
-- Workspace File Tree sync status indicators (have-rev vs head-rev badges)
-- Submitted Changelist file list (p4_describe)
-- Enhanced FileTree nodes with out-of-date badges
-- Enhanced ChangelistDetailView for submitted CLs
-
-**Addresses features:**
-- Workspace Sync Status (must-have)
-- Submitted CL File List (must-have)
-
-**Avoids pitfalls:**
-- Pitfall 3: Use p4 have instead of p4 fstat for sync status
-- Pitfall 6: Use `p4 describe -s` flag, virtualize large file lists
-
-**Estimate:** 3-4 days
-
----
-
-### Phase 3: Submit Enhancement
-**Rationale:** Depends on file content viewer from Phase 1. Enhances existing submit flow with preview capability. Medium complexity due to coordination with existing UI state.
-
-**Delivers:**
-- Submit Dialog preview with clickable file list
-- Navigation from submit dialog to FileContentView
-- Coordination with existing description editor
-
-**Addresses features:**
-- Submit Dialog Preview (must-have)
-
-**Avoids pitfalls:**
-- Pitfall 5: Read-only preview or lock main editor, refetch before submit
-
-**Estimate:** 2-3 days
-
----
-
-### Phase 4: Independent Features
-**Rationale:** Bookmarks are fully independent, can be added anytime. Pure UI state management with no P4 command complexity. Good buffer task if other phases blocked.
-
-**Delivers:**
-- Bookmark management UI
-- Bookmark persistence via tauri-plugin-store
-- Left sidebar Bookmarks section
-
-**Addresses features:**
-- Bookmarks basic (should-have)
-
-**Avoids pitfalls:**
-- Pitfall 7: Validate depot paths at bookmark creation, show validity status in UI
-
-**Estimate:** 2-3 days
-
----
+### Phase 5: Batch Optimization
+**Rationale:** Independent of Phases 2-4. Fixes the N+1 shelved file query pattern. Can be developed in parallel with earlier phases.
+**Delivers:** `p4_describe_shelved_batch` Rust command, single TanStack Query replacing useQueries array.
+**Addresses:** TS-6 (batch shelved queries)
+**Avoids:** Pitfall 7 (batch error isolation -- per-CL try/catch), Pitfall 9 (server rate limiting -- sequential execution, not parallel)
+**Estimated effort:** 1 day
 
 ### Phase Ordering Rationale
 
-- **Phase 1 first** because file content viewer unblocks submit preview, and annotations establish long-running command patterns used elsewhere
-- **Phase 2 next** for quick wins with high-visibility table-stakes features (sync status, submitted CL files)
-- **Phase 3 third** because it depends on Phase 1 content viewer and touches existing submit workflow (higher integration risk)
-- **Phase 4 last** because bookmarks are independent and can flex if earlier phases take longer
-
-**Grouping logic:**
-- Group by dependency (content viewer → submit preview)
-- Group by complexity (simple UI changes together in Phase 2)
-- Group by integration risk (Phase 3 isolated due to state coordination needs)
-
-**Pitfall avoidance:**
-- All phases include specific mitigation strategies identified in research
-- Phase 1 establishes performance patterns (size checks, timeouts) reused in later phases
-- Phase ordering ensures foundational patterns (virtualization, lazy loading) are proven before wider adoption
+- **Phase 1 before all others:** ProcessManager update is a hard dependency for streaming. Debounce hook is trivial and unblocks Phase 4 filter work.
+- **Phase 2 before Phase 3:** FileIndex rebuild hook fires after fstat streaming completes. Without streaming data, there is nothing to index.
+- **Phase 3 before Phase 4:** The tree filter can use the FileIndex for matching, but this is a soft dependency. Phase 4 can start before Phase 3 finishes.
+- **Phase 5 is independent:** Batched shelved queries have no dependency on streaming or search. Can be done in parallel with any phase after Phase 1.
+- **TS-4 (workspace restriction) and TS-5 (server-side limiting) are deferred** to a follow-up iteration. They are P1/P2 features that improve depot browser performance but are not on the critical path for the 7 core bottlenecks. They can be added after the core scalability work ships.
+- **Grouping rationale:** Phases are grouped by data flow direction: Phase 1-2 fix backend-to-frontend pipeline, Phase 3 adds backend state, Phase 4 optimizes frontend rendering, Phase 5 optimizes a separate backend query.
 
 ### Research Flags
 
-**Phases likely needing deeper research during planning:**
-None. All features have well-documented Perforce command patterns and established frontend patterns.
+Phases likely needing deeper research during planning:
+- **Phase 2 (Streaming fstat):** Integration of Tauri Channel streaming with TanStack Query cache requires careful race condition handling. The existing p4_sync pattern is a good model but streaming into query cache (vs. one-shot mutation) is a different pattern. Needs validation with real 10K depot.
+- **Phase 4 (Tree Performance):** Incremental tree builder with structural sharing is the most complex change (~200 new lines). Edge cases around empty folders, file renames, and deep nesting need comprehensive unit tests. react-arborist behavior with 10K nodes and partial tree updates needs empirical testing.
 
-**Phases with standard patterns (skip research-phase):**
-- **Phase 1:** File viewer and annotations use standard `p4 print` and `p4 annotate` commands (official Perforce docs comprehensive)
-- **Phase 2:** Sync status uses `p4 have` (standard pattern), submitted CL uses `p4 describe` (well-documented)
-- **Phase 3:** Submit preview reuses existing submit flow, no new P4 commands
-- **Phase 4:** Bookmarks are frontend-only (tauri-plugin-store already in use)
-
-**Research quality note:** All four research files cite official Perforce documentation as primary sources. Stack research includes npm package stats and bundle size analysis. Architecture research references existing codebase patterns. Pitfalls research includes Perforce performance tuning guides and real-world forum discussions.
+Phases with standard patterns (skip phase research):
+- **Phase 1 (Async Foundation):** Well-documented tokio patterns. ProcessManager already uses tokio::sync::Mutex. Straightforward feature flag enable + spawn_blocking wrapping.
+- **Phase 3 (FileIndex):** Managed state in Tauri is a documented pattern. nucleo API is simple. This is a new module with clean boundaries.
+- **Phase 5 (Batch Optimization):** Replace useQueries with single useQuery. Backend batching is trivial loop. Error isolation is standard try/catch pattern.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | HIGH | Both new libraries (prism-react-renderer, react-virtuoso) verified from official npm sources with 2M+ and 600K+ weekly downloads respectively. All Perforce commands verified from official Perforce docs. |
-| Features | HIGH | Features cross-referenced with official P4V documentation. MVP recommendations based on existing P4Now feature gaps and user workflow patterns. |
-| Architecture | HIGH | All integration points verified against existing P4Now codebase (73k LOC). Patterns follow established v3.0 architecture (command-query-detail, TanStack Query, discriminated unions). |
-| Pitfalls | MEDIUM-HIGH | Perforce command performance characteristics verified from official tuning guides and community forums. Integration pitfalls based on codebase analysis. Some edge cases (rename handling, large file limits) may vary by server configuration. |
+| Stack | HIGH | Only 2 new deps (nucleo battle-tested in helix, react-pacer is only medium confidence item). Existing stack verified solid. |
+| Features | HIGH | v5.0 scope is well-defined: 8 table stakes, 4 differentiators, 5 anti-features mapped from P4V research and scalability analysis. |
+| Architecture | HIGH | Integration map verified against actual codebase file paths. Existing p4_sync streaming pattern provides proven template. ~1,400 lines estimated. |
+| Pitfalls | MEDIUM | Tauri + tokio pitfalls verified with official docs. TanStack Query race conditions based on community patterns. Perforce server limits may vary by deployment. |
 
 **Overall confidence:** HIGH
 
-All features are well-understood P4V functionality with established Perforce command patterns. Stack additions are minimal and proven. Architecture integration is clean with no structural changes. Primary uncertainty is server-specific configuration (annotation size limits, describe performance) which can be validated during implementation.
+The research converges strongly. All four documents agree on approach (extend existing patterns), stack (minimal additions), and risk profile (operational pitfalls, not architectural gaps). The 13-14 day single-developer estimate from architecture research is credible given the codebase already has the right foundations.
 
 ### Gaps to Address
 
-- **Server-specific limits:** Research assumes default Perforce server configuration (10MB annotate limit, no custom `p4 describe` performance tweaks). Should validate with target server during Phase 1 and adjust thresholds if needed.
-
-- **File type detection edge cases:** Research covers standard binary/text detection via `headType` field. May need additional handling for P4 unicode file types (utf16, utf8) or custom type maps. Validate during Phase 1 with sample depot files.
-
-- **Rename handling complexity:** Pitfall 1 identifies file rename tracking as unsupported by `p4 annotate`. Research recommends warning users rather than attempting full rename chain traversal. During Phase 1, validate that warning UX is acceptable vs. implementing partial rename detection.
-
-- **Auto-refresh coordination:** Integration Pitfall 4 notes that new long-running commands (annotate, describe) need registration with existing `operationStore` to prevent auto-refresh conflicts. Validate during Phase 1 that existing v3.0 auto-refresh infrastructure covers new command types.
-
-- **Query cache invalidation completeness:** Integration Pitfall 2 identifies risk of missing new query keys in existing mutation invalidation lists. During each phase, audit all relevant mutations (submit, sync, edit) to ensure new query keys are invalidated.
+- **Real depot testing:** All performance targets (10K files in <3s, search in <5ms) are extrapolated from library benchmarks, not measured on target hardware with a real Perforce server. Need a 10K+ file test depot for validation during Phase 2.
+- **Perforce server limits:** Server-side `maxcommands` and connection limits vary by deployment. Phase 5 batch query assumes sequential execution is safe, but target server config should be verified with admin.
+- **react-pacer maturity:** @tanstack/react-pacer released January 2026. Small API surface reduces risk, but monitor for breaking changes. Fallback to lodash.debounce or custom useDebounce hook if issues arise.
+- **Long-running memory stability:** Pitfall 8 (memory leak from string slices) needs 8+ hour soak testing with periodic fstat refreshes to validate FileIndex memory behavior.
+- **Streaming + auto-refresh interaction:** The exact behavior of TanStack Query when `setQueryData` and `invalidateQueries` overlap needs empirical testing. Pitfall 4 documents the risk, but the mutation-guard prevention pattern needs validation in P4Now's specific refresh cycle.
+- **Delta refresh accuracy:** TS-2 assumes `p4 fstat -Ro` (opened files only) is sufficient for 30-second refresh. Need to validate that deleted/added files not yet opened are handled correctly -- may require periodic full refresh (every 5 minutes) alongside frequent delta refreshes.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-
-**Stack Research:**
-- [prism-react-renderer npm](https://www.npmjs.com/package/prism-react-renderer) - Official package, 2M+ weekly downloads
-- [react-virtuoso npm](https://www.npmjs.com/package/react-virtuoso) - Official package, 600K+ weekly downloads
-- [Perforce p4 annotate command reference](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_annotate.html)
-- [Perforce p4 fstat command reference](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_fstat.html)
-- [Perforce p4 print command reference](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_print.html)
-- [Perforce p4 describe command reference](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_describe.html)
-
-**Features Research:**
-- [P4V Cheat Sheet](https://www.cheat-sheets.org/saved-copy/p4v-card.pdf) - File status icons, toolbar
-- [Display revision history in P4V](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/files.history.html)
-- [Submit (Check in) files in P4V](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/files.submit.html)
-- [Bookmark files and folders in P4V](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/using.bookmarks.html)
-- [GitLens for VS Code](https://marketplace.visualstudio.com/items?itemName=eamodio.gitlens) - Blame UX patterns
-
-**Architecture Research:**
-- Existing P4Now codebase: `src-tauri/src/commands/p4.rs` (command wrapper patterns)
-- Existing P4Now codebase: `src/hooks/useFileHistory.ts` (TanStack Query hook patterns)
-- Existing P4Now codebase: `src/components/DetailPane/FileDetailView.tsx` (detail view structure)
-- Existing P4Now codebase: `src/stores/detailPaneStore.ts` (discriminated union routing)
-
-**Pitfalls Research:**
-- [Tuning Perforce for Performance](https://perforce.com/manuals/v15.1/p4sag/chapter.performance.html)
-- [p4 annotate - Perforce r16.2 Reference](https://ftp.perforce.com/perforce/r16.2/doc/manuals/cmdref/p4_annotate.html) - 10MB default size limit
-- [Helix Core file type detection and Unicode](https://www.perforce.com/manuals/v17.1/p4guide/Content/P4Guide/filetypes.unicode.detection.html)
+- [Tauri v2 Streaming Responses](https://v2.tauri.app/develop/calling-rust/#streaming-responses) -- Channel streaming API
+- [tokio::process::Command](https://docs.rs/tokio/latest/tokio/process/struct.Command.html) -- Async process spawning
+- [tokio::io::BufReader](https://docs.rs/tokio/latest/tokio/io/struct.BufReader.html) -- Async line-by-line reading
+- [TanStack Query v5 QueryClient](https://tanstack.com/query/v5/docs/reference/QueryClient) -- setQueryData, invalidation
+- [nucleo GitHub (helix-editor)](https://github.com/helix-editor/nucleo) -- Fuzzy matching performance
+- [p4 fstat reference](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_fstat.html) -- Filter flags for incremental queries
+- [P4V performance tips](https://articles.assembla.com/en/articles/1804524-speed-up-your-perforce-repo-with-p4v) -- Workspace restriction as top performance feature
+- P4Now codebase: `src-tauri/src/commands/p4/p4handlers.rs` (p4_sync streaming pattern, lines 545-623)
 
 ### Secondary (MEDIUM confidence)
+- [TanStack Pacer documentation](https://tanstack.com/pacer/latest/docs/installation) -- Debounce hooks
+- [TanStack Query race condition discussion](https://github.com/TanStack/query/discussions/7932) -- Concurrent invalidation patterns
+- [TanStack Query structural sharing issue](https://github.com/TanStack/query/issues/6812) -- Tree data reference identity
+- [React debounce stale closures](https://www.developerway.com/posts/debouncing-in-react) -- Prevention patterns
+- [Perforce connection limits](https://www.perforce.com/manuals/p4sag/Content/P4SAG/performance.prevention.connection_limits.html) -- Server-side rate limiting
+- [Progress Bars - Win32 UX Guide](https://learn.microsoft.com/en-us/windows/win32/uxguide/progress-bars) -- 2 second threshold for progress indicators
 
-**Stack Research:**
-- [npm-compare: syntax highlighting libraries](https://npm-compare.com/prism-react-renderer,react-highlight,react-syntax-highlighter) - Bundle size comparison
-- [LogRocket: 3 ways to render large datasets](https://blog.logrocket.com/3-ways-render-large-datasets-react/) - react-window vs react-virtuoso analysis
-
-**Features Research:**
-- [TortoiseGit Status Icons](https://tortoisegit.org/docs/tortoisegit/tgit-dug-wcstatus.html) - Sync status UX patterns
-- [Source Control in VS Code](https://code.visualstudio.com/docs/sourcecontrol/overview) - File tree badges
-- [12 GitLens Features that Revolutionized My Coding Workflow](https://techcommunity.microsoft.com/blog/educatordeveloperblog/12-gitlens-features-that-revolutionized-my-coding-workflow-in-vs-code/4421891)
-
-**Pitfalls Research:**
-- [Integrating while keeping history? - Perforce Forums](https://perforce-user.perforce.narkive.com/Y8IdlQvu/integrating-while-keeping-history) - File rename history preservation
-- [Changelist and affected files report - Perforce Forums](https://perforce-user.perforce.narkive.com/noS3CZ8X/p4-changelist-and-affected-files-report) - Performance with large CLs
-
-### Tertiary (LOW confidence - verify during implementation)
-
-- WebSearch claims about Monaco Editor 6MB size (not verified with official bundlephobia)
-- Community reports of react-syntax-highlighter slowness with large files (no benchmarks linked)
-- Assumption that most blame views are <10k lines (should validate with production depot data)
+### Tertiary (LOW confidence)
+- [Tauri Channel blocking discussion](https://github.com/tauri-apps/tauri/discussions/11589) -- Backpressure behavior (community report, not official docs)
+- react-arborist performance with 10K+ nodes -- Inferred from virtualization design, needs empirical validation
 
 ---
-*Research completed: 2026-02-03*
+*Research completed: 2026-02-04*
 *Ready for roadmap: yes*

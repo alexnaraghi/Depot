@@ -1,1141 +1,1421 @@
-# Architecture Research: v3.0 Feature Integration
+# Architecture Integration: Large Depot Scalability Fixes
 
-**Domain:** Tauri 2.0 + React 19 Desktop GUI for Perforce (P4Now v3.0)
-**Researched:** 2026-01-29
+**Project:** P4Now Large Depot Milestone
+**Researched:** 2026-02-04
 **Confidence:** HIGH
-
-## Integration with Existing Architecture
-
-### Current System Overview
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    React Frontend (src/)                     │
-├─────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │   FileTree   │  │  Changelist  │  │    Search    │      │
-│  │  Component   │  │    Panel     │  │    Panel     │      │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘      │
-│         │                 │                 │              │
-│  ┌──────┴─────────────────┴─────────────────┴───────┐      │
-│  │          TanStack Query Layer                     │      │
-│  │  (useFileTree, useChangelists, useSearch)         │      │
-│  └────────────────────┬──────────────────────────────┘      │
-│                       │                                      │
-├───────────────────────┼──────────────────────────────────────┤
-│                    Tauri IPC                                 │
-├───────────────────────┼──────────────────────────────────────┤
-│                  Rust Backend (src-tauri/src/)               │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │              P4 Commands Module                      │    │
-│  │  (p4_fstat, p4_opened, p4_sync, p4_edit, etc.)      │    │
-│  └────────────────────┬────────────────────────────────┘    │
-│                       │                                      │
-│  ┌────────────────────┴────────────────────────────────┐    │
-│  │          ProcessManager (tokio::sync::Mutex)         │    │
-│  │  - Process tracking with UUIDs                       │    │
-│  │  - Cancellation support (taskkill on Windows)        │    │
-│  │  - Channel for streaming output                      │    │
-│  └─────────────────────────────────────────────────────┘    │
-├─────────────────────────────────────────────────────────────┤
-│                        P4 CLI Layer                          │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐                   │
-│  │ p4.exe   │  │ p4.exe   │  │ p4.exe   │                   │
-│  │ (spawn)  │  │ (spawn)  │  │ (spawn)  │                   │
-│  └──────────┘  └──────────┘  └──────────┘                   │
-└─────────────────────────────────────────────────────────────┘
-
-Settings: tauri-plugin-store (settings.json)
-State: Zustand stores (connectionStore, fileTreeStore, operationStore)
-UI: shadcn/ui components, react-arborist for trees
-Events: Custom Tauri event system for file-status-changed
-```
-
-## v3.0 Feature Integration Points
-
-### Feature 1: Resolve Workflow
-
-**What:** Detect merge conflicts, launch external merge tool, apply resolutions
-
-**Integration Points:**
-- **Backend (Rust):** New commands in `src-tauri/src/commands/p4.rs`
-  - `p4_resolve_preview()` - Runs `p4 resolve -n` to detect conflicts (similar to `p4_reconcile_preview`)
-  - `p4_resolve_accept()` - Runs `p4 resolve -am/-at/-ay` to accept resolutions
-  - `launch_merge_tool()` - Launches P4MERGE tool (similar to existing `launch_diff_tool`)
-  - Reuses existing `-ztag` parsing patterns from `parse_ztag_fstat`
-
-- **Frontend (React):** New components in `src/components/dialogs/`
-  - `ResolvePreviewDialog.tsx` - Similar to existing `ReconcilePreviewDialog.tsx`
-  - Shows conflict list with depot paths and conflict types
-  - Buttons: "Accept Yours", "Accept Theirs", "Merge", "Skip"
-  - Reuses existing dialog patterns from `FileHistoryDialog.tsx`
-
-- **Data Flow:**
-  1. User triggers sync or submit → Backend returns conflict error
-  2. Frontend detects error, calls `p4_resolve_preview` → Gets conflict list
-  3. User selects files, clicks "Merge" → `launch_merge_tool` spawns P4MERGE
-  4. User completes merge → Clicks "Accept Merge" → `p4_resolve_accept -am`
-  5. Invalidate changelist queries → UI updates
-
-**New Components:**
-- `src-tauri/src/commands/resolve.rs` (or extend `p4.rs`)
-- `src/hooks/useResolve.ts` (TanStack Query hook)
-- `src/components/dialogs/ResolveDialog.tsx`
-
-**Modified Components:**
-- `src/hooks/useSync.ts` - Add conflict detection after sync
-- `src/components/ChangelistPanel/SubmitDialog.tsx` - Detect pre-submit conflicts
-
----
-
-### Feature 2: Depot Tree Browser
-
-**What:** Browse depot hierarchy with lazy-loading directories
-
-**Integration Points:**
-- **Backend (Rust):** New commands in `src-tauri/src/commands/p4.rs`
-  - `p4_dirs(path: String)` - Returns immediate subdirectories
-  - Runs `p4 dirs <path>/*` to get directory list
-  - Returns `Vec<String>` of depot paths
-  - Note: `p4 dirs` computes directories, doesn't track them in DB
-  - Does NOT support "..." wildcard, only "*"
-  - Use `-D` flag to include directories with only deleted files
-
-- **Frontend (React):** Reuse react-arborist pattern
-  - `src/components/DepotBrowser/DepotTree.tsx` - Clone of `FileTree.tsx`
-  - Lazy load: On node expand → call `p4_dirs` for children
-  - File list: On directory select → call `p4_files <path>/*` for files
-  - Reuse `FileStatusIcon.tsx` for file status display
-  - Double-click file → Show in workspace tree (navigate to local path)
-
-- **Data Flow:**
-  1. Component mounts → Load root directories `p4 dirs //depot/*`
-  2. User expands node → `p4 dirs //depot/subdir/*` → Cache in TanStack Query
-  3. User selects directory → `p4 files //depot/subdir/*` → Show file list
-  4. Click "Sync This" → Call existing `p4_sync` with depot path
-
-**New Components:**
-- `src/components/DepotBrowser/` directory
-  - `DepotTree.tsx` (lazy-loading tree)
-  - `DepotNode.tsx` (tree node renderer)
-  - `DepotContextMenu.tsx` (sync, view history)
-- `src/hooks/useDepotTree.ts` (TanStack Query with lazy loading)
-
-**Modified Components:**
-- `src/components/MainLayout.tsx` - Add DepotBrowser panel to layout
-- Add panel toggle button to toolbar
-
-**Key Pattern:**
-```typescript
-// Lazy load on expand
-const { data: subdirs } = useQuery({
-  queryKey: ['depotDirs', depotPath],
-  queryFn: () => invokeP4Dirs(depotPath),
-  enabled: isExpanded, // Only fetch when node expanded
-  staleTime: Infinity, // Depot structure rarely changes
-});
-```
-
----
-
-### Feature 3: Workspace/Stream Switching
-
-**What:** Switch P4CLIENT or stream without restarting app
-
-**Integration Points:**
-- **Backend (Rust):** New commands
-  - `p4_switch_stream(stream_name: String)` - Runs `p4 switch <stream>`
-  - Workflow: `p4 switch` automatically reconciles → shelves → switches → syncs → unshelves
-  - Returns success/error, no additional parsing needed
-  - NOTE: Cannot switch if numbered changelists are open (constraint)
-
-- **Frontend (React):** Settings dialog extension
-  - Add "Switch Workspace" button to `SettingsDialog.tsx`
-  - Dropdown with workspace list from `p4_list_workspaces` (already exists)
-  - On switch → Update connectionStore state → Invalidate ALL queries
-  - Add "Switch Stream" button if workspace has stream
-  - Dropdown with streams from `p4 streams` (new query)
-
-- **State Management (Critical):**
-  - Update `connectionStore` with new workspace/stream
-  - Call `queryClient.invalidateQueries()` to refresh ALL data
-  - Pattern: connectionStore change → trigger global refetch
-  - Use `useEffect` to watch connectionStore and invalidate
-
-- **Data Flow:**
-  1. User clicks "Switch Workspace" → Shows workspace picker
-  2. User selects workspace → `saveSettings({ p4client: newClient })`
-  3. Settings save → `connectionStore.setConnected()` with new client
-  4. Effect detects change → `queryClient.invalidateQueries()`
-  5. All hooks refetch with new P4CLIENT → UI updates
-
-**New Components:**
-- `src/hooks/useWorkspaceSwitcher.ts` - Manages switch logic and invalidation
-- Add workspace/stream picker to `src/components/SettingsDialog.tsx`
-
-**Modified Components:**
-- `src/stores/connectionStore.ts` - Add stream switching methods
-- `src/lib/settings.ts` - Add stream persistence
-- `src/App.tsx` - Add useEffect to watch connection changes and invalidate
-
-**Critical Pattern:**
-```typescript
-// In App.tsx or layout
-useEffect(() => {
-  if (connectionStore.p4client) {
-    queryClient.invalidateQueries(); // Refresh all data
-  }
-}, [connectionStore.p4client, connectionStore.stream]);
-```
-
----
-
-### Feature 4: Actionable Search Results
-
-**What:** Make search results clickable with navigation to changelist/file
-
-**Integration Points:**
-- **Frontend Only:** Modify existing components
-  - `SearchResultsPanel.tsx` already displays changelist cards
-  - Add onClick handlers to navigate
-  - Navigation target: Expand changelist in ChangelistPanel
-  - If submitted changelist → Show FileHistoryDialog for files
-
-- **Navigation Implementation:**
-  - Use Zustand store method to expand specific changelist
-  - `changelistStore.setExpandedChangelist(id)`
-  - Scroll changelist into view with `scrollIntoView()`
-  - Highlight changelist with temporary CSS class animation
-
-- **Data Flow:**
-  1. User clicks search result changelist #12345
-  2. Check if pending or submitted
-  3. If pending → `changelistStore.setExpandedChangelist(12345)` + scroll
-  4. If submitted → Open FileHistoryDialog with changelist details
-  5. Clear search (optional) → Focus moves to changelist
-
-**Modified Components:**
-- `src/components/SearchResultsPanel.tsx` - Add onClick handlers
-- `src/stores/changelistStore.ts` - Add `setExpandedChangelist` method
-- `src/components/ChangelistPanel/ChangelistPanel.tsx` - Add scroll-to logic
-
-**No New Backend:** Reuses existing data, pure UI enhancement
-
----
-
-### Feature 5: Auto-Refresh
-
-**What:** Automatically refetch key queries on interval
-
-**Integration Points:**
-- **Frontend Only:** TanStack Query configuration
-  - Add `refetchInterval` to critical queries
-  - Changelist query: `refetchInterval: 30000` (30s)
-  - File tree query: `refetchInterval: 60000` (60s)
-  - Search query: `refetchInterval: 300000` (5min)
-  - Use `refetchIntervalInBackground: false` to pause when minimized
-
-- **User Control:**
-  - Add "Auto-refresh" toggle to SettingsDialog
-  - Store setting in tauri-plugin-store
-  - Pass setting to hooks as `enabled` prop
-  - Dynamic interval: `refetchInterval: autoRefresh ? 30000 : false`
-
-- **Optimization:**
-  - Only enable for connected state: `enabled: isConnected && autoRefresh`
-  - Use `refetchOnWindowFocus: true` for manual refresh fallback
-  - Don't refresh during active operations (check operationStore)
-
-**Modified Components:**
-- `src/components/ChangelistPanel/useChangelists.ts` - Add `refetchInterval`
-- `src/components/FileTree/useFileTree.ts` - Add `refetchInterval`
-- `src/hooks/useSearch.ts` - Add `refetchInterval`
-- `src/types/settings.ts` - Add `autoRefresh: boolean`
-- `src/components/SettingsDialog.tsx` - Add toggle control
-
-**Pattern:**
-```typescript
-const { data, refetch } = useQuery({
-  queryKey: ['changelists'],
-  queryFn: fetchChangelists,
-  enabled: isConnected && autoRefreshEnabled,
-  refetchInterval: autoRefreshEnabled ? 30000 : false,
-  refetchIntervalInBackground: false, // Pause when minimized
-});
-```
-
-**No Backend Changes:** Pure TanStack Query configuration
-
----
-
-### Feature 6: E2E Testing
-
-**What:** WebdriverIO + tauri-driver for end-to-end tests
-
-**Integration Points:**
-- **Testing Infrastructure:** New directory structure
-  - `e2e-tests/` directory at project root
-  - `wdio.conf.js` - WebdriverIO configuration
-  - `test/specs/` - Test files
-  - Uses `@crabnebula/tauri-driver` package
-
-- **Platform Requirements:**
-  - **Windows:** Microsoft Edge Driver (must match Edge version)
-  - **Linux:** WebKitWebDriver (check `which WebKitWebDriver`)
-  - **macOS:** NOT SUPPORTED (no WKWebView driver)
-  - CI: Use windows-latest or ubuntu-latest runners
-
-- **Test Structure:**
-  - Unit tests: Component logic with Vitest (existing)
-  - Integration tests: Hook behavior with Mock Service Worker
-  - E2E tests: Full app workflows with WebdriverIO
-
-- **Setup Process:**
-  1. `npm install --save-dev webdriverio @wdio/cli @crabnebula/tauri-driver`
-  2. Configure `wdio.conf.js` to launch tauri-driver
-  3. Build app before tests: `npm run tauri build`
-  4. Run tests: `npm run test:e2e`
-
-- **Test Coverage (Initial):**
-  - Connection workflow: Settings → Test Connection → Success
-  - File operations: Check out → Edit → Revert
-  - Changelist: Create → Add files → Delete
-  - Search: Type query → Click result → Verify navigation
-
-**New Components:**
-- `e2e-tests/wdio.conf.js` - Main config
-- `e2e-tests/test/specs/connection.spec.js` - Connection tests
-- `e2e-tests/test/specs/changelist.spec.js` - Changelist tests
-- `e2e-tests/helpers/` - Test utilities
-- `package.json` - Add scripts: `test:e2e`, `test:e2e:headless`
-
-**CI Integration:**
-- `.github/workflows/test.yml` - Add E2E job
-- Matrix: `[windows-latest, ubuntu-latest]` (skip macOS)
-- Requires: Build app → Install Edge Driver → Run tests
-
-**Known Compatibility:**
-- May need to downgrade to WebdriverIO v7 for tauri-driver compat
-- TypeScript types may require manual definitions
-- tauri-driver acts as proxy for native WebDriver servers
-
-**No Application Code Changes:** Pure testing infrastructure
-
----
-
-## Component Dependency Map
-
-### New Components Needed
-
-| Component | Dependencies | Integrates With |
-|-----------|--------------|-----------------|
-| `ResolveDialog.tsx` | TanStack Query, shadcn/ui | ChangelistPanel, SyncToolbar |
-| `DepotTree.tsx` | react-arborist, TanStack Query | MainLayout (new panel) |
-| `useResolve.ts` | `invokeP4ResolvePreview`, `invokeP4ResolveAccept` | ResolveDialog |
-| `useDepotTree.ts` | `invokeP4Dirs`, `invokeP4Files` | DepotTree |
-| `useWorkspaceSwitcher.ts` | connectionStore, queryClient | SettingsDialog |
-| `p4_resolve_*` (Rust) | Existing p4 module patterns | Frontend hooks |
-| `p4_dirs` (Rust) | Existing p4 module patterns | useDepotTree |
-| `e2e-tests/` | WebdriverIO, tauri-driver | CI pipeline |
-
-### Modified Components
-
-| Component | Modifications | Reason |
-|-----------|---------------|--------|
-| `useChangelists.ts` | Add `refetchInterval` option | Auto-refresh |
-| `useFileTree.ts` | Add `refetchInterval` option | Auto-refresh |
-| `useSearch.ts` | Add `refetchInterval` option | Auto-refresh |
-| `SearchResultsPanel.tsx` | Add onClick navigation | Actionable search |
-| `changelistStore.ts` | Add `setExpandedChangelist` method | Search navigation |
-| `SettingsDialog.tsx` | Add workspace/stream switcher, auto-refresh toggle | Settings UI |
-| `connectionStore.ts` | Add stream switching methods | State management |
-| `App.tsx` | Add query invalidation on connection change | Workspace switching |
-| `useSync.ts` | Add conflict detection | Resolve workflow trigger |
-| `SubmitDialog.tsx` | Add pre-submit conflict check | Resolve workflow trigger |
-
----
-
-## Data Flow Patterns
-
-### Pattern 1: Query Invalidation Cascade
-
-**What:** When workspace/stream changes, invalidate all queries to refetch
-
-**When to use:** Workspace switching, stream switching, major setting changes
-
-**Trade-offs:**
-- **Pro:** Simple, comprehensive, ensures consistency
-- **Pro:** Reuses existing TanStack Query cache keys
-- **Con:** Refetches everything, brief loading state
-
-**Implementation:**
-```typescript
-// In App.tsx or similar
-const queryClient = useQueryClient();
-const { p4client, stream } = useConnectionStore();
-
-useEffect(() => {
-  if (p4client) {
-    // Invalidate all queries when workspace changes
-    queryClient.invalidateQueries();
-  }
-}, [p4client, stream, queryClient]);
-```
-
-### Pattern 2: Lazy Loading with Enabled Flag
-
-**What:** Load data only when UI element expands
-
-**When to use:** Depot tree, nested file lists, expandable panels
-
-**Trade-offs:**
-- **Pro:** Reduces initial load, only fetches needed data
-- **Pro:** Perfect for hierarchical/tree structures
-- **Con:** Brief loading spinner on first expand
-
-**Implementation:**
-```typescript
-const { data: subdirs, isLoading } = useQuery({
-  queryKey: ['depotDirs', depotPath],
-  queryFn: () => invokeP4Dirs(depotPath),
-  enabled: isExpanded, // Only fetch when expanded
-  staleTime: Infinity, // Depot structure rarely changes
-});
-```
-
-### Pattern 3: Conditional Auto-Refresh
-
-**What:** Refetch on interval only when enabled and connected
-
-**When to use:** Real-time updates for changelist/file status
-
-**Trade-offs:**
-- **Pro:** Keeps UI fresh without manual refresh
-- **Pro:** User can disable to reduce load
-- **Con:** Increased server requests
-- **Con:** Can cause conflicts with user edits
-
-**Implementation:**
-```typescript
-const { data } = useQuery({
-  queryKey: ['changelists'],
-  queryFn: fetchChangelists,
-  enabled: isConnected && autoRefreshEnabled,
-  refetchInterval: autoRefreshEnabled ? 30000 : false,
-  refetchIntervalInBackground: false, // Pause when minimized
-});
-```
-
-### Pattern 4: State-Based Navigation
-
-**What:** Update Zustand store to trigger UI changes, scroll to element
-
-**When to use:** Search result click, deep linking, programmatic navigation
-
-**Trade-offs:**
-- **Pro:** Reactive, works across components
-- **Pro:** Can be triggered from anywhere (keyboard shortcuts, search)
-- **Con:** Requires store method and scroll logic
-
-**Implementation:**
-```typescript
-// In store
-setExpandedChangelist: (id: number) => set({ expandedId: id }),
-
-// In component
-const handleNavigate = (id: number) => {
-  changelistStore.setExpandedChangelist(id);
-
-  // Scroll after state update
-  setTimeout(() => {
-    document.getElementById(`cl-${id}`)?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'center'
-    });
-  }, 100);
-};
-```
-
----
-
-## Architectural Recommendations
-
-### Build Order (Suggested Phases)
-
-**Phase 1: Foundation (Auto-Refresh)**
-- Modify existing query hooks with `refetchInterval`
-- Add settings UI for auto-refresh toggle
-- Lowest risk, no new components, validates query patterns
-
-**Phase 2: Navigation (Actionable Search)**
-- Add navigation handlers to SearchResultsPanel
-- Extend changelistStore with setExpandedChangelist
-- Pure frontend, builds on existing search
-
-**Phase 3: Workspace Management**
-- Add workspace/stream switcher to settings
-- Implement query invalidation on switch
-- Tests existing architecture's flexibility
-
-**Phase 4: Depot Browser**
-- Implement `p4_dirs` and `p4_files` backend commands
-- Build DepotTree component (clone FileTree pattern)
-- Add lazy loading with TanStack Query enabled flag
-- Larger feature, but self-contained
-
-**Phase 5: Resolve Workflow**
-- Implement `p4_resolve_*` backend commands
-- Build ResolveDialog (clone ReconcilePreviewDialog)
-- Integrate with sync and submit workflows
-- Complex feature, touches multiple areas
-
-**Phase 6: E2E Testing**
-- Set up WebdriverIO and tauri-driver
-- Write initial test specs
-- Integrate with CI
-- Independent, can run parallel with other phases
-
-**Rationale:** Start simple (auto-refresh), validate patterns, build confidence. Progress to user-facing navigation, then larger features. E2E testing last to validate completed features.
-
----
-
-## Integration Complexity Assessment
-
-| Feature | Backend Complexity | Frontend Complexity | Integration Risk | Suggested Phase |
-|---------|-------------------|---------------------|------------------|-----------------|
-| Auto-Refresh | None (config only) | Low (query options) | Low | Phase 1 |
-| Actionable Search | None | Low (handlers + store) | Low | Phase 2 |
-| Workspace Switching | Low (existing commands) | Medium (invalidation) | Medium | Phase 3 |
-| Depot Browser | Medium (new commands) | Medium (lazy tree) | Medium | Phase 4 |
-| Resolve Workflow | Medium (new commands) | Medium (dialog + logic) | High | Phase 5 |
-| E2E Testing | None | High (test infrastructure) | Low (isolated) | Phase 6 |
-
-**Risk Definitions:**
-- **Low:** Isolated change, established patterns, no cross-cutting concerns
-- **Medium:** New patterns, touches multiple components, requires coordination
-- **High:** Complex workflow, multiple integration points, potential edge cases
-
----
-
-## Anti-Patterns to Avoid
-
-### Anti-Pattern 1: Global Auto-Refresh Without User Control
-
-**What people do:** Set `refetchInterval` on all queries without opt-out
-
-**Why it's wrong:**
-- Causes conflicts during user edits (file tree updates mid-operation)
-- Wastes resources when user minimizes window
-- Frustrating when user wants stable UI to read
-
-**Do this instead:**
-- Make auto-refresh opt-in via settings toggle
-- Use `refetchIntervalInBackground: false` to pause when minimized
-- Disable auto-refresh during active operations (check operationStore)
-- Provide manual refresh button as fallback
-
-### Anti-Pattern 2: Fetching All Depot Directories Upfront
-
-**What people do:** Load entire depot hierarchy on mount
-
-**Why it's wrong:**
-- `p4 dirs` computes directories, very slow for large depots
-- Wastes memory and network for data user may never view
-- Blocks UI with loading spinner
-
-**Do this instead:**
-- Lazy load with `enabled: isExpanded` flag
-- Fetch only immediate children when node expands
-- Use `staleTime: Infinity` since depot structure rarely changes
-- Show loading spinner only for expanded node, not whole tree
-
-### Anti-Pattern 3: Invalidating Specific Queries on Workspace Switch
-
-**What people do:** Manually list and invalidate each query key
-
-**Why it's wrong:**
-- Fragile, easy to miss new queries added later
-- Inconsistent state if some queries missed
-- Harder to maintain as app grows
-
-**Do this instead:**
-- Use `queryClient.invalidateQueries()` without filter to clear all
-- Let TanStack Query's `enabled` flags prevent unnecessary refetches
-- Simple, comprehensive, future-proof
-
-### Anti-Pattern 4: Blocking E2E Tests on Full Feature Coverage
-
-**What people do:** Wait until all features complete before starting E2E tests
-
-**Why it's wrong:**
-- Delays feedback on integration issues
-- Harder to debug failures across large feature sets
-- CI setup becomes rushed at end of project
-
-**Do this instead:**
-- Set up E2E infrastructure early (Phase 6 can start anytime)
-- Write tests incrementally as features complete
-- Run E2E in CI from day one, even with minimal tests
-- Catch integration issues early
-
-### Anti-Pattern 5: Calling `p4 resolve` Without Preview
-
-**What people do:** Auto-resolve conflicts with `-am` flag immediately
-
-**Why it's wrong:**
-- User loses visibility into what conflicts existed
-- Auto-merge can silently break code if conflicts are complex
-- No chance to review before accepting
-
-**Do this instead:**
-- Always show ResolvePreviewDialog with conflict list
-- Let user choose per-file: merge tool, accept yours, accept theirs
-- Show conflict count and depot paths before resolution
-- Provide "Resolve All" option but with confirmation
-
----
-
-## Sources
-
-### Perforce Resolve Workflow
-- [Merging to resolve conflicts](https://help.perforce.com/helix-core/server-apps/p4guide/2024.2/Content/P4Guide/merging-to-resolve-conflicts.html)
-- [p4 resolve](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_resolve.html)
-- [Resolve files | P4 Visual Client (P4V) Documentation](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/branches.resolve.html)
-- [How to resolve conflicts](https://www.perforce.com/manuals/p4guide/Content/P4Guide/resolve.howto.html)
-
-### Perforce Depot Browser
-- [p4 dirs | P4 Command Reference](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_dirs.html)
-- [p4 dirs // P4 Command Reference](https://www.perforce.com/manuals/v15.2/cmdref/p4_dirs.html)
-
-### Perforce Stream Switching
-- [p4 switch | Helix Core Command-Line (P4) Reference 2024.2](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_switch.html)
-- [Switch between streams | P4 Server Administration](https://help.perforce.com/helix-core/server-apps/p4sag/current/Content/DVCS/streams.switch.html)
-
-### Tauri E2E Testing
-- [WebdriverIO | Tauri](https://v2.tauri.app/develop/tests/webdriver/example/webdriverio/)
-- [WebDriver | Tauri](https://v2.tauri.app/develop/tests/webdriver/)
-- [@crabnebula/tauri-driver - npm](https://www.npmjs.com/package/@crabnebula/tauri-driver)
-- [GitHub - Haprog/tauri-wdio-win-test](https://github.com/Haprog/tauri-wdio-win-test)
-
-### TanStack Query Auto-Refresh
-- [React TanStack Query Auto Refetching Example | TanStack Query Docs](https://tanstack.com/query/v4/docs/framework/react/examples/auto-refetching)
-- [useQuery | TanStack Query React Docs](https://tanstack.com/query/v4/docs/react/reference/useQuery)
-- [Automatically refetching with React Query - DEV Community](https://dev.to/dailydevtips1/automatically-refetching-with-react-query-1l0f)
-
----
-
-*Architecture research for: P4Now v3.0 Feature Integration*
-*Researched: 2026-01-29*
-
-
----
----
-
-# Architecture Research: P4V Parity Features for v4.0
 
 ## Executive Summary
 
-The six P4V parity features integrate cleanly into P4Now's existing architecture with minimal structural changes. All features follow established patterns: new Rust commands in `p4.rs`, corresponding TypeScript invocations in `tauri.ts`, TanStack Query hooks for data fetching, and UI components in the detail pane. The primary architectural consideration is build order—file annotations and content viewer are foundational features that other features depend on, while bookmarks is fully independent.
+This document maps the 7 scalability fixes identified in the analysis to the existing P4Now architecture, providing specific integration points, file paths, data flow changes, and build order recommendations. The architecture is well-suited for incremental enhancement: the existing streaming pattern (p4_sync), TanStack Query infrastructure, and Zustand stores provide solid foundations for the scalability improvements.
 
-## Existing Architecture Overview
+**Key architectural strengths to leverage:**
+- Tauri Channel streaming already proven in `p4_sync` command
+- TanStack Query handles caching, refetch, and invalidation
+- Zustand stores provide Map-based O(1) file lookups
+- react-arborist provides virtualized tree rendering
+- ProcessManager tracks cancellable operations
 
-**Backend (Rust/Tauri):**
-- `ProcessManager` spawns p4.exe processes
-- `commands/p4.rs` contains all p4 command wrappers with `-ztag` output parsing
-- Connection args (server/user/client) injected at invoke layer via `getConnectionArgs()`
-
-**Frontend (React):**
-- TanStack Query for server data caching and invalidation
-- Zustand stores for UI state (detailPane, fileTree, changelist, connection, searchFilter, command)
-- react-arborist for virtualized trees (FileTree, ChangelistTree, DepotBrowser)
-- Discriminated union routing in DetailPane: `none | file | changelist | revision | search`
-
-**Data Flow Pattern:**
-1. User action triggers hook (e.g., `useFileOperations`)
-2. Hook invokes Tauri command via `tauri.ts` wrapper
-3. Rust backend spawns p4.exe with connection args
-4. Result parsed from `-ztag` output into typed struct
-5. Frontend receives typed response, invalidates queries
-6. TanStack Query refetches, UI updates automatically
-
-## Component Analysis
-
-### Feature 1: File Annotations (Blame)
-
-**New Components:**
-- `FileAnnotationView.tsx` — New detail pane view showing line-by-line blame
-- `useFileAnnotations.ts` — TanStack Query hook for fetching annotations
-
-**Modified Components:**
-- `DetailPane.tsx` — Add `annotation` type to `DetailSelection` union
-- `FileDetailView.tsx` — Add "Show Annotations" button to action bar
-- `detailPaneStore.ts` — Add `drillToAnnotation()` action
-
-**New Rust Commands:**
-- `p4_annotate(depotPath: String, revision: Option<i32>) -> Vec<P4AnnotationLine>`
-  - Returns: `{ line_number, revision, changelist, user, date, content }`
-  - Uses: `p4 annotate -c -q <depotPath>#<revision>`
-  - Flag: `-c` for changelist numbers, `-q` to suppress header
-
-**New TypeScript APIs:**
-- `invokeP4Annotate(depotPath: string, revision?: number): Promise<P4AnnotationLine[]>`
-- Interface: `P4AnnotationLine { lineNumber, revision, changelist, user, date, content }`
-
-**Integration Points:**
-- FileDetailView action bar — New "Annotations" button next to "Diff"
-- DetailPane routing — New `annotation` selection type
-- Back navigation — Pressing Escape returns to FileDetailView
-
-**Data Flow:**
-1. User clicks "Show Annotations" in FileDetailView
-2. `drillToAnnotation()` navigates to annotation view with depot path + revision
-3. `useFileAnnotations` hook fetches via `invokeP4Annotate`
-4. Rust spawns `p4 annotate -c -q //depot/path#5`
-5. Parse output: each line is `... change 12345 //depot/path#5 - line content`
-6. Component renders table with changelist, user, date (from changelist lookup), content
-
-**Performance Considerations:**
-- Perforce limits annotations to files under 10MB by default
-- Frontend should show loading state (annotations can take 2-3 seconds for large files)
-- Consider virtualized rendering for files with 1000+ lines
-
-**Suggested Build Order:** **Phase 1** (foundational)
+**Key architectural gaps to address:**
+- All commands use blocking `std::process::Command` (except p4_sync)
+- No Rust state management beyond ProcessManager
+- File tree rebuilds completely on every data change
+- No debounce/throttle utilities in codebase
+- Search has three separate mechanisms with no unified architecture
 
 ---
 
-### Feature 2: Workspace File Tree with Sync Status
+## Integration Map: 7 Fixes × Existing Architecture
 
-**New Components:**
-- None (enhancement to existing FileTree)
+### 1. Streaming fstat Integration with TanStack Query
 
-**Modified Components:**
-- `FileTree.tsx` — Add out-of-date badge rendering for files where `revision < headRevision`
-- `FileStatusIcon.tsx` — Add new icon variant for "out of date" status
-- `useFileTree.ts` — Modify to track sync status from fstat results
+**Question:** How should streaming fstat integrate with TanStack Query (replace the query, or merge alongside)?
 
-**Modified Rust Commands:**
-- `p4_fstat()` already returns `head_revision` field — no changes needed
+**Answer:** **MERGE ALONGSIDE** with incremental accumulation pattern.
 
-**Integration Points:**
-- FileTree node rendering — Display badge when `file.revision < file.headRevision`
-- FileStatusIcon component — New color/icon for out-of-date status (orange badge with down-arrow)
-- Existing sync flow — Already updates tree via query invalidation
-
-**Data Flow:**
-1. `useFileTree` fetches via `invokeP4Fstat()` (already happens)
-2. Rust `p4_fstat` command already returns `revision` (have) and `head_revision` (depot)
-3. Frontend compares: if `revision < headRevision`, file is out-of-date
-4. `FileNode` component renders out-of-date badge
-5. User clicks sync button → existing sync flow updates `revision` → badge disappears
-
-**UI Design:**
-- Out-of-date files: Orange badge with "↓" icon and count (e.g., "↓3" for 3 revisions behind)
-- Hover tooltip: "Out of date: #5 (you have) vs #8 (depot)"
-- Consistent with existing status badges (green checkmark for synced, blue pencil for edited)
-
-**Suggested Build Order:** **Phase 2** (table stakes feature, depends on existing infrastructure)
-
----
-
-### Feature 3: File Content Viewer
-
-**New Components:**
-- `FileContentView.tsx` — New detail pane view showing file content at specific revision
-- `useFileContent.ts` — Hook for fetching file content via `p4 print`
-
-**Modified Components:**
-- `RevisionDetailView.tsx` — Add "View Content" button to action bar
-- `DetailPane.tsx` — Add `content` type to `DetailSelection` union
-- `detailPaneStore.ts` — Add `drillToContent()` action
-
-**New Rust Commands:**
-- `p4_print(depotPath: String, revision: i32) -> String`
-  - Returns: File content as UTF-8 string
-  - Uses: `p4 print -q <depotPath>#<revision>`
-  - Flag: `-q` to suppress header (only content)
-
-**New TypeScript APIs:**
-- `invokeP4Print(depotPath: string, revision: number): Promise<string>`
-
-**Integration Points:**
-- RevisionDetailView — New "View Content" button next to "Diff"
-- FileDetailView — "View Current Revision" button
-- DetailPane routing — New `content` selection type with depot path + revision
-- Syntax highlighting — Use existing code editor library (Monaco or Prism.js)
-
-**Data Flow:**
-1. User clicks "View Content" in RevisionDetailView (or FileDetailView)
-2. `drillToContent()` navigates with depot path + revision
-3. `useFileContent` fetches via `invokeP4Print(path, rev)`
-4. Rust spawns `p4 print -q //depot/path#5`
-5. Return content as string
-6. Component renders in code viewer with syntax highlighting
-
-**Performance Considerations:**
-- Large files (>1MB) should show size warning with "View Anyway" confirmation
-- Consider streaming for very large files (requires Rust channel pattern like sync)
-- Binary files: Show hex viewer or "Binary file (X MB) - cannot display"
-
-**Suggested Build Order:** **Phase 1** (foundational, enables submit preview)
-
----
-
-### Feature 4: Submit Dialog Preview
-
-**New Components:**
-- None (enhancement to existing SubmitDialog)
-
-**Modified Components:**
-- `SubmitDialog.tsx` — Expand file list section to show diffs inline or link to content view
-- No new data fetching needed — files already in `changelist.files`
-
-**Integration Points:**
-- SubmitDialog file list — Each file becomes clickable
-- Click behavior: Opens FileContentView in modal overlay OR drills to FileDetailView
-- Depends on: File content viewer (Feature 3) for "preview changes"
-
-**Data Flow:**
-1. User opens SubmitDialog (already happens)
-2. Dialog displays `changelist.files` (already happens)
-3. NEW: Each file is clickable
-4. Click → Opens FileContentView in overlay OR navigates to FileDetailView
-5. User can review changes before confirming submit
-
-**UI Options:**
-- **Option A:** Open FileDetailView in side panel (keeps dialog open)
-- **Option B:** Open FileContentView as modal overlay on dialog
-- **Option C:** Expand file row to show diff inline (like GitHub PR view)
-
-**Suggested Build Order:** **Phase 3** (enhancement to existing feature, depends on Feature 3)
-
----
-
-### Feature 5: Submitted Changelist File List
-
-**New Components:**
-- None (enhancement to existing ChangelistDetailView)
-
-**Modified Components:**
-- `ChangelistDetailView.tsx` — Add file list section for submitted changelists
-- `useChangelists.ts` — May need to fetch files for submitted CLs on demand
-
-**New Rust Commands:**
-- `p4_describe(changelist: i32) -> P4ChangelistDetail`
-  - Returns: `{ id, description, user, client, time, files: Vec<P4DescribeFile> }`
-  - Uses: `p4 describe -s <changelist>` (shallow, no diffs)
-  - `-s` flag omits diffs (only file list)
-
-**New TypeScript APIs:**
-- `invokeP4Describe(changelist: number): Promise<P4ChangelistDetail>`
-- Interface: `P4DescribeFile { depotPath, action, fileType, revision }`
-
-**Integration Points:**
-- ChangelistDetailView — Check `changelist.status === 'submitted'`
-- If submitted: Fetch via `useQuery(['p4', 'describe', clId])`
-- Display file list same as pending CLs (but read-only, no actions)
-- File clicks → Navigate to RevisionDetailView for that changelist's revision
-
-**Data Flow:**
-1. User selects submitted changelist from SearchResultsView
-2. ChangelistDetailView detects `status === 'submitted'`
-3. `useQuery` fetches via `invokeP4Describe(clId)`
-4. Rust spawns `p4 describe -s 12345`
-5. Parse output into structured file list
-6. Component renders files (same UI as pending CL)
-7. Click file → Navigate to RevisionDetailView
-
-**Caching Strategy:**
-- Submitted changelists are immutable — cache indefinitely
-- Query key: `['p4', 'describe', clId]` (won't refetch unless invalidated)
-- Consider React Query `staleTime: Infinity` for submitted CLs
-
-**Suggested Build Order:** **Phase 2** (table stakes feature, straightforward command wrapper)
-
----
-
-### Feature 6: Bookmarks
-
-**New Components:**
-- `BookmarkManager.tsx` — UI for managing bookmarks (add/remove/rename)
-- `BookmarkList.tsx` — Left sidebar section showing bookmarked paths
-- `useBookmarks.ts` — Hook for bookmark CRUD operations
-
-**Modified Components:**
-- `FileTree.tsx` — Add "Bookmark" action to context menu
-- `DepotBrowser.tsx` — Add "Bookmark" action to context menu
-- `MainLayout.tsx` — Add BookmarkList to left sidebar (collapsible section)
-
-**Storage:**
-- Use existing `tauri-plugin-store` (same as settings)
-- Store as `{ bookmarks: Array<{ id, name, depotPath, type }> }`
-- Type: `'file' | 'folder'`
-
-**Integration Points:**
-- FileTree context menu — "Add Bookmark" option
-- DepotBrowser context menu — "Add Bookmark" option
-- Left sidebar — New collapsible "Bookmarks" section above or below Workspace
-- Click bookmark → Navigate to file/folder in appropriate tree
-- Settings dialog — "Manage Bookmarks" tab
-
-**Data Flow:**
-1. User right-clicks file/folder → "Add Bookmark"
-2. Modal prompts for bookmark name (default: file/folder name)
-3. Save to store: `{ id: uuid(), name, depotPath, type }`
-4. BookmarkList re-renders with new bookmark
-5. Click bookmark → Expand tree to path, select node, show in detail pane
-
-**Persistence:**
-- Bookmarks stored in `settings.json` alongside connection settings
-- Load on app startup via `useSettings`
-- Auto-save on add/remove/rename
-
-**Suggested Build Order:** **Phase 4** (independent feature, no dependencies on other features)
-
----
-
-## Suggested Build Order
-
-### Phase 1: Foundational Features (Milestone 1)
-**Rationale:** These features provide core building blocks for other features.
-
-1. **File Content Viewer** (Feature 3)
-   - Enables submit preview and revision browsing
-   - Straightforward p4 print command wrapper
-   - Adds new detail pane view type (pattern already established)
-   - **Estimate:** 2-3 days (Rust command + React component + syntax highlighting)
-
-2. **File Annotations** (Feature 1)
-   - Independent feature, high value for developers
-   - Follows same pattern as file content viewer
-   - More complex UI (table with changelist lookup)
-   - **Estimate:** 3-4 days (Rust command + React component + changelist data join)
-
-### Phase 2: Table Stakes Features (Milestone 2)
-**Rationale:** Features users expect from any P4 client.
-
-3. **Submitted Changelist File List** (Feature 5)
-   - Unblocks submitted CL exploration (currently only shows description)
-   - Simple p4 describe command wrapper
-   - Reuses existing ChangelistDetailView UI patterns
-   - **Estimate:** 1-2 days (Rust command + React hook + UI integration)
-
-4. **Workspace File Tree Sync Status** (Feature 2)
-   - Visual indicator for out-of-date files
-   - No new commands needed (fstat already returns data)
-   - Minimal UI changes (badge rendering)
-   - **Estimate:** 1 day (UI changes only)
-
-### Phase 3: Enhancement Features (Milestone 3)
-**Rationale:** Features that improve existing workflows.
-
-5. **Submit Dialog Preview** (Feature 4)
-   - Depends on file content viewer (Phase 1)
-   - Enhances existing submit flow
-   - Design decision needed: modal vs. side panel vs. inline
-   - **Estimate:** 2-3 days (UI design + integration)
-
-### Phase 4: Independent Features (Milestone 4)
-**Rationale:** Features that stand alone and can be added anytime.
-
-6. **Bookmarks** (Feature 6)
-   - No dependencies on other features
-   - Pure UI state management + persistence
-   - Deferred to allow focus on core P4 functionality
-   - **Estimate:** 2-3 days (storage + UI + tree navigation)
-
----
-
-## Cross-Feature Integration Points
-
-### Detail Pane Routing
-All features extend the existing discriminated union pattern:
-
-```typescript
-// Current
-type DetailSelection =
-  | { type: 'none' }
-  | { type: 'file'; depotPath: string; localPath: string }
-  | { type: 'changelist'; changelist: P4Changelist }
-  | { type: 'revision'; depotPath: string; localPath: string; revision: P4Revision }
-  | { type: 'search'; searchType: 'submitted' | 'depot'; query: string }
-
-// After v4.0
-type DetailSelection =
-  | ... (existing types)
-  | { type: 'annotation'; depotPath: string; revision: number }  // Feature 1
-  | { type: 'content'; depotPath: string; revision: number }      // Feature 3
+**Current Architecture:**
+```
+useFileTree.ts (line 105-129)
+  ↓ TanStack Query (single shot)
+  ↓ invokeP4Fstat([], depotPath)
+  ↓ src-tauri/src/commands/p4/p4handlers.rs:42-76 (blocking cmd.output())
+  ↓ Returns Vec<P4FileInfo> (entire dataset)
+  ↓ Frontend: mapP4FileInfo + setFiles + buildFileTree
 ```
 
-### Query Invalidation
-Features follow existing pattern — no changes needed:
-- File operations invalidate: `['fileTree']`, `['p4', 'opened']`, `['p4', 'changes']`
-- New queries add their own keys: `['p4', 'annotate', path]`, `['p4', 'print', path, rev]`
+**New Architecture:**
+```
+useFileTree.ts
+  ↓ TanStack Query (manages cache/staleness)
+  ↓ invokeP4FstatStream(depotPath, onProgress: Channel)
+  ↓ src-tauri/src/commands/p4/p4handlers.rs:p4_fstat_stream
+      ├─ Uses cmd.stdout(Stdio::piped())
+      ├─ BufReader + line-by-line parsing
+      ├─ Emits batches of 100 files via Channel
+      └─ Background thread (like p4_sync pattern)
+  ↓ Frontend: Accumulates batches in useState
+  ↓ On complete: setFiles once + buildFileTree once
+```
 
-### Back Navigation
-All detail pane views support Escape key navigation via `useDetailPaneStore.goBack()`:
-- Annotation view → FileDetailView
-- Content view → RevisionDetailView or FileDetailView
-- Feature 4 and 5 don't add new views (modify existing)
+**Integration Strategy:**
 
----
+1. **Keep existing `p4_fstat` command** for single-file queries (backwards compatibility)
+2. **Add new `p4_fstat_stream` command** modeled on `p4_sync` (lines 545-623 in p4handlers.rs)
+3. **TanStack Query manages the query lifecycle**, but queryFn uses streaming internally
+4. **Use `useState` to accumulate** batches during streaming, then `useEffect` to merge into store when complete
 
-## Architecture Patterns to Follow
+**Modified Files:**
 
-### Pattern 1: Command Wrapper (Rust)
+```typescript
+// src/components/FileTree/useFileTree.ts
+export function useFileTree() {
+  const [streamingFiles, setStreamingFiles] = useState<P4File[]>([]);
+  const [isStreaming, setIsStreaming] = useState(false);
+
+  // Query for workspace files (now uses streaming internally)
+  const { data: files = [], isLoading: filesLoading, refetch } = useQuery({
+    queryKey: ['fileTree', rootPath, depotPath],
+    queryFn: async () => {
+      setIsStreaming(true);
+      setStreamingFiles([]);
+
+      const accumulated: P4FileInfo[] = [];
+
+      await invokeP4FstatStream(
+        depotPath,
+        (batch: P4FileInfo[]) => {
+          // Accumulate in closure
+          accumulated.push(...batch);
+          // Show incremental progress in UI
+          setStreamingFiles(accumulated.map(mapP4FileInfo));
+        }
+      );
+
+      setIsStreaming(false);
+      const mapped = accumulated
+        .filter(f => f.head_action !== 'delete')
+        .map(mapP4FileInfo);
+      setFiles(mapped);
+      return mapped;
+    },
+    enabled: rootPath !== null,
+    staleTime: 30000,
+    refetchOnWindowFocus: true,
+  });
+
+  // Use streamingFiles during load, files when complete
+  const displayFiles = isStreaming ? streamingFiles : files;
+  const tree = useMemo(() => {
+    if (!rootPath || displayFiles.length === 0) return [];
+    return buildFileTree(displayFiles, rootPath);
+  }, [displayFiles, rootPath, isStreaming]);
+
+  return { tree, files: displayFiles, isLoading: filesLoading || isStreaming, refetch };
+}
+```
+
 ```rust
-// Location: src-tauri/src/commands/p4.rs
+// src-tauri/src/commands/p4/p4handlers.rs (add after p4_fstat)
 #[tauri::command]
-pub async fn p4_new_command(
-    param: String,
+pub async fn p4_fstat_stream(
+    depot_path: Option<String>,
     server: Option<String>,
     user: Option<String>,
     client: Option<String>,
-) -> Result<ResponseType, String> {
+    on_batch: Channel<Vec<P4FileInfo>>,
+    state: State<'_, ProcessManager>,
+) -> Result<String, String> {
     let mut cmd = Command::new("p4");
     apply_connection_args(&mut cmd, &server, &user, &client);
-    cmd.args(["-ztag", "command", param]);
+    cmd.args(["-ztag", "fstat"]);
+    cmd.arg(depot_path.unwrap_or_else(|| "//...".to_string()));
+    cmd.stdout(Stdio::piped());
 
-    let output = cmd.output().map_err(|e| e.to_string())?;
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut child = cmd.spawn()
+        .map_err(|e| format!("Failed to spawn p4 fstat: {}", e))?;
 
-    let records = parse_ztag_records(&stdout);
-    // Parse into typed struct
+    let stdout = child.stdout.take();
+    let process_id = state.register(child).await;
+    let process_id_clone = process_id.clone();
 
-    Ok(result)
+    // Stream in background thread (pattern from p4_sync lines 588-595)
+    if let Some(stdout) = stdout {
+        std::thread::spawn(move || {
+            let reader = BufReader::new(stdout);
+            let mut batch = Vec::new();
+            let mut current_record = String::new();
+
+            for line in reader.lines().map_while(Result::ok) {
+                if line.is_empty() && !current_record.is_empty() {
+                    // End of record, parse and batch
+                    if let Ok(file_info) = parse_ztag_fstat_record(&current_record) {
+                        batch.push(file_info);
+                        if batch.len() >= 100 {
+                            let _ = on_batch.send(std::mem::take(&mut batch));
+                        }
+                    }
+                    current_record.clear();
+                } else {
+                    current_record.push_str(&line);
+                    current_record.push('\n');
+                }
+            }
+
+            // Send remaining
+            if !batch.is_empty() {
+                let _ = on_batch.send(batch);
+            }
+        });
+    }
+
+    Ok(process_id_clone)
 }
 ```
 
-### Pattern 2: Tauri Invocation (TypeScript)
-```typescript
-// Location: src/lib/tauri.ts
-export interface P4NewType {
-  field: string;
-}
+**Data Flow Change:**
 
-export async function invokeP4NewCommand(param: string): Promise<P4NewType[]> {
-  return invoke<P4NewType[]>('p4_new_command', { param, ...getConnectionArgs() });
+**BEFORE:**
+```
+Query starts → 10s blocking call → Full dataset arrives → Build tree → Render
+User sees: Loading spinner for 10s, then instant tree
+```
+
+**AFTER:**
+```
+Query starts → Stream begins → Batch 1 (100 files) → Incremental tree → Render
+              → Batch 2 → Update tree → Render
+              → Batch N → Final tree → Complete
+User sees: Tree builds progressively, files appear as they load
+```
+
+**Build Order:**
+1. Add `p4_fstat_stream` Rust command (model on p4_sync)
+2. Add `parse_ztag_fstat_record` helper in parsing.rs
+3. Update `lib/tauri.ts` to expose `invokeP4FstatStream`
+4. Modify `useFileTree.ts` to use streaming
+5. Test with 10K file depot, verify memory stays flat
+
+**Estimated Effort:** 2 days
+
+---
+
+### 2. tokio::process::Command Migration Pattern
+
+**Question:** What's the right pattern for tokio::process::Command migration (global replace, or per-command)?
+
+**Answer:** **HYBRID** - Global replace for read-only queries, selective async for long-running operations.
+
+**Current Architecture:**
+
+All 30+ Tauri commands use `std::process::Command`:
+```rust
+// Pattern used everywhere (except p4_sync which uses spawn + threads)
+#[tauri::command]
+pub async fn p4_info(...) -> Result<P4ClientInfo, String> {
+    let mut cmd = Command::new("p4");  // std::process::Command
+    cmd.args(["-ztag", "info"]);
+    let output = cmd.output()          // BLOCKS tokio thread
+        .map_err(|e| format!("Failed: {}", e))?;
+    parse_ztag_info(&String::from_utf8_lossy(&output.stdout))
 }
 ```
 
-### Pattern 3: TanStack Query Hook (TypeScript)
-```typescript
-// Location: src/hooks/useNewFeature.ts
-export function useNewFeature(param: string) {
-  const { p4port, p4user, p4client } = useConnectionStore();
+**Problem:** Tauri's async runtime (tokio) has a limited thread pool (4-8 threads). Blocking calls exhaust threads, queuing other commands.
 
-  return useQuery<P4NewType[]>({
-    queryKey: ['p4', 'newfeature', param],
-    queryFn: async () => {
-      const { addOutputLine } = useOperationStore.getState();
-      const verbose = await getVerboseLogging();
-      if (verbose) addOutputLine(`p4 command ${param}`, false);
-      const result = await invokeP4NewCommand(param);
-      if (verbose) addOutputLine(`... returned ${result.length} items`, false);
-      return result;
-    },
-    enabled: !!p4port && !!p4user && !!p4client,
+**New Architecture - Three Patterns:**
+
+**Pattern A: Short Commands (< 1 second) - Use spawn_blocking**
+```rust
+use tokio::task::spawn_blocking;
+
+#[tauri::command]
+pub async fn p4_info(...) -> Result<P4ClientInfo, String> {
+    let server_clone = server.clone();
+    // ... clone all args
+
+    spawn_blocking(move || {
+        let mut cmd = std::process::Command::new("p4");
+        apply_connection_args(&mut cmd, &server_clone, &user_clone, &client_clone);
+        cmd.args(["-ztag", "info"]);
+        let output = cmd.output()
+            .map_err(|e| format!("Failed: {}", e))?;
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        parse_ztag_info(&stdout)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
+}
+```
+
+**Applies to:** p4_info, p4_describe, p4_changes, p4_opened (fast queries)
+
+**Pattern B: Streaming Commands - Use tokio::process + spawn threads**
+```rust
+use tokio::process::Command as TokioCommand;
+
+#[tauri::command]
+pub async fn p4_fstat_stream(..., on_batch: Channel) -> Result<String, String> {
+    let mut cmd = TokioCommand::new("p4");  // tokio::process::Command
+    apply_connection_args_tokio(&mut cmd, &server, &user, &client);
+    cmd.args(["-ztag", "fstat", "//..."]);
+    cmd.stdout(Stdio::piped());
+    cmd.stderr(Stdio::piped());
+
+    let mut child = cmd.spawn()
+        .map_err(|e| format!("Failed to spawn: {}", e))?;
+
+    let stdout = child.stdout.take();
+    let process_id = state.register_tokio(child).await;  // Need ProcessManager update
+
+    // Spawn background task (not thread) to read stdout
+    if let Some(stdout) = stdout {
+        tokio::task::spawn(async move {
+            let mut reader = BufReader::new(stdout);
+            let mut batch = Vec::new();
+            let mut line = String::new();
+
+            while reader.read_line(&mut line).await.is_ok() && !line.is_empty() {
+                // ... parse and batch
+                line.clear();
+            }
+        });
+    }
+
+    Ok(process_id)
+}
+```
+
+**Applies to:** p4_fstat_stream (new), p4_sync (refactor existing)
+
+**Pattern C: Long-Running Blocking Commands - Use spawn_blocking + streaming**
+```rust
+#[tauri::command]
+pub async fn p4_reconcile_preview(..., on_progress: Channel) -> Result<String, String> {
+    let depot_path_clone = depot_path.clone();
+    // ... clone all args
+
+    spawn_blocking(move || {
+        let mut cmd = std::process::Command::new("p4");
+        cmd.args(["reconcile", "-n", &depot_path_clone]);
+        cmd.stdout(Stdio::piped());
+
+        let mut child = cmd.spawn()?;
+        let stdout = child.stdout.take();
+
+        // Read and stream in this blocking context
+        if let Some(stdout) = stdout {
+            let reader = BufReader::new(stdout);
+            for line in reader.lines().map_while(Result::ok) {
+                let _ = on_progress.send(line);
+            }
+        }
+
+        Ok("complete".to_string())
+    })
+    .await
+    .map_err(|e| format!("Task error: {}", e))?
+}
+```
+
+**Applies to:** p4_reconcile_preview, p4_annotate (long-running but not worth full async refactor)
+
+**Migration Strategy:**
+
+1. **Phase 1 (High Impact):** Convert streaming commands (p4_fstat, p4_sync) to tokio::process
+2. **Phase 2 (Medium Impact):** Wrap long queries (p4_changes, p4_opened) in spawn_blocking
+3. **Phase 3 (Low Impact):** Wrap fast queries (p4_info, p4_describe) in spawn_blocking
+4. **Don't migrate:** Single-shot mutation commands (p4_edit, p4_revert) - already fast
+
+**Modified Files:**
+
+```rust
+// src-tauri/src/commands/p4/p4handlers.rs
+// Add at top:
+use std::process::Command as StdCommand;
+use tokio::process::Command as TokioCommand;
+use tokio::task::spawn_blocking;
+
+// Update apply_connection_args to be generic over command type
+fn apply_connection_args<C: CommandExt>(cmd: &mut C, server: &Option<String>, ...) {
+    // Works with both std and tokio Command
+}
+
+trait CommandExt {
+    fn arg(&mut self, arg: &str) -> &mut Self;
+    fn args(&mut self, args: &[&str]) -> &mut Self;
+    // ... etc
+}
+
+impl CommandExt for StdCommand { /* ... */ }
+impl CommandExt for TokioCommand { /* ... */ }
+```
+
+```rust
+// src-tauri/src/state/process_manager.rs
+// Add support for tokio Child processes
+use tokio::process::Child as TokioChild;
+
+pub struct ProcessManager {
+    processes: Arc<Mutex<HashMap<String, ProcessHandle>>>,
+}
+
+enum ProcessHandle {
+    Std(std::process::Child),
+    Tokio(TokioChild),
+}
+
+impl ProcessManager {
+    pub async fn register_std(&self, child: std::process::Child) -> String { /* ... */ }
+    pub async fn register_tokio(&self, child: TokioChild) -> String { /* ... */ }
+
+    pub async fn kill(&self, id: &str) -> Result<bool, String> {
+        let mut processes = self.processes.lock().await;
+        if let Some(handle) = processes.remove(id) {
+            match handle {
+                ProcessHandle::Std(mut child) => {
+                    // Existing logic (lines 34-43)
+                }
+                ProcessHandle::Tokio(mut child) => {
+                    #[cfg(target_os = "windows")]
+                    {
+                        let pid = child.id().expect("child has pid");
+                        tokio::process::Command::new("taskkill")
+                            .args(["/F", "/T", "/PID", &pid.to_string()])
+                            .output().await.ok();
+                    }
+                    child.kill().await.map_err(|e| e.to_string())?;
+                }
+            }
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+}
+```
+
+**Build Order:**
+1. Update ProcessManager to support both std and tokio Child types
+2. Create `CommandExt` trait for generic connection args
+3. Migrate p4_fstat_stream to tokio (already planned in Fix #1)
+4. Refactor p4_sync to use tokio::process instead of spawn + threads
+5. Wrap p4_changes and p4_opened in spawn_blocking
+6. Progressively wrap remaining commands
+
+**Estimated Effort:** 2 days (ProcessManager + trait) + 0.5 days per command category
+
+---
+
+### 3. Rust FileIndex State Integration with Tauri State
+
+**Question:** How should a Rust FileIndex state integrate with Tauri's state management?
+
+**Answer:** **ADD AS MANAGED STATE** alongside ProcessManager using Tauri's `.manage()`.
+
+**Current Architecture:**
+
+```rust
+// src-tauri/src/lib.rs:8-14
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(...)
+        .manage(ProcessManager::new())  // Only state is ProcessManager
+        .invoke_handler(...)
+        .setup(...)
+        .run(...)
+}
+```
+
+**State Access Pattern:**
+```rust
+// Commands access state via State<'_, T>
+#[tauri::command]
+pub async fn p4_sync(
+    ...,
+    state: State<'_, ProcessManager>,  // Tauri injects managed state
+) -> Result<String, String> {
+    let process_id = state.register(child).await;
+    // ...
+}
+```
+
+**New Architecture:**
+
+**Create FileIndex as managed state:**
+
+```rust
+// src-tauri/src/state/file_index.rs (NEW FILE)
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use fuzzy_matcher::{FuzzyMatcher, skim::SkimMatcherV2};
+
+/// In-memory index of workspace file paths for instant search.
+/// Thread-safe via RwLock, allowing concurrent reads.
+#[derive(Clone)]
+pub struct FileIndex {
+    paths: Arc<RwLock<Vec<FileEntry>>>,
+    matcher: Arc<SkimMatcherV2>,
+}
+
+#[derive(Clone, Debug)]
+struct FileEntry {
+    depot_path: String,
+    depot_path_lower: String,  // Pre-lowercased for matching
+    file_name: String,          // Last segment for quick match
+}
+
+impl FileIndex {
+    pub fn new() -> Self {
+        Self {
+            paths: Arc::new(RwLock::new(Vec::new())),
+            matcher: Arc::new(SkimMatcherV2::default()),
+        }
+    }
+
+    /// Rebuild entire index from depot paths
+    /// Called after initial fstat completes
+    pub async fn rebuild(&self, depot_paths: Vec<String>) {
+        let entries: Vec<FileEntry> = depot_paths
+            .into_iter()
+            .map(|path| {
+                let file_name = path.rsplit('/').next()
+                    .unwrap_or(&path)
+                    .to_string();
+                FileEntry {
+                    depot_path_lower: path.to_lowercase(),
+                    depot_path: path,
+                    file_name,
+                }
+            })
+            .collect();
+
+        let mut paths = self.paths.write().await;
+        *paths = entries;
+    }
+
+    /// Incrementally add files (called during streaming fstat)
+    pub async fn add_batch(&self, depot_paths: Vec<String>) {
+        let mut paths = self.paths.write().await;
+        for path in depot_paths {
+            let file_name = path.rsplit('/').next().unwrap_or(&path).to_string();
+            paths.push(FileEntry {
+                depot_path_lower: path.to_lowercase(),
+                depot_path: path,
+                file_name,
+            });
+        }
+    }
+
+    /// Fuzzy search with scoring
+    pub async fn search(&self, query: &str, max_results: usize) -> Vec<SearchResult> {
+        let paths = self.paths.read().await;
+        let query_lower = query.to_lowercase();
+
+        let mut results: Vec<_> = paths
+            .iter()
+            .filter_map(|entry| {
+                // Match against file name (most relevant)
+                let score = self.matcher.fuzzy_match(&entry.file_name, query)?;
+                Some(SearchResult {
+                    depot_path: entry.depot_path.clone(),
+                    score,
+                })
+            })
+            .collect();
+
+        results.sort_by(|a, b| b.score.cmp(&a.score));
+        results.truncate(max_results);
+        results
+    }
+
+    /// Clear the index (on disconnect)
+    pub async fn clear(&self) {
+        let mut paths = self.paths.write().await;
+        paths.clear();
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Debug)]
+pub struct SearchResult {
+    pub depot_path: String,
+    pub score: i64,
+}
+
+impl Default for FileIndex {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+```
+
+```rust
+// src-tauri/src/state/mod.rs
+mod process_manager;
+mod file_index;  // NEW
+
+pub use process_manager::ProcessManager;
+pub use file_index::{FileIndex, SearchResult};  // NEW
+```
+
+```rust
+// src-tauri/src/lib.rs
+use state::{ProcessManager, FileIndex};  // Add FileIndex
+
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(...)
+        .manage(ProcessManager::new())
+        .manage(FileIndex::new())  // NEW: Add as managed state
+        .invoke_handler(tauri::generate_handler![
+            // ... existing commands
+            commands::search_workspace_files,  // NEW
+            commands::rebuild_file_index,      // NEW
+        ])
+        .setup(|app| {
+            // ... existing setup
+            Ok(())
+        })
+        .run(...)
+}
+```
+
+**New Tauri Commands:**
+
+```rust
+// src-tauri/src/commands/p4/p4handlers.rs (add at end)
+
+/// Rebuild the file index from a list of depot paths
+/// Called by frontend after fstat completes
+#[tauri::command]
+pub async fn rebuild_file_index(
+    depot_paths: Vec<String>,
+    state: State<'_, FileIndex>,
+) -> Result<usize, String> {
+    let count = depot_paths.len();
+    state.rebuild(depot_paths).await;
+    Ok(count)
+}
+
+/// Search workspace files using in-memory fuzzy index
+#[tauri::command]
+pub async fn search_workspace_files(
+    query: String,
+    max_results: Option<usize>,
+    state: State<'_, FileIndex>,
+) -> Result<Vec<SearchResult>, String> {
+    if query.len() < 2 {
+        return Ok(Vec::new());
+    }
+
+    let max = max_results.unwrap_or(50);
+    Ok(state.search(&query, max).await)
+}
+```
+
+**Frontend Integration:**
+
+```typescript
+// src/lib/tauri.ts (add exports)
+export async function rebuildFileIndex(depotPaths: string[]): Promise<number> {
+  return invoke('rebuild_file_index', { depotPaths });
+}
+
+export interface SearchResult {
+  depot_path: string;
+  score: number;
+}
+
+export async function searchWorkspaceFiles(
+  query: string,
+  maxResults?: number
+): Promise<SearchResult[]> {
+  return invoke('search_workspace_files', { query, maxResults });
+}
+```
+
+```typescript
+// src/components/FileTree/useFileTree.ts
+// After setFiles, rebuild index
+useEffect(() => {
+  if (files.length > 0) {
+    const depotPaths = files.map(f => f.depotPath);
+    rebuildFileIndex(depotPaths).catch(console.error);
+  }
+}, [files]);
+```
+
+```typescript
+// src/hooks/useWorkspaceSearch.ts (NEW FILE)
+import { useQuery } from '@tanstack/react-query';
+import { searchWorkspaceFiles } from '@/lib/tauri';
+
+export function useWorkspaceSearch(query: string, enabled: boolean = true) {
+  return useQuery({
+    queryKey: ['workspace-search', query],
+    queryFn: () => searchWorkspaceFiles(query, 50),
+    enabled: enabled && query.length >= 2,
+    staleTime: 5000,
+    keepPreviousData: true,
   });
 }
 ```
 
-### Pattern 4: Detail Pane View (React)
+**Lifecycle Integration:**
+
+```
+App Start → FileIndex::new() → Empty index
+  ↓
+Connection → p4_fstat_stream → Files load
+  ↓
+Batch 1-N arrive → Frontend accumulates
+  ↓
+Stream complete → rebuildFileIndex(allDepotPaths) → Index ready
+  ↓
+User searches → search_workspace_files → Returns results in <5ms
+  ↓
+Disconnect → clear() → Index cleared
+```
+
+**Build Order:**
+1. Create `src-tauri/src/state/file_index.rs`
+2. Add `fuzzy-matcher` crate to Cargo.toml
+3. Export FileIndex in `state/mod.rs`
+4. Add `.manage(FileIndex::new())` in lib.rs
+5. Add `rebuild_file_index` and `search_workspace_files` commands
+6. Create `useWorkspaceSearch` hook
+7. Integrate index rebuild into `useFileTree`
+
+**Estimated Effort:** 2 days
+
+**Dependencies:** None (can be built independently)
+
+---
+
+### 4. Unified Search UI with Detail Pane & Command Palette
+
+**Question:** How should the unified search UI interact with the existing detail pane and command palette?
+
+**Answer:** **EXTEND EXISTING PATTERNS** - Add 'search' type to DetailSelection, integrate with command palette's existing search commands.
+
+**Current Architecture:**
+
+**Detail Pane (Discriminated Union):**
 ```typescript
-// Location: src/components/DetailPane/NewView.tsx
-export function NewView({ param }: NewViewProps) {
-  const { data, isLoading, error } = useNewFeature(param);
+// src/stores/detailPaneStore.ts:8-13
+export type DetailSelection =
+  | { type: 'none' }
+  | { type: 'file'; depotPath: string; localPath: string; fromCl?: number }
+  | { type: 'changelist'; changelist: P4Changelist }
+  | { type: 'revision'; depotPath: string; localPath: string; revision: P4Revision }
+  | { type: 'search'; searchType: 'submitted' | 'depot'; query: string };  // Already exists!
+```
 
-  if (isLoading) return <Loader2 className="animate-spin" />;
-  if (error) return <ErrorDisplay error={error} />;
+**Search Bar (Toolbar Filter):**
+```typescript
+// src/components/SearchBar.tsx:16-82
+// Drives searchFilterStore (in-place filtering of FileTree + ChangelistPanel)
+// Shows match count badge
+```
 
-  return (
-    <div className="flex flex-col h-full">
-      <div className="border-b p-4">
-        {/* Header with breadcrumb */}
-      </div>
-      <div className="flex-1 overflow-auto p-4">
-        {/* Content */}
-      </div>
-    </div>
-  );
+**Search Results View:**
+```typescript
+// src/components/DetailPane/SearchResultsView.tsx
+// Renders when detailPaneStore.selection.type === 'search'
+// Currently has 'submitted' and 'depot' modes
+```
+
+**New Architecture - Unified Search:**
+
+**Extend DetailSelection:**
+```typescript
+// src/stores/detailPaneStore.ts
+export type DetailSelection =
+  | { type: 'none' }
+  | { type: 'file'; depotPath: string; localPath: string; fromCl?: number }
+  | { type: 'changelist'; changelist: P4Changelist }
+  | { type: 'revision'; depotPath: string; localPath: string; revision: P4Revision }
+  | { type: 'search'; searchMode: SearchMode; query: string; results?: UnifiedSearchResults };
+
+export type SearchMode =
+  | 'workspace'      // In-memory Rust index (NEW)
+  | 'depot'          // p4 files with wildcards (existing)
+  | 'submitted'      // p4 changes submitted (existing)
+  | 'unified';       // All three combined (NEW)
+
+export interface UnifiedSearchResults {
+  workspace: SearchResult[];  // From FileIndex
+  depot: P4FileResult[];      // From p4 files
+  changelists: P4Changelist[]; // From p4 changes
+  isLoading: {
+    workspace: boolean;
+    depot: boolean;
+    changelists: boolean;
+  };
 }
 ```
 
+**Two Search Modes:**
+
+**Mode 1: Quick Filter (Existing, Enhanced)**
+- Triggered by SearchBar in toolbar
+- Filters FileTree and ChangelistPanel in-place
+- Uses searchFilterStore (existing)
+- Enhancement: Use FileIndex for fuzzy matching instead of microfuzz in component
+
+**Mode 2: Deep Search (New)**
+- Triggered by Cmd+Shift+F or command palette "Search Depot..."
+- Opens unified search results in detail pane
+- Searches workspace (FileIndex), depot (p4 files), and CLs (p4 changes)
+- Uses detailPaneStore with 'search' type
+
+**Modified Integration Points:**
+
+| Component | Current | Change | File Path |
+|-----------|---------|--------|-----------|
+| detailPaneStore.ts | `searchType: 'submitted' \| 'depot'` | Add `searchMode: SearchMode` with 'workspace' and 'unified' | `src/stores/detailPaneStore.ts:13` |
+| SearchBar.tsx | Single mode (filter) | Add toggle between filter and search | `src/components/SearchBar.tsx` |
+| DetailPane.tsx | Routes to SearchResultsView | Add route to UnifiedSearchView for 'unified' mode | `src/components/DetailPane/DetailPane.tsx` |
+| FileTree.tsx | microfuzz in component | Query FileIndex via useWorkspaceSearch | `src/components/FileTree/FileTree.tsx:119` |
+
+**Build Order:**
+1. Extend DetailSelection to support 'unified' search mode
+2. Create UnifiedSearchView component
+3. Create useDepotSearch and useChangelistSearch hooks
+4. Add mode toggle to SearchBar
+5. Wire up command palette commands
+6. Update DetailPane routing
+
+**Estimated Effort:** 2 days
+
+**Dependencies:** Requires FileIndex (Fix #3) for workspace search
+
 ---
 
-## Potential Architecture Improvements
+### 5. Debounce/Throttle Location
 
-### Improvement 1: Unified File Viewer Component
-Current state: FileDetailView, RevisionDetailView, and new FileContentView have overlapping concerns.
+**Question:** Where should debounce/throttle live (Zustand store, hook, component)?
 
-**Suggestion:** Create `UnifiedFileViewer` that accepts `{ depotPath, revision, view: 'detail' | 'content' | 'annotation' }` and renders appropriate sub-view. Reduces duplication and simplifies navigation.
+**Answer:** **HOOK LEVEL** - Create reusable hooks, keep stores pure, avoid component-level complexity.
 
-**Impact:** Moderate refactor, but cleaner long-term architecture.
+**Current Architecture:**
 
-### Improvement 2: P4 Command Result Caching
-Current state: Each command invocation spawns p4.exe, even for immutable data (submitted CLs, file history).
+**No debounce utilities exist in codebase.** Current pattern:
+```typescript
+// src/components/FileTree/FileTree.tsx:46
+const deferredFilterTerm = useDeferredValue(filterTerm);
+```
 
-**Suggestion:** Add Rust-side in-memory cache with TTL for immutable results. TanStack Query already caches frontend, but Rust cache avoids process spawns entirely.
+**Problem with useDeferredValue alone:**
+- Still runs on every value change (just deprioritized)
+- No actual delay to skip intermediate values
+- Doesn't prevent expensive operations during rapid typing
 
-**Impact:** Performance win for submitted CL browsing (Feature 5) and annotations (Feature 1).
+**New Architecture - Utility Hooks:**
 
-### Improvement 3: Batch P4 Commands
-Current state: Each file in submit preview requires separate p4 print invocation.
+```typescript
+// src/hooks/useDebounce.ts (NEW FILE)
+import { useEffect, useState } from 'react';
 
-**Suggestion:** Add `p4_print_batch(files: Vec<(String, i32)>)` that spawns single p4 process with multiple file specs. Perforce supports `p4 print file1#5 file2#3 ...` syntax.
+/**
+ * Debounce a value with configurable delay.
+ * Returns the debounced value that updates after delay of inactivity.
+ *
+ * @param value - Value to debounce
+ * @param delay - Delay in milliseconds (default: 300)
+ * @returns Debounced value
+ */
+export function useDebounce<T>(value: T, delay: number = 300): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
 
-**Impact:** 10x faster submit preview for large changelists (Feature 4).
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+```
+
+**Usage Pattern:**
+
+```typescript
+// src/components/FileTree/FileTree.tsx
+export function FileTree() {
+  const filterTerm = useSearchFilterStore(s => s.filterTerm);
+
+  // BEFORE: const deferredFilterTerm = useDeferredValue(filterTerm);
+  // AFTER:
+  const debouncedFilterTerm = useDebounce(filterTerm, 150);  // 150ms quiet time
+
+  // Build fuzzy index once
+  const fuzzyIndex = useMemo(() => {
+    const flatFiles = files.map(f => ({
+      depotPath: f.depotPath,
+      name: f.depotPath.split('/').pop() || '',
+    }));
+    return createFuzzySearch(flatFiles, { getText: (item) => [item.name] });
+  }, [files]);  // Only rebuild when files change, NOT on every filter change
+
+  // Apply filter using debounced term
+  const matchSet = useMemo(() => {
+    if (!debouncedFilterTerm) return null;
+    const results = fuzzyIndex(debouncedFilterTerm);
+    return new Map(results.map(r => [r.item.depotPath, r.matches[0]]));
+  }, [fuzzyIndex, debouncedFilterTerm]);  // Only runs 150ms after user stops typing
+
+  // ... rest of component
+}
+```
+
+**Why NOT in Zustand stores:**
+
+```typescript
+// ❌ BAD: Debounce in store (violates single responsibility)
+export const useSearchFilterStore = create((set) => ({
+  filterTerm: '',
+  debouncedFilterTerm: '',
+  setFilterTerm: (term) => {
+    set({ filterTerm: term });
+    // Need to use setTimeout, but how to clean up?
+    // Stores don't have lifecycle hooks
+    setTimeout(() => {
+      set({ debouncedFilterTerm: term });
+    }, 300);
+  },
+}));
+
+// ✅ GOOD: Store holds raw value, component debounces
+export const useSearchFilterStore = create((set) => ({
+  filterTerm: '',
+  setFilterTerm: (term) => set({ filterTerm: term }),
+}));
+
+// Component:
+const filterTerm = useSearchFilterStore(s => s.filterTerm);
+const debouncedFilterTerm = useDebounce(filterTerm, 150);
+```
+
+**Integration Points:**
+
+| Component | Current Issue | Apply Pattern | Delay |
+|-----------|--------------|---------------|-------|
+| FileTree.tsx | Filter on every keystroke | useDebounce(filterTerm) | 150ms |
+| ChangelistPanel.tsx | Filter on every keystroke | useDebounce(filterTerm) | 150ms |
+| SearchResultsView.tsx | Query on every keystroke | useDebounce(query) | 300ms |
+
+**Build Order:**
+1. Create `src/hooks/useDebounce.ts`
+2. Update FileTree.tsx to use useDebounce
+3. Update ChangelistPanel.tsx to use useDebounce
+4. Update SearchResultsView.tsx to use useDebounce
+
+**Estimated Effort:** 0.5 days
+
+**Dependencies:** None (can be built immediately)
 
 ---
 
-## Risk Assessment
+### 6. Incremental Tree Updates with react-arborist
 
-### Low Risk
-- **Feature 2 (Sync Status):** Pure UI change, no new commands
-- **Feature 6 (Bookmarks):** Pure frontend state, no P4 interaction
+**Question:** How should incremental tree updates work with react-arborist's data model?
 
-### Medium Risk
-- **Feature 3 (Content Viewer):** Large files may cause memory issues (mitigate with size warning)
-- **Feature 5 (CL File List):** Submitted CLs with 1000+ files may slow UI (mitigate with virtualization)
+**Answer:** **STRUCTURAL SHARING** - Compare new data with old, reuse unchanged subtrees, only rebuild affected paths.
 
-### Medium-High Risk
-- **Feature 1 (Annotations):** Perforce annotate can be slow for large/old files (mitigate with loading state + timeout)
-- **Feature 4 (Submit Preview):** Fetching content for 50+ files could overwhelm backend (mitigate with batching, Improvement 3)
+**Current Architecture:**
+
+```typescript
+// src/components/FileTree/useFileTree.ts:135-140
+const tree = useMemo(() => {
+  if (!rootPath || files.length === 0) {
+    return [];
+  }
+  return buildFileTree(files, rootPath);
+}, [files, rootPath]);
+```
+
+**Problem:** `files` is a new array reference every time the query returns, even if data is identical. `buildFileTree` rebuilds the entire tree from scratch (O(n) where n = file count).
+
+**New Architecture - TanStack Query Structural Sharing:**
+
+```typescript
+// Enable structural sharing in query config
+const { data: files = [] } = useQuery({
+  queryKey: ['fileTree', rootPath, depotPath],
+  queryFn: async () => { /* ... */ },
+  // This compares new data with old, only updates if different
+  structuralSharing: true,  // Default is true, but making explicit
+});
+```
+
+**Incremental Builder Approach:**
+
+```typescript
+// src/utils/treeBuilder.ts - Add cache-aware builder
+let treeCache: {
+  rootPath: string;
+  files: Map<string, P4File>;  // depot path -> file
+  tree: FileTreeNode[];
+} | null = null;
+
+export function buildFileTreeIncremental(
+  files: P4File[],
+  rootPath: string
+): FileTreeNode[] {
+  // Create file map for comparison
+  const newFilesMap = new Map<string, P4File>();
+  files.forEach(f => newFilesMap.set(f.depotPath, f));
+
+  // If cache exists and rootPath matches, try incremental update
+  if (treeCache && treeCache.rootPath === rootPath) {
+    const changes = detectChanges(treeCache.files, newFilesMap);
+
+    // If no changes, return cached tree (same references)
+    if (changes.added.length === 0 &&
+        changes.removed.length === 0 &&
+        changes.modified.length === 0) {
+      return treeCache.tree;
+    }
+
+    // If changes are small (<10% of tree), do incremental update
+    const totalChanges = changes.added.length + changes.removed.length + changes.modified.length;
+    if (totalChanges < files.length * 0.1) {
+      const updatedTree = applyChangesIncrementally(
+        treeCache.tree,
+        changes,
+        newFilesMap,
+        rootPath
+      );
+      treeCache = { rootPath, files: newFilesMap, tree: updatedTree };
+      return updatedTree;
+    }
+  }
+
+  // Full rebuild for new root or major changes
+  const tree = buildFileTree(files, rootPath);
+  treeCache = { rootPath, files: newFilesMap, tree };
+  return tree;
+}
+
+function detectChanges(
+  oldFiles: Map<string, P4File>,
+  newFiles: Map<string, P4File>
+): { added: string[]; removed: string[]; modified: string[] } {
+  const added: string[] = [];
+  const removed: string[] = [];
+  const modified: string[] = [];
+
+  // Find added and modified
+  newFiles.forEach((newFile, depotPath) => {
+    const oldFile = oldFiles.get(depotPath);
+    if (!oldFile) {
+      added.push(depotPath);
+    } else if (
+      oldFile.status !== newFile.status ||
+      oldFile.revision !== newFile.revision ||
+      oldFile.headRevision !== newFile.headRevision
+    ) {
+      modified.push(depotPath);
+    }
+  });
+
+  // Find removed
+  oldFiles.forEach((_, depotPath) => {
+    if (!newFiles.has(depotPath)) {
+      removed.push(depotPath);
+    }
+  });
+
+  return { added, removed, modified };
+}
+```
+
+**Frontend Integration:**
+
+```typescript
+// src/components/FileTree/useFileTree.ts
+const tree = useMemo(() => {
+  if (!rootPath || files.length === 0) {
+    return [];
+  }
+  return buildFileTreeIncremental(files, rootPath);
+}, [files, rootPath]);
+```
+
+**Performance Impact:**
+
+**BEFORE (10,000 files):**
+- Query returns new array → useMemo triggers
+- buildFileTree runs: sort (50ms) + build (100ms) + aggregate (20ms) = 170ms
+- react-arborist receives entirely new tree → re-renders all 10,000 nodes
+
+**AFTER (10,000 files, 10 files changed):**
+- Query returns → structuralSharing compares data
+- If data identical: Same array reference → useMemo skipped → 0ms
+- If 10 files changed: buildFileTreeIncremental runs:
+  - detectChanges: O(n) map comparison = 10ms
+  - Apply 10 changes incrementally = 5ms
+  - Total: ~15ms (11× faster)
+- react-arborist: Only changed nodes re-render (instead of 10,000)
+
+**Build Order:**
+1. Enable structuralSharing in TanStack Query
+2. Implement detectChanges in treeBuilder.ts
+3. Implement incremental update logic
+4. Add cache management
+5. Test with large depot + single file checkout/revert
+
+**Estimated Effort:** 2-3 days
+
+**Dependencies:** None (improvement to existing flow)
+
+---
+
+### 7. Batching Pattern for Shelved File Queries
+
+**Question:** What's the right batching pattern for shelved file queries?
+
+**Answer:** **BATCH REQUEST** - Single backend command takes array of CL IDs, executes sequentially, returns map.
+
+**Current Architecture:**
+
+```typescript
+// src/components/ChangelistPanel/useChangelists.ts:146-177
+const numberedClIds = useMemo(() => {
+  return Array.from(changelists.values())
+    .filter(cl => cl.id > 0)
+    .map(cl => cl.id);
+}, [changelists]);
+
+// N+1 query problem: One query per changelist
+const shelvedQueries = useQueries({
+  queries: numberedClIds.map(clId => ({
+    queryKey: ['p4', 'shelved', clId],
+    queryFn: async () => {
+      // Each spawns separate p4 describe -S <clId> command
+      const result = await invokeP4DescribeShelved(clId);
+      return result;
+    },
+    enabled: isConnected,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+    refetchInterval: refetchIntervalValue,
+  })),
+});
+```
+
+**Problem:**
+- 20 pending CLs = 20 concurrent p4.exe processes
+- Each process registers in ProcessManager (mutex contention)
+- P4 server receives 20 concurrent describe commands
+- Every 30 seconds, this repeats (if auto-refresh enabled)
+
+**New Architecture - Batched Backend:**
+
+```rust
+// src-tauri/src/commands/p4/p4handlers.rs (add new command)
+
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+#[derive(Serialize, Deserialize)]
+pub struct ShelvedFilesMap {
+    /// Map of changelist ID to shelved files
+    pub shelved_files: HashMap<i32, Vec<P4ShelvedFile>>,
+}
+
+/// Get shelved files for multiple changelists in a single batch.
+/// Executes p4 describe -S <clId> sequentially for each CL.
+/// Returns a map of CL ID -> shelved files.
+#[tauri::command]
+pub async fn p4_describe_shelved_batch(
+    changelist_ids: Vec<i32>,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<ShelvedFilesMap, String> {
+    let mut shelved_files = HashMap::new();
+
+    // Execute describe commands sequentially (avoids server overload)
+    for cl_id in changelist_ids {
+        // Use existing p4_describe_shelved logic but inline
+        let mut cmd = Command::new("p4");
+        apply_connection_args(&mut cmd, &server, &user, &client);
+        cmd.args(["-ztag", "describe", "-S", &cl_id.to_string()]);
+
+        match cmd.output() {
+            Ok(output) if output.status.success() => {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                match parse_ztag_describe_shelved(&stdout) {
+                    Ok(files) if !files.is_empty() => {
+                        shelved_files.insert(cl_id, files);
+                    }
+                    _ => {
+                        // CL has no shelved files, skip
+                    }
+                }
+            }
+            _ => {
+                // CL describe failed, skip (don't fail entire batch)
+            }
+        }
+    }
+
+    Ok(ShelvedFilesMap { shelved_files })
+}
+```
+
+**Frontend Integration:**
+
+```typescript
+// src/lib/tauri.ts (add export)
+export interface ShelvedFilesMap {
+  shelved_files: Record<number, P4ShelvedFile[]>;
+}
+
+export async function invokeP4DescribeShelvedBatch(
+  changelistIds: number[]
+): Promise<ShelvedFilesMap> {
+  return invoke('p4_describe_shelved_batch', { changelistIds });
+}
+```
+
+```typescript
+// src/components/ChangelistPanel/useChangelists.ts
+export function useChangelists() {
+  // ... existing code
+
+  const numberedClIds = useMemo(() => {
+    return Array.from(changelists.values())
+      .filter(cl => cl.id > 0)
+      .map(cl => cl.id);
+  }, [changelists]);
+
+  // BEFORE: Multiple queries (N+1)
+  // const shelvedQueries = useQueries({ queries: numberedClIds.map(...) });
+
+  // AFTER: Single batched query
+  const { data: shelvedBatch } = useQuery({
+    queryKey: ['p4', 'shelved-batch', numberedClIds],
+    queryFn: async () => {
+      const { addOutputLine } = useOperationStore.getState();
+      const verbose = await getVerboseLogging();
+      if (verbose) addOutputLine(`p4 describe -S batch (${numberedClIds.length} CLs)`, false);
+
+      const result = await invokeP4DescribeShelvedBatch(numberedClIds);
+
+      if (verbose) {
+        const totalFiles = Object.values(result.shelved_files)
+          .reduce((sum, files) => sum + files.length, 0);
+        addOutputLine(`... returned ${totalFiles} shelved files across ${Object.keys(result.shelved_files).length} CLs`, false);
+      }
+
+      return result;
+    },
+    enabled: isConnected && numberedClIds.length > 0,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+    refetchInterval: refetchIntervalValue,
+  });
+
+  // Build shelved files map from batch result
+  const shelvedFilesMap = useMemo(() => {
+    if (!shelvedBatch) return new Map<number, P4ShelvedFile[]>();
+
+    const map = new Map<number, P4ShelvedFile[]>();
+    Object.entries(shelvedBatch.shelved_files).forEach(([clIdStr, files]) => {
+      const clId = parseInt(clIdStr, 10);
+      map.set(clId, files);
+    });
+    return map;
+  }, [shelvedBatch]);
+
+  // ... rest of hook (buildChangelistTree uses shelvedFilesMap)
+}
+```
+
+**Comparison:**
+
+| Approach | Pros | Cons | Best For |
+|----------|------|------|----------|
+| **Batch Request** | Simple, predictable, reduces server load | All CLs queried even if not expanded | <50 CLs, most are relevant |
+| **Lazy Load** | Only queries what user expands, scales to 100+ CLs | More complex, multiple server calls if user expands many | >50 CLs, sparse usage |
+
+**Recommended:** **Batch Request** for P4Now because:
+- Most developers have <20 pending CLs
+- Shelved files are important context (want to load eagerly)
+- Single query easier to debug and cache
+- Can add lazy loading later if usage patterns show it's needed
+
+**Build Order:**
+1. Add `p4_describe_shelved_batch` Rust command
+2. Export `invokeP4DescribeShelvedBatch` in tauri.ts
+3. Replace `useQueries` with single `useQuery` in useChangelists.ts
+4. Test with 20+ CLs, verify single batch call
+
+**Estimated Effort:** 1 day
+
+**Dependencies:** None (refactor of existing pattern)
+
+---
+
+## Component Integration Matrix
+
+| Component/Module | Integrates With | How | Estimated Lines Changed |
+|------------------|-----------------|-----|------------------------|
+| **useFileTree.ts** | Fix #1 (streaming fstat) | Replace queryFn with streaming accumulator | ~40 lines |
+| **useFileTree.ts** | Fix #6 (incremental tree) | Add cache-aware builder | ~30 lines |
+| **treeBuilder.ts** | Fix #6 (incremental tree) | Add incremental builder functions | +200 lines |
+| **FileTree.tsx** | Fix #5 (debounce) | Replace useDeferredValue with useDebounce | ~10 lines |
+| **FileTree.tsx** | Fix #1 (streaming progress) | Show loading state during streaming | ~20 lines |
+| **p4handlers.rs** | Fix #1 (streaming fstat) | Add p4_fstat_stream command (model on p4_sync) | +100 lines |
+| **p4handlers.rs** | Fix #2 (tokio) | Wrap commands in spawn_blocking or use tokio::process | ~200 lines changed |
+| **p4handlers.rs** | Fix #7 (batch shelved) | Add p4_describe_shelved_batch | +50 lines |
+| **process_manager.rs** | Fix #2 (tokio) | Support both std and tokio Child | +40 lines |
+| **file_index.rs** | Fix #3 (NEW FILE) | Create FileIndex state | +200 lines |
+| **lib.rs** | Fix #3 (FileIndex state) | Add .manage(FileIndex::new()) | ~2 lines |
+| **useChangelists.ts** | Fix #7 (batch shelved) | Replace useQueries with single batch query | ~30 lines changed |
+| **SearchBar.tsx** | Fix #4 (unified search) | Add mode toggle (filter vs search) | ~40 lines |
+| **detailPaneStore.ts** | Fix #4 (unified search) | Extend SearchMode type | ~5 lines |
+| **DetailPane.tsx** | Fix #4 (unified search) | Route to UnifiedSearchView | ~10 lines |
+| **UnifiedSearchView.tsx** | Fix #4 (NEW FILE) | Create unified search results view | +150 lines |
+| **useWorkspaceSearch.ts** | Fix #3 (NEW FILE) | Hook for FileIndex search | +20 lines |
+| **useDebounce.ts** | Fix #5 (NEW FILE) | Debounce utility hook | +20 lines |
+
+**Total Estimated Changes:** ~1,400 lines (including new files)
+
+---
+
+## Build Order & Dependencies
+
+**Phase 1: Foundation (No Dependencies)**
+1. Create debounce hook (Fix #5) - 0.5 days
+2. Update ProcessManager for tokio Child (Fix #2 prep) - 0.5 days
+3. Create FileIndex state (Fix #3) - 2 days
+
+**Phase 2: Backend Streaming (Depends on Phase 1.2)**
+4. Add p4_fstat_stream command (Fix #1) - 1 day
+5. Wrap blocking commands in spawn_blocking (Fix #2) - 1 day
+6. Add p4_describe_shelved_batch (Fix #7) - 1 day
+
+**Phase 3: Frontend Performance (Depends on Phase 1.1)**
+7. Integrate streaming fstat in useFileTree (Fix #1) - 1 day
+8. Apply debounce to FileTree filter (Fix #5) - 0.5 days
+9. Implement incremental tree builder (Fix #6) - 2-3 days
+
+**Phase 4: Search (Depends on Phase 1.3 + Phase 3)**
+10. Integrate FileIndex rebuild in useFileTree (Fix #3) - 0.5 days
+11. Create unified search UI (Fix #4) - 2 days
+
+**Phase 5: Changelist Optimization (Depends on Phase 2.3)**
+12. Replace useQueries with batch query (Fix #7) - 0.5 days
+
+**Total Effort:** 13-14 days
+
+**Critical Path:**
+Phase 1.2 → Phase 2 (ProcessManager needed for streaming)
+Phase 1.3 → Phase 4 (FileIndex needed for search)
+Phase 1.1 → Phase 3 (Debounce needed for filter performance)
+
+**Parallelization Opportunities:**
+- Phase 1 can all be done in parallel by different developers
+- Phase 2.2, 2.3 can be done in parallel
+- Phase 3.2, 3.3 can be done in parallel
+
+**With 2 developers:** ~7-8 days
+**With 3 developers:** ~5-6 days
+
+---
+
+## Risk Areas & Mitigation
+
+### Risk 1: Streaming fstat breaks existing functionality
+**Area:** All file tree operations depend on fstat
+**Mitigation:**
+- Keep existing `p4_fstat` command intact
+- Add `p4_fstat_stream` as new command
+- Feature flag to toggle between old/new behavior during testing
+- Comprehensive testing: checkout, revert, sync all trigger fstat invalidation
+
+### Risk 2: Incremental tree builder has bugs with edge cases
+**Area:** Empty folders, file renames, deep nesting
+**Mitigation:**
+- Extensive unit tests for incremental builder
+- Fallback to full rebuild if detectChanges finds >50% changed
+- Logging/telemetry to detect rebuilds vs incremental updates
+
+### Risk 3: FileIndex memory usage with 100K+ files
+**Area:** In-memory Vec<String> with 100K depot paths
+**Estimation:** 100K paths × ~50 bytes avg = 5MB (acceptable)
+**Mitigation:**
+- Monitor memory in development
+- Index is optional - if rebuild fails, search falls back to server queries
+
+### Risk 4: tokio::process breaks ProcessManager kill behavior
+**Area:** Process cancellation on Windows
+**Mitigation:**
+- Test kill functionality extensively on Windows
+- Keep taskkill logic for both std and tokio Child
+- Verify cleanup on app close
+
+### Risk 5: Debounce breaks user experience (feels laggy)
+**Area:** Search bar responsiveness
+**Mitigation:**
+- Use short delay (150ms) - feels instant
+- Show loading indicator during debounce
+- Keep instant visual feedback (text input updates immediately, results debounced)
+
+### Risk 6: Batched shelved queries timeout with many CLs
+**Area:** 50+ CLs in batch
+**Mitigation:**
+- Batch size limit (max 50 CLs per batch)
+- Timeout per describe command (5s max)
+- Skip failed describes without failing entire batch
 
 ---
 
 ## Testing Strategy
 
-### Unit Tests
-- Rust: Test `-ztag` parsing for each new command
-- TypeScript: Test hook state management and query invalidation
+### Unit Tests (Rust)
+- FileIndex::search with various query patterns
+- FileIndex::rebuild with large datasets
+- Incremental builder: detectChanges correctness
+- p4_describe_shelved_batch with empty results
+- Process manager with both std and tokio Child
 
-### Integration Tests
-- Test complete flow: click action → fetch data → render view → navigate back
-- Test error cases: connection lost, command timeout, file not found
+### Integration Tests (Frontend)
+- useFileTree with streaming: batches accumulate correctly
+- useDebounce: skips intermediate values
+- Incremental tree: unchanged subtrees preserve references
+- Batched shelved query: map structure correct
+
+### E2E Tests (Manual)
+- Connect to 10K file depot, observe progressive tree rendering
+- Type rapidly in search bar, verify no input lag
+- Search for file in unified search, navigate to result
+- Create 20 CLs with shelved files, verify single batch query
+- Checkout file, verify tree updates incrementally
 
 ### Performance Tests
-- Large file content viewer (10MB text file)
-- Annotations for 5000-line file with 200 revisions
-- Submit preview with 100-file changelist
+- p4_fstat_stream: 10K files completes in <15s
+- FileTree filter: keystroke response <50ms @ 10K files
+- FileIndex search: <10ms @ 100K files
+- Incremental tree: single file update <20ms @ 10K files
+- Batched shelved: 20 CLs complete in <5s
 
 ---
 
-## Sources
+## Conclusion
 
-**Perforce Command Documentation:**
-- [p4 annotate | Helix Core Command-Line Reference](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_annotate.html)
-- [p4 have command reference](https://www.perforce.com/manuals/v15.2/cmdref/p4_have.html)
-- [p4 print | Helix Core Command-Line Reference](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_print.html)
-- [p4 describe | Helix Core Command-Line Reference](https://www.perforce.com/manuals/cmdref/Content/CmdRef/p4_describe.html)
-- [Helix Core Command-Line (P4) Guide - Annotation](https://www.perforce.com/manuals/p4guide/Content/P4Guide/scripting.file-reporting.annotation.html)
+The 7 scalability fixes integrate cleanly with P4Now's existing architecture by:
 
-**Existing Codebase Patterns:**
-- `src-tauri/src/commands/p4.rs` — Command wrapper pattern with `-ztag` parsing
-- `src/hooks/useFileHistory.ts` — TanStack Query hook pattern with pagination
-- `src/components/DetailPane/FileDetailView.tsx` — Detail view component structure
-- `src/stores/detailPaneStore.ts` — Navigation state management with discriminated unions
+1. **Leveraging proven patterns:** Streaming (p4_sync), managed state (ProcessManager), TanStack Query caching
+2. **Extending, not replacing:** Keep existing commands for compatibility, add streaming/batched variants
+3. **Composing primitives:** Debounce hooks + incremental builder + FileIndex = scalable search
+4. **Respecting boundaries:** Rust handles heavy lifting (index search, batching), React handles UI state
+5. **Maintaining simplicity:** Each fix addresses one bottleneck, dependencies are minimal
 
----
-
-*Researched: 2026-02-03*
+The architecture already has the right foundations (virtualized trees, query caching, streaming support). The scalability milestone enhances these foundations without fundamental rewrites, making the 13-14 day estimate realistic and low-risk.
