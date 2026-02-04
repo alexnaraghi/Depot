@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 
 Milestone: v4.0 Road to P4V Killer
 Phase: 20 of 20 (Bug Fixes & UI Polish)
-Plan: 1 of ?
+Plan: 2 of ?
 Status: In progress
-Last activity: 2026-02-03 — Completed 20-03-PLAN.md (Depot Browser Fixes)
+Last activity: 2026-02-04 — Completed 20-02-PLAN.md (Query Invalidation Fixes)
 
-Progress: [████████████████████] 70/70 plans complete (v1.0: 14, v2.0: 17, v3.0: 27, v4.0: 12)
+Progress: [████████████████████] 71/71 plans complete (v1.0: 14, v2.0: 17, v3.0: 27, v4.0: 13)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 70 (14 v1.0 + 17 v2.0 + 27 v3.0 + 12 v4.0)
+- Total plans completed: 71 (14 v1.0 + 17 v2.0 + 27 v3.0 + 13 v4.0)
 - Quick tasks completed: 9 (007 partial)
 - Average duration: 5 min
-- Total execution time: ~491 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 34 quick + 81 v4.0)
+- Total execution time: ~494 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 34 quick + 84 v4.0)
 
 **By Phase (v3.0):**
 
@@ -46,7 +46,7 @@ Progress: [████████████████████] 70/70 p
 | 17 | 3 | 41 min | 14 min |
 | 18 | 3 | 14 min | 5 min |
 | 19 | 2 | 9 min | 5 min |
-| 20 | 1 | 3 min | 3 min |
+| 20 | 2 | 6 min | 3 min |
 
 *Updated after each plan completion*
 
@@ -67,9 +67,11 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Extract getActionBadgeColor to shared utility for DRY
 - Use drillToFile from detailPaneStore for file navigation from submit dialog
 
-**Phase 20 Decisions (Plan 03):**
-- Move setTreeData from queryFn to useEffect to handle both fresh fetches and cached data
-- Use operation store for depot loading to show progress in status bar
+**Phase 20 Decisions:**
+- Plan 02: All TanStack Query mutation onSuccess handlers must be async and await invalidations
+- Plan 02: Fire-and-forget Promise.all/invalidateQueries prevents UI updates - always await
+- Plan 03: Move setTreeData from queryFn to useEffect to handle both fresh fetches and cached data
+- Plan 03: Use operation store for depot loading to show progress in status bar
 
 ### Pending Todos
 
@@ -102,8 +104,8 @@ None — v4.0 "Road to P4V Killer" milestone complete!
 
 ## Session Continuity
 
-Last session: 2026-02-03
-Stopped at: Completed 20-03-PLAN.md (Depot Browser Fixes)
+Last session: 2026-02-04
+Stopped at: Completed 20-02-PLAN.md (Query Invalidation Fixes)
 Resume file: None
 
 ---
