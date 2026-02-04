@@ -249,8 +249,8 @@ export function MainLayout() {
 
           {/* LEFT: Workspace and Stream info */}
           <div className="flex items-center gap-6">
-            <WorkspaceSwitcher />
             <StreamSwitcher />
+            <WorkspaceSwitcher />
           </div>
 
           {/* CENTER: Action buttons - GitKraken style (icon above text, no borders) */}
@@ -379,7 +379,7 @@ export function MainLayout() {
         <div style={{ width: `${leftWidth}px`, minWidth: '200px', flexShrink: 0 }} className="flex flex-col overflow-hidden bg-background">
           {/* Workspace Files Section */}
           <Collapsible open={workspaceOpen} onOpenChange={setWorkspaceOpen} className="flex flex-col min-h-0" style={{ flex: workspaceOpen ? '1 1 0%' : '0 0 auto' }}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2 bg-secondary/50 cursor-pointer select-none">
+            <CollapsibleTrigger className="flex-shrink-0 flex items-center justify-between w-full px-4 py-2 bg-secondary/50 cursor-pointer select-none">
               <span className="text-lg font-semibold">Workspace Files</span>
               <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", workspaceOpen && "rotate-180")} />
             </CollapsibleTrigger>
@@ -390,7 +390,7 @@ export function MainLayout() {
 
           {/* Depot Section */}
           <Collapsible open={depotOpen} onOpenChange={setDepotOpen} className="flex flex-col min-h-0" style={{ flex: depotOpen ? '1 1 0%' : '0 0 auto' }}>
-            <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2 bg-secondary/30 border-t border-border cursor-pointer select-none">
+            <CollapsibleTrigger className="flex-shrink-0 flex items-center justify-between w-full px-4 py-2 bg-secondary/30 border-t border-border cursor-pointer select-none">
               <span className="text-lg font-semibold">Depot</span>
               <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", depotOpen && "rotate-180")} />
             </CollapsibleTrigger>
