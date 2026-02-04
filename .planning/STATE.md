@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 
 Milestone: v4.0 Road to P4V Killer
 Phase: 20 of 20 (Bug Fixes & UI Polish)
-Plan: 0 of ?
-Status: NOT PLANNED
-Last activity: 2026-02-03 — Phase 20 added (Bug Fixes & UI Polish)
+Plan: 1 of ?
+Status: In progress
+Last activity: 2026-02-03 — Completed 20-03-PLAN.md (Depot Browser Fixes)
 
-Progress: [████████████████████] 69/69 plans complete (v1.0: 14, v2.0: 17, v3.0: 27, v4.0: 11)
+Progress: [████████████████████] 70/70 plans complete (v1.0: 14, v2.0: 17, v3.0: 27, v4.0: 12)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 69 (14 v1.0 + 17 v2.0 + 27 v3.0 + 11 v4.0)
+- Total plans completed: 70 (14 v1.0 + 17 v2.0 + 27 v3.0 + 12 v4.0)
 - Quick tasks completed: 9 (007 partial)
 - Average duration: 5 min
-- Total execution time: ~488 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 34 quick + 78 v4.0)
+- Total execution time: ~491 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 34 quick + 81 v4.0)
 
 **By Phase (v3.0):**
 
@@ -46,6 +46,7 @@ Progress: [████████████████████] 69/69 p
 | 17 | 3 | 41 min | 14 min |
 | 18 | 3 | 14 min | 5 min |
 | 19 | 2 | 9 min | 5 min |
+| 20 | 1 | 3 min | 3 min |
 
 *Updated after each plan completion*
 
@@ -65,6 +66,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Use Dialog instead of AlertDialog for workflow-style submit confirmation
 - Extract getActionBadgeColor to shared utility for DRY
 - Use drillToFile from detailPaneStore for file navigation from submit dialog
+
+**Phase 20 Decisions (Plan 03):**
+- Move setTreeData from queryFn to useEffect to handle both fresh fetches and cached data
+- Use operation store for depot loading to show progress in status bar
 
 ### Pending Todos
 
@@ -98,7 +103,7 @@ None — v4.0 "Road to P4V Killer" milestone complete!
 ## Session Continuity
 
 Last session: 2026-02-03
-Stopped at: Completed quick task 008 (Large Depot Scalability Analysis)
+Stopped at: Completed 20-03-PLAN.md (Depot Browser Fixes)
 Resume file: None
 
 ---
