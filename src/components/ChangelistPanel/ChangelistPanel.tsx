@@ -15,11 +15,12 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useOperationStore } from '@/store/operation';
 import { useDiff } from '@/hooks/useDiff';
 import { useFileOperations } from '@/hooks/useFileOperations';
-import { useShelve } from '@/hooks/useShelvedFiles';
+import { useShelve, useUnshelve, useDeleteShelf } from '@/hooks/useShelvedFiles';
+import { P4ShelvedFile } from '@/lib/tauri';
 import { useUnresolvedFiles } from '@/hooks/useResolve';
 import { cn } from '@/lib/utils';
 import toast from 'react-hot-toast';
-import { Plus, Send, Archive, ArrowDownToLine, Pencil, Trash2, Undo2 } from 'lucide-react';
+import { Plus, Send, Archive, ArrowDownToLine, Pencil, Trash2, Undo2, Copy, History } from 'lucide-react';
 import { useDndManager } from '@/contexts/DndContext';
 import createFuzzySearch from '@nozbe/microfuzz';
 import { useCommand } from '@/hooks/useCommand';
@@ -54,6 +55,13 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
   } | null>(null);
   const [headerMenuState, setHeaderMenuState] = useState<{
     changelist: P4Changelist;
+    x: number;
+    y: number;
+  } | null>(null);
+  const [shelvedMenuState, setShelvedMenuState] = useState<{
+    type: 'section' | 'file';
+    changelistId: number;
+    shelvedFile?: P4ShelvedFile;
     x: number;
     y: number;
   } | null>(null);
@@ -340,6 +348,16 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
     });
   }, []);
 
+  // Handle shelved section context menu
+  const handleShelvedSectionContextMenu = useCallback((e: React.MouseEvent, changelistId: number) => {
+    setShelvedMenuState({ type: 'section', changelistId, x: e.clientX, y: e.clientY });
+  }, []);
+
+  // Handle shelved file context menu
+  const handleShelvedFileContextMenu = useCallback((e: React.MouseEvent, shelvedFile: P4ShelvedFile, changelistId: number) => {
+    setShelvedMenuState({ type: 'file', changelistId, shelvedFile, x: e.clientX, y: e.clientY });
+  }, []);
+
   // Listen for new-changelist command
   useCommand('new-changelist', () => setCreateDialogOpen(true));
 
@@ -481,6 +499,8 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
               }}
               onContextMenu={handleContextMenu}
               onHeaderContextMenu={handleHeaderContextMenu}
+              onShelvedSectionContextMenu={handleShelvedSectionContextMenu}
+              onShelvedFileContextMenu={handleShelvedFileContextMenu}
             />
           )}
         </Tree>
@@ -581,6 +601,17 @@ export function ChangelistPanel({ className }: ChangelistPanelProps) {
               }
             }
           }}
+        />
+      )}
+      {shelvedMenuState && (
+        <ShelvedContextMenu
+          type={shelvedMenuState.type}
+          changelistId={shelvedMenuState.changelistId}
+          shelvedFile={shelvedMenuState.shelvedFile}
+          x={shelvedMenuState.x}
+          y={shelvedMenuState.y}
+          onClose={() => setShelvedMenuState(null)}
+          onShowHistory={handleShowHistory}
         />
       )}
     </div>
@@ -780,6 +811,165 @@ function ChangelistHeaderMenu({
           <Undo2 className="w-4 h-4" />
           Revert All Files
         </button>
+      )}
+    </div>
+  );
+}
+
+// Shelved files context menu component
+interface ShelvedContextMenuProps {
+  type: 'section' | 'file';
+  changelistId: number;
+  shelvedFile?: P4ShelvedFile;
+  x: number;
+  y: number;
+  onClose: () => void;
+  onShowHistory?: (depotPath: string, localPath: string) => void;
+}
+
+function ShelvedContextMenu({
+  type,
+  changelistId,
+  shelvedFile,
+  x,
+  y,
+  onClose,
+  onShowHistory,
+}: ShelvedContextMenuProps) {
+  const menuRef = useRef<HTMLDivElement>(null);
+  const unshelve = useUnshelve();
+  const deleteShelf = useDeleteShelf();
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        onClose();
+      }
+    }
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [onClose]);
+
+  async function handleUnshelve() {
+    try {
+      await unshelve.mutateAsync({
+        changelistId,
+        filePaths: type === 'file' && shelvedFile ? [shelvedFile.depotPath] : undefined,
+      });
+    } catch {
+      // Error handling in mutation hook
+    }
+    onClose();
+  }
+
+  async function handleDeleteShelf() {
+    const confirmed = window.confirm(
+      `Delete all shelved files from CL ${changelistId}? This cannot be undone.`
+    );
+    if (!confirmed) return;
+    try {
+      await deleteShelf.mutateAsync({ changelistId });
+    } catch {
+      // Error handling in mutation hook
+    }
+    onClose();
+  }
+
+  function handleCopyDepotPath() {
+    if (shelvedFile) {
+      navigator.clipboard.writeText(shelvedFile.depotPath);
+      toast.success('Depot path copied to clipboard');
+    }
+    onClose();
+  }
+
+  function handleShowHistory() {
+    if (shelvedFile && onShowHistory) {
+      onShowHistory(shelvedFile.depotPath, '');
+    }
+    onClose();
+  }
+
+  return (
+    <div
+      ref={menuRef}
+      className="fixed z-50 min-w-48 bg-background border border-border rounded-md shadow-xl py-1"
+      style={{ left: x, top: y }}
+    >
+      {/* Unshelve */}
+      <button
+        onClick={handleUnshelve}
+        disabled={unshelve.isPending}
+        className={cn(
+          'w-full px-4 py-2 text-left text-sm text-foreground',
+          'hover:bg-accent',
+          'flex items-center gap-2',
+          'disabled:opacity-50 disabled:cursor-not-allowed'
+        )}
+      >
+        <ArrowDownToLine className="w-4 h-4" />
+        {type === 'section' ? 'Unshelve All Files' : 'Unshelve'}
+      </button>
+
+      {/* Delete Shelf - section only */}
+      {type === 'section' && (
+        <button
+          onClick={handleDeleteShelf}
+          disabled={deleteShelf.isPending}
+          className={cn(
+            'w-full px-4 py-2 text-left text-sm text-foreground',
+            'hover:bg-accent',
+            'flex items-center gap-2',
+            'disabled:opacity-50 disabled:cursor-not-allowed'
+          )}
+        >
+          <Trash2 className="w-4 h-4" />
+          Delete Shelf
+        </button>
+      )}
+
+      {/* File-specific items */}
+      {type === 'file' && shelvedFile && (
+        <>
+          <div className="h-px bg-border my-1" />
+
+          {/* File History */}
+          <button
+            onClick={handleShowHistory}
+            className={cn(
+              'w-full px-4 py-2 text-left text-sm text-foreground',
+              'hover:bg-accent',
+              'flex items-center gap-2'
+            )}
+          >
+            <History className="w-4 h-4" />
+            File History
+          </button>
+
+          <div className="h-px bg-border my-1" />
+
+          {/* Copy Depot Path */}
+          <button
+            onClick={handleCopyDepotPath}
+            className={cn(
+              'w-full px-4 py-2 text-left text-sm text-foreground',
+              'hover:bg-accent',
+              'flex items-center gap-2'
+            )}
+          >
+            <Copy className="w-4 h-4" />
+            Copy Depot Path
+          </button>
+        </>
       )}
     </div>
   );

@@ -17,13 +17,15 @@ interface ChangelistNodeProps extends NodeRendererProps<ChangelistTreeNode> {
   onDelete?: () => void;
   onContextMenu?: (e: React.MouseEvent, file: P4File) => void;
   onHeaderContextMenu?: (e: React.MouseEvent, changelist: P4Changelist) => void;
+  onShelvedSectionContextMenu?: (e: React.MouseEvent, changelistId: number) => void;
+  onShelvedFileContextMenu?: (e: React.MouseEvent, shelvedFile: P4ShelvedFile, changelistId: number) => void;
 }
 
 /**
  * Tree node renderer for changelist display in react-arborist
  * Handles both changelist headers and file entries
  */
-export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDelete, onContextMenu, onHeaderContextMenu }: ChangelistNodeProps) {
+export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDelete, onContextMenu, onHeaderContextMenu, onShelvedSectionContextMenu, onShelvedFileContextMenu }: ChangelistNodeProps) {
   const isSelected = node.isSelected;
   const nodeData = node.data;
 
@@ -37,6 +39,7 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
         name={nodeData.name}
         isOpen={node.isOpen}
         onToggle={() => node.toggle()}
+        onContextMenu={onShelvedSectionContextMenu}
       />
     );
   }
@@ -55,6 +58,7 @@ export function ChangelistNode({ node, style, dragHandle, onSubmit, onEdit, onDe
         shelvedFile={shelvedFile}
         fileName={fileName}
         changelistId={changelistId}
+        onContextMenu={onShelvedFileContextMenu}
       />
     );
   }
@@ -247,11 +251,13 @@ function ShelvedFileRow({
   shelvedFile,
   fileName,
   changelistId,
+  onContextMenu,
 }: {
   style: React.CSSProperties;
   shelvedFile: P4ShelvedFile;
   fileName: string;
   changelistId: number;
+  onContextMenu?: (e: React.MouseEvent, shelvedFile: P4ShelvedFile, changelistId: number) => void;
 }) {
   const unshelve = useUnshelve();
 
@@ -273,6 +279,10 @@ function ShelvedFileRow({
         'group flex items-center gap-2 pr-3 py-1 text-sm overflow-hidden',
         'hover:bg-accent/30'
       )}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onContextMenu?.(e, shelvedFile, changelistId);
+      }}
     >
       <Archive className="w-4 h-4 text-violet-400 flex-shrink-0" />
       <span className="flex-1 truncate text-violet-200">{fileName}</span>
@@ -303,12 +313,14 @@ function ShelvedSectionHeader({
   name,
   isOpen,
   onToggle,
+  onContextMenu,
 }: {
   style: React.CSSProperties;
   changelistId: number;
   name: string;
   isOpen: boolean;
   onToggle: () => void;
+  onContextMenu?: (e: React.MouseEvent, changelistId: number) => void;
 }) {
   const unshelve = useUnshelve();
   const deleteShelf = useDeleteShelf();
@@ -341,6 +353,10 @@ function ShelvedSectionHeader({
         'hover:bg-accent/50'
       )}
       onClick={onToggle}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        onContextMenu?.(e, changelistId);
+      }}
     >
       <ChevronRight
         className={cn(
