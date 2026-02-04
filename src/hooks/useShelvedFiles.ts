@@ -55,10 +55,10 @@ export function useShelve() {
       addOutputLine(`p4 shelve -c ${changelistId} ${filePaths.join(' ')}`, false);
       return invokeP4Shelve(changelistId, filePaths);
     },
-    onSuccess: (data, variables) => {
+    onSuccess: async (data, variables) => {
       addOutputLine(String(data), false);
       toast.success(`Shelved ${variables.filePaths.length} file(s)`);
-      Promise.all([
+      await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['p4', 'shelved'] }),
         queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
         queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] }),
@@ -175,10 +175,10 @@ export function useDeleteShelf() {
       addOutputLine(`p4 shelve -d -c ${changelistId}`, false);
       return invokeP4DeleteShelf(changelistId);
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       addOutputLine(String(data), false);
       toast.success('Deleted shelf successfully');
-      queryClient.invalidateQueries({ queryKey: ['p4', 'shelved'] });
+      await queryClient.invalidateQueries({ queryKey: ['p4', 'shelved'] });
     },
     onError: (error) => {
       addOutputLine(`Error: ${error}`, true);
