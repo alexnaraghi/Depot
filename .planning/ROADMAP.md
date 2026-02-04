@@ -178,10 +178,14 @@ Plans:
   10. Settings menu is scrollable when content overflows
   11. Accordion headers always visible regardless of content size
   12. Default CL description edit moves files to new numbered CL
-**Plans**: 0 plans
+**Plans**: 5 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 20 to break down)
+- [ ] 20-01-PLAN.md — Fix toolbar order, accordion headers, and connection dialog auto-open
+- [ ] 20-02-PLAN.md — Fix query invalidation in shelve/unshelve and edit description
+- [ ] 20-03-PLAN.md — Fix depot browser data persistence and loading progress
+- [ ] 20-04-PLAN.md — Fix client spec parsing and settings dialog scrollability
+- [ ] 20-05-PLAN.md — Fix file selection toolbar update and CL file count display
 
 **Todos addressed:**
 - 2026-02-03: connection-dialog-shows-on-startup
@@ -222,4 +226,4 @@ Plans:
 | 17. File Annotations | v4.0 | 3/3 | Complete | 2026-02-03 |
 | 18. Table Stakes UI | v4.0 | 3/3 | Complete | 2026-02-03 |
 | 19. Submit Enhancement | v4.0 | 2/2 | Complete | 2026-02-03 |
-| 20. Bug Fixes & UI Polish | v4.0 | 0/? | Not Planned | - |
+| 20. Bug Fixes & UI Polish | v4.0 | 0/5 | Planned | - |
