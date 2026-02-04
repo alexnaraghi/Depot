@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { getActionBadgeColor } from '@/lib/actionBadges';
+import { cn } from '@/lib/utils';
 import { useFileOperations } from '@/hooks/useFileOperations';
 import { P4Changelist } from '@/types/p4';
 
@@ -22,7 +24,8 @@ interface SubmitDialogProps {
 /**
  * Submit dialog for submitting a changelist
  *
- * Shows changelist info, editable description, and file list.
+ * Shows changelist info, editable description, and file list with action badges.
+ * Uses Dialog primitive (not AlertDialog) for workflow-style interactions.
  * Disables submit if description is empty.
  * Shows loading state during submission.
  */
@@ -37,11 +40,12 @@ export function SubmitDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Initialize description from changelist when dialog opens
+  // Re-sync if changelist.description changes while dialog is open
   useEffect(() => {
     if (open && changelist) {
       setDescription(changelist.description);
     }
-  }, [open, changelist]);
+  }, [open, changelist?.description]);
 
   const handleSubmit = async () => {
     if (!changelist) return;
@@ -61,51 +65,80 @@ export function SubmitDialog({
   if (!changelist) return null;
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-md" data-testid="submit-dialog">
-        <AlertDialogHeader>
-          <AlertDialogTitle>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className="sm:max-w-2xl max-h-[80vh] flex flex-col"
+        data-testid="submit-dialog"
+      >
+        <DialogHeader>
+          <DialogTitle>
             Submit Changelist {changelist.id === 0 ? '(Default)' : changelist.id}
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            {changelist.fileCount} file(s) will be submitted.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
+          </DialogTitle>
+          <DialogDescription>
+            {changelist.files.length} file{changelist.files.length !== 1 ? 's' : ''} will be submitted.
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="my-4">
-          <label className="block text-sm font-medium text-foreground mb-2">
-            Description
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full h-24 px-3 py-2 bg-background border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            placeholder="Enter changelist description..."
-            disabled={isSubmitting}
-            data-testid="submit-description"
-          />
-        </div>
+        <div className="flex-1 overflow-auto space-y-4">
+          {/* Description section */}
+          <div>
+            <label className="block text-sm font-medium text-foreground mb-2">
+              Description
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full h-24 px-3 py-2 bg-background border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              placeholder="Enter changelist description..."
+              disabled={isSubmitting}
+              data-testid="submit-description"
+            />
+          </div>
 
-        <div className="mb-4 max-h-32 overflow-y-auto">
-          <div className="text-sm text-muted-foreground mb-1">Files:</div>
-          {changelist.files.map((file) => (
-            <div key={file.depotPath} className="text-sm text-foreground truncate">
-              {file.depotPath.split('/').pop()}
+          {/* File list section with action badges */}
+          <div>
+            <h3 className="text-sm font-semibold mb-2 text-muted-foreground">
+              FILES ({changelist.files.length})
+            </h3>
+            <div className="max-h-48 overflow-y-auto space-y-1">
+              {changelist.files.map((file) => {
+                const fileName = file.depotPath.split('/').pop() || file.depotPath;
+
+                return (
+                  <div
+                    key={file.depotPath}
+                    className="flex items-center gap-2 px-3 py-2 rounded hover:bg-accent"
+                  >
+                    <Badge
+                      className={cn('px-2 py-0.5 text-xs', getActionBadgeColor(file.action))}
+                    >
+                      {file.action || 'edit'}
+                    </Badge>
+                    <span className="flex-1 truncate text-sm">{fileName}</span>
+                  </div>
+                );
+              })}
             </div>
-          ))}
+          </div>
         </div>
 
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
-          <AlertDialogAction
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button
             onClick={handleSubmit}
             disabled={isSubmitting || !description.trim()}
             data-testid="submit-confirm-button"
           >
             {isSubmitting ? 'Submitting...' : 'Submit'}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
