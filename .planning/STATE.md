@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-02-03)
 
 Milestone: v4.0 Road to P4V Killer
 Phase: 20 of 20 (Bug Fixes & UI Polish)
-Plan: 3 of ?
+Plan: 5 of ?
 Status: In progress
-Last activity: 2026-02-04 — Completed 20-01-PLAN.md (MainLayout Bug Fixes)
+Last activity: 2026-02-03 — Completed 20-05-PLAN.md (File Selection State & CL Count)
 
-Progress: [████████████████████] 72/72 plans complete (v1.0: 14, v2.0: 17, v3.0: 27, v4.0: 14)
+Progress: [████████████████████] 74/74 plans complete (v1.0: 14, v2.0: 17, v3.0: 27, v4.0: 16)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 72 (14 v1.0 + 17 v2.0 + 27 v3.0 + 14 v4.0)
+- Total plans completed: 74 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0)
 - Quick tasks completed: 9 (007 partial)
 - Average duration: 5 min
-- Total execution time: ~498 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 34 quick + 88 v4.0)
+- Total execution time: ~504 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 34 quick + 94 v4.0)
 
 **By Phase (v3.0):**
 
@@ -46,7 +46,7 @@ Progress: [████████████████████] 72/72 p
 | 17 | 3 | 41 min | 14 min |
 | 18 | 3 | 14 min | 5 min |
 | 19 | 2 | 9 min | 5 min |
-| 20 | 3 | 10 min | 3 min |
+| 20 | 5 | 16 min | 3 min |
 
 *Updated after each plan completion*
 
@@ -74,6 +74,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Plan 02: Fire-and-forget Promise.all/invalidateQueries prevents UI updates - always await
 - Plan 03: Move setTreeData from queryFn to useEffect to handle both fresh fetches and cached data
 - Plan 03: Use operation store for depot loading to show progress in status bar
+- Plan 05: Use fileCount as source of truth for CL file count instead of files.length
 
 ### Pending Todos
 
@@ -106,8 +107,8 @@ None — v4.0 "Road to P4V Killer" milestone complete!
 
 ## Session Continuity
 
-Last session: 2026-02-04
-Stopped at: Completed 20-01-PLAN.md (MainLayout Bug Fixes)
+Last session: 2026-02-03
+Stopped at: Completed 20-05-PLAN.md (File Selection State & CL Count)
 Resume file: None
 
 ---
