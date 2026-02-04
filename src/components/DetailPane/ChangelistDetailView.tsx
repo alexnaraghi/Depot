@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { P4Changelist, FileAction } from '@/types/p4';
+import { P4Changelist } from '@/types/p4';
 import { useDetailPaneStore } from '@/stores/detailPaneStore';
 import { useShelvedFilesQuery, useShelve } from '@/hooks/useShelvedFiles';
 import { useChangelistFiles } from '@/hooks/useChangelistFiles';
@@ -12,42 +12,12 @@ import { SubmitDialog } from '@/components/ChangelistPanel/SubmitDialog';
 import { EditDescriptionDialog } from '@/components/ChangelistPanel/EditDescriptionDialog';
 import { Triangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getActionBadgeColor } from '@/lib/actionBadges';
 import toast from 'react-hot-toast';
 
 interface ChangelistDetailViewProps {
   changelist: P4Changelist;
 }
-
-/**
- * Get badge color for file action
- */
-const getActionBadgeColor = (action?: FileAction | string): string => {
-  const actionLower = typeof action === 'string' ? action.toLowerCase() : action;
-  switch (actionLower) {
-    case FileAction.Edit:
-    case 'edit':
-      return 'bg-blue-900/30 text-blue-300';
-    case FileAction.Add:
-    case 'add':
-      return 'bg-green-900/30 text-green-300';
-    case FileAction.Delete:
-    case 'delete':
-      return 'bg-red-900/30 text-red-300';
-    case FileAction.Branch:
-    case 'branch':
-      return 'bg-purple-900/30 text-purple-300';
-    case FileAction.Integrate:
-    case 'integrate':
-      return 'bg-yellow-900/30 text-yellow-300';
-    case FileAction.MoveAdd:
-    case 'move/add':
-    case FileAction.MoveDelete:
-    case 'move/delete':
-      return 'bg-orange-900/30 text-orange-300';
-    default:
-      return 'bg-muted text-muted-foreground';
-  }
-};
 
 /**
  * Detail view for changelist selection
