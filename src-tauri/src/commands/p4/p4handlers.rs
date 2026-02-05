@@ -78,6 +78,145 @@ pub async fn p4_fstat(
     Ok(files)
 }
 
+/// Streaming fstat - sends batches of files via Channel for progressive loading
+#[tauri::command]
+pub async fn p4_fstat_stream(
+    paths: Vec<String>,
+    depot_path: Option<String>,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+    on_batch: Channel<FstatStreamBatch>,
+    state: State<'_, ProcessManager>,
+) -> Result<String, String> {
+    use std::collections::HashMap;
+
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+
+    cmd.arg("-ztag");
+    cmd.arg("fstat");
+
+    if paths.is_empty() {
+        let query_path = depot_path.unwrap_or_else(|| "//...".to_string());
+        cmd.arg(query_path);
+    } else {
+        cmd.args(&paths);
+    }
+
+    cmd.stdout(Stdio::piped());
+    cmd.stderr(Stdio::piped());
+
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("Failed to spawn p4 fstat: {}", e))?;
+
+    let stdout = child.stdout.take();
+    let stderr = child.stderr.take();
+
+    // Register process for cancellation
+    let process_id = state.register(child).await;
+    let process_id_clone = process_id.clone();
+
+    // Stream stdout in background task
+    let on_batch_clone = on_batch.clone();
+    if let Some(stdout) = stdout {
+        tokio::spawn(async move {
+            let mut lines = BufReader::new(stdout).lines();
+            let mut current_record: HashMap<String, String> = HashMap::new();
+            let mut batch: Vec<P4FileInfo> = Vec::new();
+            let mut total_received: u32 = 0;
+
+            while let Ok(Some(line)) = lines.next_line().await {
+                let line = line.trim();
+
+                // Blank line = end of record
+                if line.is_empty() {
+                    if !current_record.is_empty() {
+                        // Build file info from record, filtering out deleted-at-head files
+                        if let Some(file_info) = build_file_info(&current_record) {
+                            if file_info.head_action.as_deref() != Some("delete") {
+                                batch.push(file_info);
+
+                                // Send batch when it reaches 100 files
+                                if batch.len() >= 100 {
+                                    total_received += batch.len() as u32;
+                                    let _ = on_batch_clone.send(FstatStreamBatch::Data {
+                                        files: std::mem::take(&mut batch),
+                                        total_received,
+                                    });
+                                }
+                            }
+                        }
+                        current_record.clear();
+                    }
+                    continue;
+                }
+
+                // Parse ztag line: "... key value"
+                if let Some(stripped) = line.strip_prefix("... ") {
+                    if let Some((key, value)) = stripped.split_once(' ') {
+                        current_record.insert(key.to_string(), value.to_string());
+                    } else {
+                        // Key with no value (e.g., "... isMapped")
+                        current_record.insert(stripped.to_string(), String::new());
+                    }
+                }
+            }
+
+            // Send final batch
+            if !batch.is_empty() {
+                total_received += batch.len() as u32;
+                let _ = on_batch_clone.send(FstatStreamBatch::Data {
+                    files: batch,
+                    total_received,
+                });
+            }
+
+            // Send completion signal
+            let _ = on_batch_clone.send(FstatStreamBatch::Complete {
+                total_files: total_received,
+                success: true,
+                error: None,
+            });
+        });
+    }
+
+    // Stream stderr in background task (for errors/warnings)
+    if let Some(stderr) = stderr {
+        let on_batch_stderr = on_batch.clone();
+        tokio::spawn(async move {
+            let mut lines = BufReader::new(stderr).lines();
+            let mut had_error = false;
+            let mut error_msg = String::new();
+
+            while let Ok(Some(line)) = lines.next_line().await {
+                // Skip informational messages
+                if line.contains("no such file(s)") {
+                    continue;
+                }
+                // Log actual errors
+                eprintln!("p4 fstat stderr: {}", line);
+                if !had_error {
+                    had_error = true;
+                    error_msg = line;
+                }
+            }
+
+            // If there were errors and no success completion was sent, send error completion
+            if had_error {
+                let _ = on_batch_stderr.send(FstatStreamBatch::Complete {
+                    total_files: 0,
+                    success: false,
+                    error: Some(error_msg),
+                });
+            }
+        });
+    }
+
+    Ok(process_id_clone)
+}
+
 /// Get all files opened by current user
 #[tauri::command]
 pub async fn p4_opened(
