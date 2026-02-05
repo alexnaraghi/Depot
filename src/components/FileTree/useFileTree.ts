@@ -2,10 +2,26 @@ import { useCallback, useMemo, useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFileTreeStore } from '@/stores/fileTreeStore';
 import { useConnectionStore } from '@/stores/connectionStore';
-import { invokeP4FstatStream, invokeP4Info, P4FileInfo, FstatStreamBatch, addFilesToIndex, clearFileIndex } from '@/lib/tauri';
+import { useWindowFocus } from '@/hooks/useWindowFocus';
+import {
+  invokeP4FstatStream,
+  invokeP4Info,
+  invokeP4FstatOpened,
+  P4FileInfo,
+  FstatStreamBatch,
+  addFilesToIndex,
+  clearFileIndex,
+} from '@/lib/tauri';
 import { useOperationStore } from '@/store/operation';
-import { getVerboseLogging } from '@/lib/settings';
-import { buildFileTree } from '@/utils/treeBuilder';
+import { getVerboseLogging, getDeltaRefreshInterval, getFullRefreshInterval } from '@/lib/settings';
+import {
+  buildFileTree,
+  incrementalTreeUpdate,
+  shouldUseIncrementalUpdate,
+  createChangeMap,
+  mergeDeltaFiles,
+  FileTreeNode,
+} from '@/utils/treeBuilder';
 import { P4File, FileStatus, FileAction } from '@/types/p4';
 
 /**
@@ -72,11 +88,35 @@ export function useFileTree() {
     addOutputLine,
   } = useOperationStore();
   const isConnected = status === 'connected';
+  const isWindowFocused = useWindowFocus();
+
+  // Load refresh intervals from settings
+  const [deltaInterval, setDeltaInterval] = useState<number>(30000);
+  const [fullInterval, setFullInterval] = useState<number>(300000);
+
+  useEffect(() => {
+    getDeltaRefreshInterval().then(setDeltaInterval);
+    getFullRefreshInterval().then(setFullInterval);
+  }, []);
 
   // Streaming state
   const [isStreaming, setIsStreaming] = useState(false);
   const accumulatedFilesRef = useRef<P4File[]>([]);
   const estimatedTotalRef = useRef(0);
+
+  // References for incremental updates
+  const prevTreeRef = useRef<FileTreeNode[]>([]);
+  const prevFilesRef = useRef<Map<string, P4File>>(new Map());
+
+  // Track last refresh timestamps for focus-return logic
+  const lastDeltaRefreshRef = useRef<number>(Date.now());
+  const lastFullRefreshRef = useRef<number>(Date.now());
+
+  // Auto-refresh is active when connected, not streaming, window focused, and interval > 0
+  const isDeltaRefreshActive =
+    isConnected && !isStreaming && isWindowFocused && deltaInterval > 0;
+  const isFullRefreshActive =
+    isConnected && !isStreaming && isWindowFocused && fullInterval > 0;
 
   // Clear store and index when disconnected
   useEffect(() => {
@@ -185,6 +225,11 @@ export function useFileTree() {
           }
 
           if (batch.success) {
+            // Update refs for incremental updates
+            prevFilesRef.current = new Map(
+              accumulatedFilesRef.current.map(f => [f.depotPath, f])
+            );
+            lastFullRefreshRef.current = Date.now();
             completeOperation(true);
             resolve(accumulatedFilesRef.current);
           } else {
@@ -220,25 +265,138 @@ export function useFileTree() {
     setProcessId,
   ]);
 
-  // Query for workspace files using streaming
+  // Query for workspace files using streaming (slow refresh: 5min default)
   const { data: files = [], isLoading: filesLoading, error: filesError, refetch } = useQuery({
     queryKey: ['fileTree', rootPath, depotPath],
     queryFn: loadFilesStreaming,
     enabled: rootPath !== null && !isStreaming, // Disable during active streaming
-    staleTime: 30000,
-    refetchOnWindowFocus: false, // Disable auto-refetch during potential streaming
+    staleTime: fullInterval / 2, // Allow refetch after half the interval
+    refetchOnWindowFocus: false, // We handle focus ourselves
+    refetchInterval: isFullRefreshActive ? fullInterval : false,
     structuralSharing: false, // Prevent reference breaks from streaming updates
+  });
+
+  // Fast refresh: query only opened files every 30s (delta refresh)
+  const { data: openedFilesData } = useQuery({
+    queryKey: ['p4', 'fstat', 'opened', p4port, p4user, p4client],
+    queryFn: async () => {
+      const verbose = await getVerboseLogging();
+      if (verbose) addOutputLine('p4 fstat (opened files for delta refresh)', false);
+      const result = await invokeP4FstatOpened();
+      if (verbose) addOutputLine(`... returned ${result.length} opened items`, false);
+      lastDeltaRefreshRef.current = Date.now();
+      return result.map(mapP4FileInfo);
+    },
+    enabled: isDeltaRefreshActive && rootPath !== null,
+    staleTime: deltaInterval / 2, // Allow refetch after half the interval
+    refetchInterval: isDeltaRefreshActive ? deltaInterval : false,
+    refetchOnWindowFocus: false, // We handle focus ourselves
   });
 
   const isLoading = clientInfoLoading || filesLoading || isStreaming;
   const error = clientInfoError || filesError;
 
-  // Build tree structure from flat file list
+  // Immediate refresh on focus return if interval elapsed while unfocused
+  useEffect(() => {
+    if (!isWindowFocused) return;
+    if (!isConnected || isStreaming) return;
+
+    const now = Date.now();
+
+    // Check if delta interval elapsed
+    if (deltaInterval > 0 && now - lastDeltaRefreshRef.current > deltaInterval) {
+      queryClient.invalidateQueries({
+        queryKey: ['p4', 'fstat', 'opened', p4port, p4user, p4client],
+      });
+    }
+
+    // Check if full interval elapsed
+    if (fullInterval > 0 && now - lastFullRefreshRef.current > fullInterval) {
+      queryClient.invalidateQueries({
+        queryKey: ['fileTree', rootPath, depotPath],
+      });
+    }
+  }, [
+    isWindowFocused,
+    isConnected,
+    isStreaming,
+    deltaInterval,
+    fullInterval,
+    p4port,
+    p4user,
+    p4client,
+    rootPath,
+    depotPath,
+    queryClient,
+  ]);
+
+  // Process delta refresh results - merge incrementally when they arrive
+  useEffect(() => {
+    if (!openedFilesData || openedFilesData.length === 0) return;
+    if (prevFilesRef.current.size === 0) return; // No existing data to merge with
+
+    const currentFiles = useFileTreeStore.getState().files;
+
+    // Create change map to identify actual changes
+    const changeMap = createChangeMap(currentFiles, openedFilesData);
+
+    if (changeMap.size === 0) {
+      // No actual changes detected
+      return;
+    }
+
+    // Decide: incremental update or merge and let full refresh rebuild
+    if (shouldUseIncrementalUpdate(currentFiles.size, changeMap.size)) {
+      // Incremental: update tree in place with structural sharing
+      const currentTree = prevTreeRef.current;
+      if (currentTree.length > 0) {
+        const updatedTree = incrementalTreeUpdate(currentTree, changeMap);
+        prevTreeRef.current = updatedTree;
+
+        // Merge files into store
+        const mergedFiles = mergeDeltaFiles(currentFiles, openedFilesData);
+        prevFilesRef.current = mergedFiles;
+        setFiles(Array.from(mergedFiles.values()));
+      }
+    } else {
+      // Too many changes - merge files and let full rebuild happen naturally
+      const mergedFiles = mergeDeltaFiles(currentFiles, openedFilesData);
+      prevFilesRef.current = mergedFiles;
+      setFiles(Array.from(mergedFiles.values()));
+      // Tree will rebuild in useMemo below
+    }
+  }, [openedFilesData, setFiles]);
+
+  // Build tree structure from flat file list with incremental update support
   const tree = useMemo(() => {
     if (!rootPath || files.length === 0) {
+      prevTreeRef.current = [];
+      prevFilesRef.current = new Map();
       return [];
     }
-    return buildFileTree(files, rootPath);
+
+    // Check if we can use incremental update
+    const currentFiles = new Map(files.map(f => [f.depotPath, f]));
+    const changeMap = createChangeMap(prevFilesRef.current, files);
+
+    let newTree: FileTreeNode[];
+
+    if (
+      prevTreeRef.current.length > 0 &&
+      shouldUseIncrementalUpdate(prevFilesRef.current.size, changeMap.size)
+    ) {
+      // Incremental update preserving object identity
+      newTree = incrementalTreeUpdate(prevTreeRef.current, changeMap);
+    } else {
+      // Full rebuild
+      newTree = buildFileTree(files, rootPath);
+    }
+
+    // Update refs for next comparison
+    prevTreeRef.current = newTree;
+    prevFilesRef.current = currentFiles;
+
+    return newTree;
   }, [files, rootPath]);
 
   return {
