@@ -126,6 +126,11 @@ pub(super) fn build_file_info(fields: &HashMap<String, String>) -> Option<P4File
     let changelist = fields.get("change").and_then(|s| s.parse::<i32>().ok());
     let head_action = fields.get("headAction").cloned();
 
+    // Extract headModTime for recency bias (Unix epoch seconds)
+    let head_mod_time = fields
+        .get("headModTime")
+        .and_then(|s| s.parse::<i64>().ok());
+
     // Derive status from fields
     let status = derive_file_status(&action, revision, head_revision);
 
@@ -139,6 +144,7 @@ pub(super) fn build_file_info(fields: &HashMap<String, String>) -> Option<P4File
         changelist,
         file_type,
         head_action,
+        head_mod_time,
     })
 }
 

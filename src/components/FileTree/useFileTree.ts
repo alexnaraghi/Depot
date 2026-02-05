@@ -147,8 +147,7 @@ export function useFileTree() {
           // Populate FileIndex incrementally (fire-and-forget for performance)
           const indexEntries = batch.files.map(file => ({
             depotPath: file.depot_path,
-            // headModTime will be available after Task 2, use 0 as placeholder for now
-            modTime: (file as P4FileInfo & { head_mod_time?: number }).head_mod_time ?? 0,
+            modTime: file.head_mod_time ?? 0,  // Use headModTime for recency bias
           }));
           addFilesToIndex(indexEntries).catch(err => {
             console.warn('Failed to add files to index:', err);

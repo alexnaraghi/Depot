@@ -36,6 +36,7 @@ export interface P4FileInfo {
   changelist?: number;
   file_type: string;
   head_action?: string;
+  head_mod_time?: number;  // Unix timestamp of head revision (for recency bias)
 }
 
 export interface P4ChangelistInfo {

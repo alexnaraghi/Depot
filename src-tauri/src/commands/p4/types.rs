@@ -12,6 +12,7 @@ pub struct P4FileInfo {
     pub changelist: Option<i32>,
     pub file_type: String,
     pub head_action: Option<String>,
+    pub head_mod_time: Option<i64>, // Unix timestamp of head revision (for recency bias)
 }
 
 /// Streaming batch for p4_fstat_stream
