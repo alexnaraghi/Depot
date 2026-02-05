@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 
 Milestone: v5.0 Large Depot Scale
 Phase: 21 of 25 (Async Foundation)
-Plan: 21-03 completed
+Plan: 21-01 completed
 Status: In progress
-Last activity: 2026-02-04 — Completed 21-03-PLAN.md (useDebounce hook)
+Last activity: 2026-02-05 — Completed 21-01-PLAN.md (tokio::process migration)
 
-Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [█░░░░░░░░░] 33% (1/3)
+Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [███░░░░░░░] 33% (1/3)
 
 ## Performance Metrics
 
@@ -23,7 +23,7 @@ Progress: [████████████████████] 74/74 p
 - Total plans completed: 75 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 1 v5.0)
 - Quick tasks completed: 10 (007 partial)
 - Average duration: 5 min
-- Total execution time: ~508 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 2 v5.0)
+- Total execution time: ~513 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 7 v5.0)
 
 **By Phase (v4.0):**
 
@@ -39,7 +39,7 @@ Progress: [████████████████████] 74/74 p
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 21 | 1 | 2 min | 2 min |
+| 21 | 1 | 5 min | 5 min |
 
 *Updated after each plan completion*
 
@@ -56,9 +56,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Phase 24 (Tree): Incremental tree builder + delta refresh. Soft dependency on Phase 22 (can overlap with 23).
 - Phase 25 (Batch): N+1 shelved query fix. Independent of streaming pipeline, depends only on Phase 21.
 
-**21-03 Decisions:**
-- 150ms debounce delay balances responsiveness with performance (imperceptible to user)
-- useDebounce replaces useDeferredValue for true computational delay (not just deferred rendering)
+**21-01 Decisions:**
+- Migrated from std::process to tokio::process for non-blocking async execution
+- Added explicit .wait().await after every .kill().await to prevent zombie processes
+- Changed streaming tasks from std::thread::spawn to tokio::spawn
 
 ### Pending Todos
 
@@ -91,8 +92,8 @@ None
 
 ## Session Continuity
 
-Last session: 2026-02-04
-Stopped at: Completed 21-03-PLAN.md (useDebounce hook for FileTree)
+Last session: 2026-02-05
+Stopped at: Completed 21-01-PLAN.md (tokio::process migration)
 Resume file: None
 
 ---
