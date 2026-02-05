@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** The user is never blocked — operations are always cancellable, errors are non-blocking, and the app remains responsive even during network issues or long-running operations.
-**Current focus:** v5.0 Large Depot Scale -- Phase 23 complete, ready for Phase 24
+**Current focus:** v5.0 Large Depot Scale -- Phase 24 in progress
 
 ## Current Position
 
 Milestone: v5.0 Large Depot Scale
-Phase: 23 of 25 (FileIndex and Search) — COMPLETE
-Plan: —
-Status: Phase 23 verified, ready for Phase 24
-Last activity: 2026-02-05 — Phase 23 complete (3/3 plans, 4/4 must-haves verified)
+Phase: 24 of 25 (Tree Performance + Delta Refresh)
+Plan: 01 of 03 complete
+Status: In progress
+Last activity: 2026-02-05 — Completed 24-01-PLAN.md (Immer + batch updates)
 
-Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [██████░░░░] 60% (9/TBD)
+Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [██████░░░░] 67% (10/TBD)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 83 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 9 v5.0)
+- Total plans completed: 84 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 10 v5.0)
 - Quick tasks completed: 10 (007 partial)
 - Average duration: 5 min
-- Total execution time: ~546 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 40 v5.0)
+- Total execution time: ~551 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 45 v5.0)
 
 **By Phase (v4.0):**
 
@@ -42,6 +42,7 @@ Progress: [████████████████████] 74/74 p
 | 21 | 3 | 12 min | 4 min |
 | 22 | 3 | 10 min | 3 min |
 | 23 | 3 | 18 min | 6 min |
+| 24 | 1 | 5 min | 5 min |
 
 *Updated after each plan completion*
 
@@ -101,6 +102,11 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Clear index on stream start AND on disconnect for workspace change scenarios
 - headModTime field added to P4FileInfo for recency-weighted search
 
+**24-01 Decisions:**
+- Keep autoRefreshInterval for backwards compatibility (changelists still use it)
+- batchUpdateFiles only creates new Map if at least one update applied (avoids unnecessary re-renders)
+- Immer produce() usage will be in treeBuilder.ts (Plan 02), store just needs efficient Map updates
+
 ### Pending Todos
 
 19 pending — see `.planning/todos/pending/`
@@ -133,7 +139,7 @@ None
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Phase 23 complete, ready for Phase 24
+Stopped at: Completed 24-01-PLAN.md, Phase 24 in progress (01/03)
 Resume file: None
 
 ---
