@@ -9,6 +9,7 @@ import { Loader2, X } from 'lucide-react';
  * - Progress bar when p4 provides progress info, indeterminate spinner otherwise
  * - Cancel button appears only during active cancellable operations
  * - Unobtrusive but informative
+ * - Shows file count during streaming operations
  */
 export function StatusBar() {
   const { currentOperation } = useOperationStore();
@@ -27,6 +28,15 @@ export function StatusBar() {
   const isActive = status === 'running' || status === 'cancelling';
   const isError = status === 'error';
   const isSuccess = status === 'success';
+
+  // Extract file count from message if present (e.g., "Loading files... (1500)")
+  const fileCountMatch = message.match(/\((\d+)\)/);
+  const fileCount = fileCountMatch ? parseInt(fileCountMatch[1], 10) : null;
+
+  // Format display message: show progress percentage and file count
+  const displayMessage = fileCount !== null && progress !== undefined
+    ? `${message.replace(/\s*\(\d+\)/, '')} ${fileCount.toLocaleString()} files (${progress}%)`
+    : message;
 
   return (
     <div
@@ -51,7 +61,7 @@ export function StatusBar() {
         )}
 
         {/* Message - truncate if too long */}
-        <span className="truncate">{message}</span>
+        <span className="truncate">{displayMessage}</span>
       </div>
 
       {/* Right: Actions */}
