@@ -19,9 +19,9 @@ Requirements for large depot scalability milestone. Makes P4Now work smoothly wi
 
 - [ ] **TREE-01**: File tree filter uses persistent fuzzy index (built once, queried per keystroke)
 - [ ] **TREE-02**: Filter input is debounced (150ms) to prevent redundant computation
-- [ ] **TREE-03**: Tree builder uses structural sharing (unchanged subtrees preserve object identity)
-- [ ] **TREE-04**: Tree updates incrementally when <10% of files change (no full rebuild)
-- [ ] **TREE-05**: File tree store batches updates (no Map copy per individual file)
+- [x] **TREE-03**: Tree builder uses structural sharing (unchanged subtrees preserve object identity)
+- [x] **TREE-04**: Tree updates incrementally when <10% of files change (no full rebuild)
+- [x] **TREE-05**: File tree store batches updates (no Map copy per individual file)
 
 ### Search Architecture
 
@@ -31,9 +31,9 @@ Requirements for large depot scalability milestone. Makes P4Now work smoothly wi
 
 ### Delta Refresh
 
-- [ ] **DELTA-01**: Auto-refresh (30s) queries only opened/shelved files, not full fstat
-- [ ] **DELTA-02**: Periodic full refresh occurs less frequently (e.g., every 5 minutes)
-- [ ] **DELTA-03**: Delta refresh merges incrementally with existing file tree data
+- [x] **DELTA-01**: Auto-refresh (30s) queries only opened/shelved files, not full fstat
+- [x] **DELTA-02**: Periodic full refresh occurs less frequently (e.g., every 5 minutes)
+- [x] **DELTA-03**: Delta refresh merges incrementally with existing file tree data
 
 ### Batch Operations
 
@@ -109,15 +109,15 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STREAM-04 | Phase 21 | Complete |
 | TREE-01 | Phase 23 | Pending |
 | TREE-02 | Phase 21 | Complete |
-| TREE-03 | Phase 24 | Pending |
-| TREE-04 | Phase 24 | Pending |
-| TREE-05 | Phase 24 | Pending |
+| TREE-03 | Phase 24 | Complete |
+| TREE-04 | Phase 24 | Complete |
+| TREE-05 | Phase 24 | Complete |
 | SEARCH-01 | Phase 23 | Pending |
 | SEARCH-02 | Phase 23 | Pending |
 | SEARCH-03 | Phase 23 | Pending |
-| DELTA-01 | Phase 24 | Pending |
-| DELTA-02 | Phase 24 | Pending |
-| DELTA-03 | Phase 24 | Pending |
+| DELTA-01 | Phase 24 | Complete |
+| DELTA-02 | Phase 24 | Complete |
+| DELTA-03 | Phase 24 | Complete |
 | BATCH-01 | Phase 25 | Pending |
 | BATCH-02 | Phase 25 | Pending |
 | BATCH-03 | Phase 25 | Pending |

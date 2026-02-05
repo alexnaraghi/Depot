@@ -270,10 +270,10 @@ Plans:
 **Plans**: 4 plans
 
 Plans:
-- [ ] 24-01-PLAN.md — Install Immer, add settings for two-tier refresh, batch update action in store
-- [ ] 24-02-PLAN.md — Incremental tree update with Immer structural sharing
-- [ ] 24-03-PLAN.md — Backend p4_fstat_opened command for delta refresh
-- [ ] 24-04-PLAN.md — Two-tier auto-refresh integration in useFileTree
+- [x] 24-01-PLAN.md — Install Immer, add settings for two-tier refresh, batch update action in store
+- [x] 24-02-PLAN.md — Incremental tree update with Immer structural sharing
+- [x] 24-03-PLAN.md — Backend p4_fstat_opened command for delta refresh
+- [x] 24-04-PLAN.md — Two-tier auto-refresh integration in useFileTree
 
 #### Phase 25: Batch Optimization
 **Goal**: Shelved file queries execute as a single efficient operation instead of N+1 individual calls
@@ -313,5 +313,5 @@ Plans:
 | 21. Async Foundation | v5.0 | 3/3 | Complete | 2026-02-04 |
 | 22. Streaming fstat + Progress | v5.0 | 3/3 | Complete | 2026-02-04 |
 | 23. FileIndex and Search | v5.0 | 3/3 | Complete | 2026-02-05 |
-| 24. Tree Performance + Delta Refresh | v5.0 | 0/4 | Not started | - |
+| 24. Tree Performance + Delta Refresh | v5.0 | 4/4 | Complete | 2026-02-05 |
 | 25. Batch Optimization | v5.0 | 0/TBD | Not started | - |
