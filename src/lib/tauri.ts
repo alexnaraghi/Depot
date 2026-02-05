@@ -350,6 +350,17 @@ export interface P4ShelvedFile {
   revision: number;
 }
 
+export interface ShelvedBatchResult {
+  changelistId: number;
+  files: P4ShelvedFile[] | null;
+  error: string | null;
+}
+
+export type ShelvedBatchProgress =
+  | { type: 'progress'; loaded: number; total: number; message: string }
+  | { type: 'result'; result: ShelvedBatchResult }
+  | { type: 'complete'; successCount: number; errorCount: number; cancelled: boolean };
+
 /**
  * File info from p4 describe output
  */
@@ -415,6 +426,25 @@ export async function invokeP4DescribeShelved(
   changelistId: number
 ): Promise<P4ShelvedFile[]> {
   return invoke<P4ShelvedFile[]>('p4_describe_shelved', { changelistId, ...getConnectionArgs() });
+}
+
+/**
+ * Batch describe shelved files for multiple changelists.
+ * Returns process ID for cancellation and streams results via Channel.
+ * @param changelistIds - Array of changelist IDs to query
+ * @param onProgress - Callback for streaming progress updates and results
+ */
+export async function invokeP4DescribeShelvedBatch(
+  changelistIds: number[],
+  onProgress: (progress: ShelvedBatchProgress) => void
+): Promise<string> {
+  const channel = new Channel<ShelvedBatchProgress>();
+  channel.onmessage = onProgress;
+  return invoke<string>('p4_describe_shelved_batch', {
+    changelistIds,
+    ...getConnectionArgs(),
+    onProgress: channel,
+  });
 }
 
 /**
