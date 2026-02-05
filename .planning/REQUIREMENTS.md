@@ -37,9 +37,9 @@ Requirements for large depot scalability milestone. Makes P4Now work smoothly wi
 
 ### Batch Operations
 
-- [ ] **BATCH-01**: Shelved file queries use single batched backend call (not N+1 per changelist)
-- [ ] **BATCH-02**: Batch query isolates errors per changelist (one failure doesn't hide all results)
-- [ ] **BATCH-03**: Batch query uses sequential execution to avoid server rate limiting
+- [x] **BATCH-01**: Shelved file queries use single batched backend call (not N+1 per changelist)
+- [x] **BATCH-02**: Batch query isolates errors per changelist (one failure doesn't hide all results)
+- [x] **BATCH-03**: Batch query uses sequential execution to avoid server rate limiting
 
 ### Progress & Feedback
 
@@ -118,9 +118,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DELTA-01 | Phase 24 | Complete |
 | DELTA-02 | Phase 24 | Complete |
 | DELTA-03 | Phase 24 | Complete |
-| BATCH-01 | Phase 25 | Pending |
-| BATCH-02 | Phase 25 | Pending |
-| BATCH-03 | Phase 25 | Pending |
+| BATCH-01 | Phase 25 | Complete |
+| BATCH-02 | Phase 25 | Complete |
+| BATCH-03 | Phase 25 | Complete |
 | PROG-01 | Phase 22 | Complete |
 | PROG-02 | Phase 22 | Complete |
 | PROG-03 | Phase 22 | Complete |

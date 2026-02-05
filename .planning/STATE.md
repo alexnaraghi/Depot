@@ -5,15 +5,15 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** The user is never blocked — operations are always cancellable, errors are non-blocking, and the app remains responsive even during network issues or long-running operations.
-**Current focus:** v5.0 Large Depot Scale -- Phase 24 COMPLETE
+**Current focus:** v5.0 Large Depot Scale -- MILESTONE COMPLETE
 
 ## Current Position
 
 Milestone: v5.0 Large Depot Scale
-Phase: 25 of 25 (Batch Optimization)
-Plan: 02 of 03 complete
-Status: In progress
-Last activity: 2026-02-05 — Completed 25-02-PLAN.md (frontend batch integration)
+Phase: 25 of 25 (Batch Optimization) -- COMPLETE
+Plan: 02 of 02 complete (Phase complete!)
+Status: Phase complete
+Last activity: 2026-02-05 — Completed Phase 25 (batch optimization)
 
 Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [██████████] 100% (15/15)
 
