@@ -199,17 +199,64 @@ This report catalogs every scalability issue found, ranks them by severity, and 
 
 ---
 
-### 8. [P2] DepotBrowser Lazy Loading is Correct but Unbounded
+### 8. [P2] DepotBrowser: Server-Side Pagination Missing, No Workspace Restriction
 
-**Location:** `src/components/DepotBrowser/useDepotTree.ts`, `src-tauri/src/commands/p4.rs:2382-2427`
+**Location:** `src/components/DepotBrowser/useDepotTree.ts`, `src-tauri/src/commands/p4.rs:2054-2131`
 
-**Current behavior:** The depot browser correctly uses lazy loading -- it fetches children only when a folder is expanded via `p4 dirs` and `p4 files`. However, `p4 files` at a directory level has no pagination or result limit. A directory with 5,000 files will load all of them at once.
+**Current behavior:** The depot browser correctly uses lazy loading -- it fetches
+children only when a folder is expanded via `p4 dirs` and `p4 files`, and caches
+results via `loadedPaths` to avoid re-fetching on collapse/expand. However, two
+gaps exist compared to P4V's approach:
 
-**Impact:** A single directory with many files (e.g., a generated code directory) will cause a slow expand operation. Not app-breaking because it's user-triggered and per-directory.
+1. **No server-side result limiting:** The `p4_files` Rust command accepts
+   `max_results` but never passes `-m` to the actual `p4` command
+   (p4.rs:2063-2064). It fetches ALL files from the server, parses every line,
+   then truncates client-side at 1000. A directory with 5,000 files still
+   transmits all 5,000 over the wire before capping.
 
-**Solution:** Add `max_results` parameter to `p4_dirs` and paginate large directories. Show "Load more..." at the bottom when results are truncated.
+2. **No workspace-restricted view:** P4V's primary large-depot optimization is
+   "Tree restricted to workspace view", which filters the depot tree to only
+   show paths mapped in the client spec. P4Now always shows the entire depot,
+   meaning queries scope across depots the user may not care about.
 
-**Estimated effort:** 0.5 days
+**What P4V does (for reference):**
+- Uses `p4 files -m <batch_size>` for server-side pagination (configurable,
+  min 500 files per batch)
+- Loads additional batches on scroll ("Loading files..." indicator)
+- Defaults to workspace-restricted view, with "Entire Depot Tree" as opt-in
+- Caches directory contents client-side (P4Now already does this)
+- `p4 dirs` has no `-m` flag -- both P4V and P4Now fetch all subdirectories
+  at once (acceptable since directory count per level is typically small)
+
+**Impact at scale:** A single directory with 5,000 files causes the full output
+to traverse the network and be parsed, even though only the first 1,000 are
+displayed. Not app-breaking because it's user-triggered and per-directory, but
+wasteful on bandwidth and parse time. The lack of workspace restriction means
+users browsing large shared depots see everything, increasing the chance of
+accidentally expanding a massive directory.
+
+**Solution (3 changes, ordered by impact):**
+
+1. **Pass `-m` to the `p4 files` command** (small effort):
+   Add `-m {max_results}` to the p4 command args in `p4_files()` so the server
+   stops sending results at the limit. This eliminates unnecessary network
+   transfer and parse work. Return a `truncated: bool` flag alongside results.
+
+2. **Add "Load more" pagination** (small effort):
+   When results are truncated, show a "Load more files..." node at the bottom of
+   the directory. On click, fetch the next batch using `p4 files -m <batch>` with
+   a file spec offset (or simply increase the limit). P4V uses scroll-based
+   loading; a "Load more" button is simpler and avoids scroll event complexity.
+
+3. **Workspace-restricted depot view** (medium effort, high impact):
+   Add a toggle (matching P4V's "Tree restricted to workspace view") that filters
+   the depot tree to only show paths mapped in the active client spec. This
+   requires fetching the client spec view mapping and using it to filter `p4 dirs`
+   results. This is P4V's single most impactful performance feature for large
+   depots.
+
+**Estimated effort:** 0.5 days (server-side `-m`), 0.5 days (load more), 1-2
+days (workspace restriction)
 
 ---
 
@@ -587,7 +634,7 @@ Replace the current three-path search with a single unified search interface:
 |---|---|---|---|
 | FileTree | `FileTree.tsx` | P0: filter rebuild, P1: enhancedTree copies entire tree every render | Core bottleneck |
 | FileNode | `FileNode.tsx` | OK: single node renderer, virtualized by react-arborist | `useUnresolvedFiles()` hook called per node -- query is shared |
-| DepotBrowser | `DepotBrowser.tsx` | P2: no pagination per directory | Lazy load is correct |
+| DepotBrowser | `DepotBrowser.tsx` | P2: no server-side `-m`, no workspace restriction | Lazy load + client cache correct; add `-m` flag, pagination, workspace filter |
 | DepotNode | `DepotNode.tsx` | OK | Single node renderer |
 | ChangelistPanel | `ChangelistPanel.tsx` | P1: N+1 shelved queries, minor: full tree walk in findFiles helpers | |
 | ChangelistNode | `ChangelistNode.tsx` | OK | Single node renderer |
