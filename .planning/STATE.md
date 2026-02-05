@@ -20,10 +20,10 @@ Progress: [████████████████████] 74/74 p
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 85 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 11 v5.0)
+- Total plans completed: 86 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 12 v5.0)
 - Quick tasks completed: 10 (007 partial)
 - Average duration: 5 min
-- Total execution time: ~555 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 49 v5.0)
+- Total execution time: ~558 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 52 v5.0)
 
 **By Phase (v4.0):**
 
@@ -42,7 +42,7 @@ Progress: [████████████████████] 74/74 p
 | 21 | 3 | 12 min | 4 min |
 | 22 | 3 | 10 min | 3 min |
 | 23 | 3 | 18 min | 6 min |
-| 24 | 2 | 9 min | 5 min |
+| 24 | 3 | 12 min | 4 min |
 
 *Updated after each plan completion*
 
@@ -113,6 +113,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Change detection compares: revision, headRevision, status, action, changelist
 - Full re-aggregation of sync status after incremental updates (future optimization: partial branch)
 
+**24-03 Decisions:**
+- Delegate p4_fstat_opened to existing p4_opened (already uses fstat -Ro for full info)
+- No new types needed - returns same P4FileInfo[] as regular fstat
+
 ### Pending Todos
 
 19 pending — see `.planning/todos/pending/`
@@ -145,7 +149,7 @@ None
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed 24-02-PLAN.md, Phase 24 in progress (02/03)
+Stopped at: Completed 24-03-PLAN.md, Phase 24 complete (03/03)
 Resume file: None
 
 ---
