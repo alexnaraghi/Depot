@@ -11,6 +11,7 @@ interface FileTreeState {
   // Actions
   setFiles: (files: P4File[]) => void;
   updateFile: (depotPath: string, updates: Partial<P4File>) => void;
+  batchUpdateFiles: (updates: Map<string, Partial<P4File>>) => void;
   setRootPath: (path: string) => void;
   setLoading: (loading: boolean) => void;
   setSelectedFile: (file: P4File | null) => void;
@@ -37,9 +38,29 @@ export const useFileTreeStore = create<FileTreeState>((set, get) => ({
     const existingFile = currentFiles.get(depotPath);
 
     if (existingFile) {
-      const updatedFile = { ...existingFile, ...updates };
       const newFiles = new Map(currentFiles);
-      newFiles.set(depotPath, updatedFile);
+      newFiles.set(depotPath, { ...existingFile, ...updates });
+      set({ files: newFiles });
+    }
+    // If file doesn't exist, do nothing (no state change)
+  },
+
+  batchUpdateFiles: (updates) => {
+    if (updates.size === 0) return;
+
+    const currentFiles = get().files;
+    const newFiles = new Map(currentFiles);
+    let hasChanges = false;
+
+    updates.forEach((update, depotPath) => {
+      const existing = newFiles.get(depotPath);
+      if (existing) {
+        newFiles.set(depotPath, { ...existing, ...update });
+        hasChanges = true;
+      }
+    });
+
+    if (hasChanges) {
       set({ files: newFiles });
     }
   },
