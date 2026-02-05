@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** The user is never blocked — operations are always cancellable, errors are non-blocking, and the app remains responsive even during network issues or long-running operations.
-**Current focus:** v5.0 Large Depot Scale -- Phase 22: Streaming fstat + Progress
+**Current focus:** v5.0 Large Depot Scale -- Phase 23: FileIndex and Search
 
 ## Current Position
 
 Milestone: v5.0 Large Depot Scale
-Phase: 22 of 25 (Streaming fstat + Progress) — COMPLETE
-Plan: —
-Status: Phase 22 verified, ready for Phase 23
-Last activity: 2026-02-04 — Phase 22 complete (3/3 plans, 11/11 must-haves verified)
+Phase: 23 of 25 (FileIndex and Search)
+Plan: 1 of 3 complete
+Status: In progress
+Last activity: 2026-02-05 — Completed 23-01-PLAN.md (FileIndex module)
 
-Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [████░░░░░░] 40% (6/TBD)
+Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [█████░░░░░] 47% (7/TBD)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 80 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 6 v5.0)
+- Total plans completed: 81 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 7 v5.0)
 - Quick tasks completed: 10 (007 partial)
 - Average duration: 5 min
-- Total execution time: ~530 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 24 v5.0)
+- Total execution time: ~534 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 28 v5.0)
 
 **By Phase (v4.0):**
 
@@ -41,6 +41,7 @@ Progress: [████████████████████] 74/74 p
 |-------|-------|-------|----------|
 | 21 | 3 | 12 min | 4 min |
 | 22 | 3 | 10 min | 3 min |
+| 23 | 1 | 4 min | 4 min |
 
 *Updated after each plan completion*
 
@@ -83,6 +84,12 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Extract file count from operation messages via regex for cleaner UI display
 - Display format "X files (Y%)" shows both absolute and relative progress
 
+**23-01 Decisions:**
+- nucleo-matcher 0.3 for fuzzy matching (low-level API for direct control)
+- Arc<Mutex<FileIndex>> pattern matching ProcessManager for consistency
+- Recency bias: 1.5x score boost for files modified in last 7 days
+- Glob exports (pub use search::*) required for Tauri command macros
+
 ### Pending Todos
 
 19 pending — see `.planning/todos/pending/`
@@ -114,8 +121,8 @@ None
 
 ## Session Continuity
 
-Last session: 2026-02-04
-Stopped at: Phase 22 complete, ready for Phase 23
+Last session: 2026-02-05
+Stopped at: Completed 23-01-PLAN.md (FileIndex module)
 Resume file: None
 
 ---
