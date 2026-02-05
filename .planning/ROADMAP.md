@@ -233,7 +233,12 @@ Plans:
   3. User can cancel an in-progress workspace load and the partial results remain visible
   4. Operations longer than 2 seconds show a progress indicator with file count / estimated total
   5. All progress indicators have a cancel button that stops the underlying p4 process
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 22-01-PLAN.md — Backend streaming fstat command with Channel output
+- [ ] 22-02-PLAN.md — Frontend streaming integration with batch accumulation
+- [ ] 22-03-PLAN.md — Progress indicator enhancement and cancellation UX
 
 #### Phase 23: FileIndex and Search
 **Goal**: User can instantly search across all workspace files with fuzzy matching powered by a persistent Rust-side index
