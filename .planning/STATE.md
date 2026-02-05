@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 
 Milestone: v5.0 Large Depot Scale
 Phase: 25 of 25 (Batch Optimization)
-Plan: 01 of 03 complete
+Plan: 02 of 03 complete
 Status: In progress
-Last activity: 2026-02-05 — Completed 25-01-PLAN.md (backend batch command)
+Last activity: 2026-02-05 — Completed 25-02-PLAN.md (frontend batch integration)
 
-Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [█████████░] 93% (14/15)
+Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [██████████] 100% (15/15)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 88 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 14 v5.0)
+- Total plans completed: 89 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 15 v5.0)
 - Quick tasks completed: 10 (007 partial)
 - Average duration: 5 min
-- Total execution time: ~567 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 61 v5.0)
+- Total execution time: ~571 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 65 v5.0)
 
 **By Phase (v4.0):**
 
@@ -43,7 +43,7 @@ Progress: [████████████████████] 74/74 p
 | 22 | 3 | 10 min | 3 min |
 | 23 | 3 | 18 min | 6 min |
 | 24 | 4 | 17 min | 4 min |
-| 25 | 1 | 4 min | 4 min |
+| 25 | 2 | 8 min | 4 min |
 
 *Updated after each plan completion*
 
@@ -131,6 +131,12 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Field indices reset per CL - track context via 'change' field
 - Use .send() for all Channel messages (try_send not available)
 
+**25-02 Decisions:**
+- Progress format: "Loading shelved files... (X/Y)" per CONTEXT.md
+- Yellow toast on partial failure shows count summary only
+- 100ms wait after batch completes for Channel message delivery
+- Query key changed from 'shelved' to 'shelved-batch' to distinguish patterns
+
 ### Pending Todos
 
 20 pending — see `.planning/todos/pending/`
@@ -164,7 +170,7 @@ None
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed 25-01-PLAN.md (backend batch command)
+Stopped at: Completed 25-02-PLAN.md (frontend batch integration)
 Resume file: None
 
 ---
