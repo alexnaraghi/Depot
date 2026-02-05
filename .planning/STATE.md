@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 
 Milestone: v5.0 Large Depot Scale
 Phase: 22 of 25 (Streaming fstat + Progress) — IN PROGRESS
-Plan: 01 of 03
-Status: 22-01 complete, backend streaming infrastructure ready
-Last activity: 2026-02-05 — Completed 22-01-PLAN.md
+Plan: 02 of 03
+Status: 22-02 complete, frontend streaming integration ready
+Last activity: 2026-02-05 — Completed 22-02-PLAN.md
 
-Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [████░░░░░░] 27% (4/15)
+Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [█████░░░░░] 33% (5/15)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 78 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 4 v5.0)
+- Total plans completed: 79 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 5 v5.0)
 - Quick tasks completed: 10 (007 partial)
 - Average duration: 5 min
-- Total execution time: ~523 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 17 v5.0)
+- Total execution time: ~526 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 20 v5.0)
 
 **By Phase (v4.0):**
 
@@ -40,7 +40,7 @@ Progress: [████████████████████] 74/74 p
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 21 | 3 | 12 min | 4 min |
-| 22 | 1 | 3 min | 3 min |
+| 22 | 2 | 6 min | 3 min |
 
 *Updated after each plan completion*
 
@@ -72,6 +72,12 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Inline filtering of deleted-at-head files during parsing reduces payload by ~10-20%
 - Explicit completion signal with total count for frontend progress indicators
 - Separate stdout/stderr tokio tasks for parallel processing without blocking
+
+**22-02 Decisions:**
+- Use isStreaming state to prevent concurrent streams during active loading
+- Update query cache with new array references via spread operator (TanStack Query v5 API)
+- Disable refetchOnWindowFocus during streaming to prevent conflicts
+- Estimate total files: first batch = 10% of total, refine when approaching 90%
 
 ### Pending Todos
 
@@ -105,7 +111,7 @@ None
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed 22-01-PLAN.md, backend streaming ready
+Stopped at: Completed 22-02-PLAN.md, frontend streaming integration ready
 Resume file: None
 
 ---
