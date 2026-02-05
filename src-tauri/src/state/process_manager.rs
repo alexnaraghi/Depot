@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::process::Child;
+use tokio::process::Child;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -35,12 +35,15 @@ impl ProcessManager {
             // Use taskkill for reliable tree killing.
             #[cfg(target_os = "windows")]
             {
-                let pid = child.id();
-                let _ = std::process::Command::new("taskkill")
-                    .args(["/F", "/T", "/PID", &pid.to_string()])
-                    .output();
+                if let Some(pid) = child.id() {
+                    let _ = tokio::process::Command::new("taskkill")
+                        .args(["/F", "/T", "/PID", &pid.to_string()])
+                        .output()
+                        .await;
+                }
             }
-            child.kill().map_err(|e| e.to_string())?;
+            child.kill().await.map_err(|e| e.to_string())?;
+            let _ = child.wait().await; // Reap zombie
             Ok(true)
         } else {
             Ok(false)
@@ -53,12 +56,15 @@ impl ProcessManager {
         for (_, mut child) in processes.drain() {
             #[cfg(target_os = "windows")]
             {
-                let pid = child.id();
-                let _ = std::process::Command::new("taskkill")
-                    .args(["/F", "/T", "/PID", &pid.to_string()])
-                    .output();
+                if let Some(pid) = child.id() {
+                    let _ = tokio::process::Command::new("taskkill")
+                        .args(["/F", "/T", "/PID", &pid.to_string()])
+                        .output()
+                        .await;
+                }
             }
-            let _ = child.kill();
+            let _ = child.kill().await;
+            let _ = child.wait().await; // Reap zombie
         }
     }
 }
