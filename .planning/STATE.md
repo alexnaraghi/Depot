@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 
 Milestone: v5.0 Large Depot Scale
 Phase: 21 of 25 (Async Foundation)
-Plan: 21-01 completed
+Plan: 21-02 completed
 Status: In progress
-Last activity: 2026-02-05 — Completed 21-01-PLAN.md (tokio::process migration)
+Last activity: 2026-02-05 — Completed 21-02-PLAN.md (p4handlers async migration)
 
-Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [███░░░░░░░] 33% (1/3)
+Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [██████░░░░] 67% (2/3)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 75 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 1 v5.0)
+- Total plans completed: 76 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 2 v5.0)
 - Quick tasks completed: 10 (007 partial)
 - Average duration: 5 min
-- Total execution time: ~513 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 7 v5.0)
+- Total execution time: ~518 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 12 v5.0)
 
 **By Phase (v4.0):**
 
@@ -39,7 +39,7 @@ Progress: [████████████████████] 74/74 p
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 21 | 1 | 5 min | 5 min |
+| 21 | 2 | 10 min | 5 min |
 
 *Updated after each plan completion*
 
@@ -60,6 +60,11 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Migrated from std::process to tokio::process for non-blocking async execution
 - Added explicit .wait().await after every .kill().await to prevent zombie processes
 - Changed streaming tasks from std::thread::spawn to tokio::spawn
+
+**21-02 Decisions:**
+- Preserved std::process::Command inside spawn_blocking for merge tool (intentional blocking)
+- Updated all p4 commands to tokio::process with .output().await
+- Migrated p4_sync streaming from std::thread::spawn to tokio::spawn
 
 ### Pending Todos
 
@@ -93,7 +98,7 @@ None
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed 21-01-PLAN.md (tokio::process migration)
+Stopped at: Completed 21-02-PLAN.md (p4handlers async migration)
 Resume file: None
 
 ---
