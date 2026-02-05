@@ -1431,8 +1431,37 @@ pub async fn p4_reconcile_apply(
         })
         .collect();
 
+    // Use -x flag with temp file to avoid Windows command line length limit (ARG_MAX ~8191 chars)
+    // when reconciling large numbers of files
+    let temp_file = Builder::new()
+        .prefix("p4_reconcile_")
+        .suffix(".txt")
+        .tempfile()
+        .map_err(|e| format!("Failed to create temp file: {}", e))?;
+
+    let temp_path = temp_file.path().to_string_lossy().to_string();
+
+    // Write file paths to temp file (one per line)
+    use std::io::Write;
+    let mut file = std::fs::File::create(&temp_path)
+        .map_err(|e| format!("Failed to open temp file: {}", e))?;
+
+    for path in &cleaned_paths {
+        writeln!(file, "{}", path)
+            .map_err(|e| format!("Failed to write to temp file: {}", e))?;
+    }
+
+    // Flush to ensure all data is written
+    file.flush()
+        .map_err(|e| format!("Failed to flush temp file: {}", e))?;
+    drop(file); // Close file before p4 reads it
+
     let mut cmd = Command::new("p4");
     apply_connection_args(&mut cmd, &server, &user, &client);
+
+    // Use -x flag to read file list from temp file
+    cmd.arg("-x");
+    cmd.arg(&temp_path);
 
     cmd.arg("reconcile");
 
@@ -1441,8 +1470,6 @@ pub async fn p4_reconcile_apply(
         cmd.arg(cl.to_string());
     }
 
-    cmd.args(&cleaned_paths);
-
     let output = cmd
         .output()
         .await
@@ -1450,6 +1477,8 @@ pub async fn p4_reconcile_apply(
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
+
+    // Temp file is automatically cleaned up when temp_file goes out of scope
 
     if !output.status.success() {
         let err = if stderr.is_empty() {
