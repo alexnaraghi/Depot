@@ -6,7 +6,7 @@ use super::types::*;
 /// When explicit args are provided, overrides P4 environment variables
 /// and clears P4CONFIG to ensure complete isolation from DVCS/local config.
 pub(super) fn apply_connection_args(
-    cmd: &mut std::process::Command,
+    cmd: &mut tokio::process::Command,
     server: &Option<String>,
     user: &Option<String>,
     client: &Option<String>,
@@ -673,23 +673,24 @@ fn build_unresolved_file_info(fields: &HashMap<String, String>) -> Option<P4Unre
 }
 
 /// Update changelist description (used by submit and edit_change_description)
-pub(super) fn update_changelist_description(
+pub(super) async fn update_changelist_description(
     changelist: i32,
     description: &str,
     server: Option<String>,
     user: Option<String>,
     client: Option<String>,
 ) -> Result<(), String> {
-    use std::io::Write;
-    use std::process::{Command, Stdio};
+    use tokio::io::AsyncWriteExt;
+    use std::process::Stdio;
 
     // Get current changelist form
-    let mut cmd = Command::new("p4");
+    let mut cmd = tokio::process::Command::new("p4");
     apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args(["change", "-o", &changelist.to_string()]);
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to get changelist: {}", e))?;
 
     if !output.status.success() {
@@ -722,7 +723,7 @@ pub(super) fn update_changelist_description(
     }
 
     // Submit updated form
-    let mut cmd = Command::new("p4");
+    let mut cmd = tokio::process::Command::new("p4");
     apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args(["change", "-i"]);
     cmd.stdin(Stdio::piped());
@@ -736,11 +737,13 @@ pub(super) fn update_changelist_description(
     if let Some(mut stdin) = child.stdin.take() {
         stdin
             .write_all(new_form.as_bytes())
+            .await
             .map_err(|e| format!("Failed to write changelist form: {}", e))?;
     }
 
     let result = child
         .wait_with_output()
+        .await
         .map_err(|e| format!("Failed to update changelist: {}", e))?;
 
     if !result.status.success() {

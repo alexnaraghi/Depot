@@ -1,5 +1,6 @@
-use std::io::{BufRead, BufReader, Write};
-use std::process::{Command, Stdio};
+use tokio::process::Command;
+use std::process::Stdio;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tauri::{ipc::Channel, AppHandle, Emitter, State};
 use tempfile::Builder;
 
@@ -23,6 +24,7 @@ pub async fn p4_info(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 info: {}", e))?;
 
     if !output.status.success() {
@@ -64,6 +66,7 @@ pub async fn p4_fstat(
     // Execute command
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 fstat: {}", e))?;
 
     // Parse output even if exit code is non-zero (p4 fstat can return errors for individual files)
@@ -92,6 +95,7 @@ pub async fn p4_opened(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 fstat -Ro: {}", e))?;
 
     if !output.status.success() {
@@ -138,6 +142,7 @@ pub async fn p4_changes(
     // Execute command
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 changes: {}", e))?;
 
     if !output.status.success() {
@@ -183,6 +188,7 @@ pub async fn p4_edit(
     // Execute command
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 edit: {}", e))?;
 
     // Check for errors (but note p4 edit can have partial success)
@@ -245,6 +251,7 @@ pub async fn p4_revert(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 revert: {}", e))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -302,6 +309,7 @@ pub async fn p4_submit(
         apply_connection_args(&mut cmd, &server, &user, &client);
         cmd.args(["submit", "-d", &desc]);
         cmd.output()
+            .await
             .map_err(|e| format!("Failed to execute p4 submit: {}", e))?
     } else {
         // Named changelist: update description if provided, then submit with -c
@@ -312,12 +320,13 @@ pub async fn p4_submit(
                 server.clone(),
                 user.clone(),
                 client.clone(),
-            )?;
+            ).await?;
         }
         let mut cmd = Command::new("p4");
         apply_connection_args(&mut cmd, &server, &user, &client);
         cmd.args(["submit", "-c", &changelist.to_string()]);
         cmd.output()
+            .await
             .map_err(|e| format!("Failed to execute p4 submit: {}", e))?
     };
 
@@ -367,6 +376,7 @@ pub async fn p4_create_change(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to get changelist template: {}", e))?;
 
     if !output.status.success() {
@@ -423,11 +433,13 @@ pub async fn p4_create_change(
     if let Some(mut stdin) = child.stdin.take() {
         stdin
             .write_all(new_form.as_bytes())
+            .await
             .map_err(|e| format!("Failed to write changelist form: {}", e))?;
     }
 
     let result = child
         .wait_with_output()
+        .await
         .map_err(|e| format!("Failed to create changelist: {}", e))?;
 
     if !result.status.success() {
@@ -465,6 +477,7 @@ pub async fn p4_delete_change(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 change -d: {}", e))?;
 
     if !output.status.success() {
@@ -501,6 +514,7 @@ pub async fn p4_reopen(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 reopen: {}", e))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -534,7 +548,7 @@ pub async fn p4_edit_change_description(
     user: Option<String>,
     client: Option<String>,
 ) -> Result<(), String> {
-    update_changelist_description(changelist, &description, server, user, client)
+    update_changelist_description(changelist, &description, server, user, client).await
 }
 
 /// Sync files from depot (get latest)
@@ -582,12 +596,12 @@ pub async fn p4_sync(
     let process_id = state.register(child).await;
     let process_id_clone = process_id.clone();
 
-    // Stream stdout in background thread
+    // Stream stdout in background task
     let on_progress_clone = on_progress.clone();
     if let Some(stdout) = stdout {
-        std::thread::spawn(move || {
-            let reader = BufReader::new(stdout);
-            for line in reader.lines().map_while(Result::ok) {
+        tokio::spawn(async move {
+            let mut lines = BufReader::new(stdout).lines();
+            while let Ok(Some(line)) = lines.next_line().await {
                 if let Some(progress) = parse_sync_line(&line) {
                     let _ = on_progress_clone.send(progress);
                 }
@@ -595,11 +609,11 @@ pub async fn p4_sync(
         });
     }
 
-    // Stream stderr in background thread (for errors/conflicts)
+    // Stream stderr in background task (for errors/conflicts)
     if let Some(stderr) = stderr {
-        std::thread::spawn(move || {
-            let reader = BufReader::new(stderr);
-            for line in reader.lines().map_while(Result::ok) {
+        tokio::spawn(async move {
+            let mut lines = BufReader::new(stderr).lines();
+            while let Ok(Some(line)) = lines.next_line().await {
                 // Skip informational messages that P4 sends to stderr
                 if line.contains("file(s) up-to-date") {
                     // This is not an error - workspace is already synced
@@ -634,6 +648,7 @@ pub async fn p4_list_workspaces(server: String, user: String) -> Result<Vec<P4Wo
     cmd.args(["-p", &server, "-u", &user, "-ztag", "clients", "-u", &user]);
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 clients: {}", e))?;
 
     if !output.status.success() {
@@ -662,6 +677,7 @@ pub async fn p4_test_connection(
     cmd.args(["-p", &server, "-u", &user, "-c", &client, "-ztag", "info"]);
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 info: {}", e))?;
 
     if !output.status.success() {
@@ -697,6 +713,7 @@ pub async fn p4_filelog(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 filelog: {}", e))?;
 
     if !output.status.success() {
@@ -742,6 +759,7 @@ pub async fn p4_print_to_file(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 print: {}", e))?;
 
     if !output.status.success() {
@@ -774,6 +792,7 @@ pub async fn p4_print_content(
 
     let fstat_output = fstat_cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 fstat: {}", e))?;
 
     if !fstat_output.status.success() {
@@ -834,6 +853,7 @@ pub async fn p4_print_content(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 print: {}", e))?;
 
     if !output.status.success() {
@@ -868,6 +888,7 @@ pub async fn p4_annotate(
 
     let fstat_output = fstat_cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 fstat: {}", e))?;
 
     if !fstat_output.status.success() {
@@ -912,6 +933,7 @@ pub async fn p4_annotate(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 annotate: {}", e))?;
 
     if !output.status.success() {
@@ -994,6 +1016,7 @@ pub async fn p4_changes_submitted(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 changes: {}", e))?;
 
     if !output.status.success() {
@@ -1027,6 +1050,7 @@ pub async fn p4_shelve(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 shelve: {}", e))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -1058,6 +1082,7 @@ pub async fn p4_describe_shelved(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 describe: {}", e))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -1097,6 +1122,7 @@ pub async fn p4_describe(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 describe: {}", e))?;
 
     if !output.status.success() {
@@ -1136,6 +1162,7 @@ pub async fn p4_unshelve(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 unshelve: {}", e))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -1173,6 +1200,7 @@ pub async fn p4_delete_shelf(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 shelve -d: {}", e))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -1208,6 +1236,7 @@ pub async fn p4_reconcile_preview(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 reconcile -n: {}", e))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -1263,6 +1292,7 @@ pub async fn p4_reconcile_apply(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 reconcile: {}", e))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -1301,6 +1331,7 @@ pub async fn p4_resolve_preview(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 resolve -n: {}", e))?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -1335,6 +1366,7 @@ pub async fn p4_files(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 files: {}", e))?;
 
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -1413,6 +1445,7 @@ pub async fn p4_list_streams(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 streams: {}", e))?;
 
     if !output.status.success() {
@@ -1437,6 +1470,7 @@ pub async fn p4_get_client_spec(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 client -o: {}", e))?;
 
     if !output.status.success() {
@@ -1463,6 +1497,7 @@ pub async fn p4_update_client_stream(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to get client spec: {}", e))?;
 
     if !output.status.success() {
@@ -1498,6 +1533,7 @@ pub async fn p4_update_client_stream(
     if let Some(mut stdin) = child.stdin.take() {
         stdin
             .write_all(new_form.as_bytes())
+            .await
             .map_err(|e| format!("Failed to write form: {}", e))?;
         // Drop stdin to signal EOF
         drop(stdin);
@@ -1505,6 +1541,7 @@ pub async fn p4_update_client_stream(
 
     let result = child
         .wait_with_output()
+        .await
         .map_err(|e| format!("Failed to update client: {}", e))?;
 
     if !result.status.success() {
@@ -1528,6 +1565,7 @@ pub async fn p4_depots(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 depots: {}", e))?;
 
     if !output.status.success() {
@@ -1562,6 +1600,7 @@ pub async fn p4_dirs(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 dirs: {}", e))?;
 
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -1592,6 +1631,7 @@ pub async fn p4_fstat_unresolved(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 fstat -Ru -Or: {}", e))?;
 
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -1634,6 +1674,7 @@ pub async fn p4_resolve_accept(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 resolve: {}", e))?;
 
     if !output.status.success() {
@@ -1668,6 +1709,7 @@ pub async fn launch_merge_tool(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4 fstat: {}", e))?;
 
     if !output.status.success() {
@@ -1728,6 +1770,7 @@ pub async fn launch_merge_tool(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to print base file: {}", e))?;
 
     if !output.status.success() {
@@ -1748,6 +1791,7 @@ pub async fn launch_merge_tool(
 
     let output = cmd
         .output()
+        .await
         .map_err(|e| format!("Failed to print theirs file: {}", e))?;
 
     if !output.status.success() {
@@ -1762,7 +1806,7 @@ pub async fn launch_merge_tool(
     let merge_tool_clone = merge_tool.clone();
 
     let exit_code = tokio::task::spawn_blocking(move || {
-        let status = Command::new(&merge_tool_clone)
+        let status = std::process::Command::new(&merge_tool_clone)
             .args([&base_temp_str, &theirs_temp_str, &local_path_clone, &local_path_clone])
             .status()
             .map_err(|e| format!("Failed to launch merge tool: {}", e))?;
