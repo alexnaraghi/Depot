@@ -219,8 +219,11 @@ export function incrementalTreeUpdate(
   });
 
   // Re-aggregate sync status only for modified subtrees
+  // Must use produce() again since updatedTree is now frozen/immutable
   if (modifiedFolders.size > 0) {
-    reAggregateSyncStatus(updatedTree, modifiedFolders);
+    return produce(updatedTree, draft => {
+      reAggregateSyncStatus(draft, modifiedFolders);
+    });
   }
 
   return updatedTree;
