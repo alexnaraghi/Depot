@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useQuery, useQueries } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useChangelistStore } from '@/stores/changelistStore';
 import { useConnectionStore } from '@/stores/connectionStore';
-import { invokeP4Changes, invokeP4Opened, invokeP4DescribeShelved, type P4ShelvedFile } from '@/lib/tauri';
+import { invokeP4Changes, invokeP4Opened, invokeP4DescribeShelvedBatch, type P4ShelvedFile, type ShelvedBatchProgress } from '@/lib/tauri';
 import { useOperationStore } from '@/store/operation';
 import { getVerboseLogging, getAutoRefreshInterval } from '@/lib/settings';
 import { useWindowFocus } from '@/hooks/useWindowFocus';
 import { buildChangelistTree, ChangelistTreeNode } from '@/utils/treeBuilder';
 import { P4Changelist, P4File, FileStatus } from '@/types/p4';
+import toast from 'react-hot-toast';
 
 /**
  * Hook for loading and managing changelist data
@@ -150,43 +151,66 @@ export function useChangelists(): {
       .map(cl => cl.id);
   }, [changelists]);
 
-  // Query shelved files for each numbered changelist
-  const shelvedQueries = useQueries({
-    queries: numberedClIds.map(clId => ({
-      queryKey: ['p4', 'shelved', clId],
-      queryFn: async () => {
-        const { addOutputLine } = useOperationStore.getState();
-        const verbose = await getVerboseLogging();
-        if (verbose) addOutputLine(`p4 describe -S ${clId}`, false);
-        try {
-          const result = await invokeP4DescribeShelved(clId);
-          if (verbose) addOutputLine(`... returned ${result.length} shelved items`, false);
-          return result;
-        } catch (error) {
-          // CL may not have shelved files - return empty array instead of throwing
-          if (verbose) addOutputLine(`... no shelved files (${error})`, false);
-          return [] as P4ShelvedFile[];
-        }
-      },
-      enabled: isConnected,
-      staleTime: 30000,
-      refetchOnWindowFocus: false,
-      refetchInterval: refetchIntervalValue,
-      retry: 1,
-    })),
-  });
+  // Query shelved files for all numbered changelists in batch
+  const { data: shelvedFilesMap = new Map() } = useQuery({
+    queryKey: ['p4', 'shelved-batch', numberedClIds.join(',')],
+    queryFn: async () => {
+      if (numberedClIds.length === 0) return new Map<number, P4ShelvedFile[]>();
 
-  // Build shelved files map from query results
-  const shelvedFilesMap = useMemo(() => {
-    const map = new Map<number, P4ShelvedFile[]>();
-    numberedClIds.forEach((clId, index) => {
-      const query = shelvedQueries[index];
-      if (query?.data && query.data.length > 0) {
-        map.set(clId, query.data);
+      const { startOperation, updateProgress, completeOperation, addOutputLine } = useOperationStore.getState();
+      const results = new Map<number, P4ShelvedFile[]>();
+      const verbose = await getVerboseLogging();
+
+      // Start operation for progress display
+      startOperation('shelved-batch', `describe -S ${numberedClIds.length} CLs`);
+      if (verbose) addOutputLine(`p4 describe -S ${numberedClIds.join(' ')}`, false);
+
+      try {
+        const processId = await invokeP4DescribeShelvedBatch(
+          numberedClIds,
+          (progress: ShelvedBatchProgress) => {
+            if (progress.type === 'progress') {
+              const pct = Math.round((progress.loaded / progress.total) * 100);
+              updateProgress(pct, `Loading shelved files... (${progress.loaded}/${progress.total})`);
+            } else if (progress.type === 'result') {
+              if (progress.result.files) {
+                results.set(progress.result.changelistId, progress.result.files);
+              }
+            } else if (progress.type === 'complete') {
+              if (progress.errorCount > 0 && !progress.cancelled) {
+                toast(`Loaded ${progress.successCount} of ${progress.successCount + progress.errorCount} changelists`, {
+                  icon: '\u26A0\uFE0F', // Warning emoji
+                  duration: 4000,
+                });
+              }
+              if (verbose) {
+                addOutputLine(`... loaded ${progress.successCount} CLs${progress.errorCount > 0 ? `, ${progress.errorCount} errors` : ''}`, false);
+              }
+              completeOperation(progress.errorCount === 0 || progress.cancelled);
+            }
+          }
+        );
+
+        // Store processId for cancellation - this wires to the cancel button in status bar
+        // via existing useOperationStore pattern (cancel button calls ProcessManager.cancel with this ID)
+        useOperationStore.getState().setProcessId(processId);
+
+        // Wait briefly for all results to arrive (batch completes quickly)
+        // The Channel delivers results, we just need to return the accumulated map
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+      } catch (error) {
+        if (verbose) addOutputLine(`... error: ${error}`, true);
+        completeOperation(false, String(error));
       }
-    });
-    return map;
-  }, [numberedClIds, shelvedQueries]);
+
+      return results;
+    },
+    enabled: isConnected && numberedClIds.length > 0,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+    refetchInterval: refetchIntervalValue,
+  });
 
   // Build tree from store
   const treeData = useMemo(() => {
