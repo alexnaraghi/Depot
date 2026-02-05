@@ -96,6 +96,11 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Search mode preserved across filter clears (user preference)
 - Max 500 results from backend for hierarchical filtering
 
+**23-03 Decisions:**
+- Fire-and-forget pattern for index operations to avoid blocking batch processing
+- Clear index on stream start AND on disconnect for workspace change scenarios
+- headModTime field added to P4FileInfo for recency-weighted search
+
 ### Pending Todos
 
 19 pending — see `.planning/todos/pending/`
@@ -128,7 +133,7 @@ None
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed 23-01-PLAN.md (FileIndex module)
+Stopped at: Completed 23-03-PLAN.md (Streaming integration)
 Resume file: None
 
 ---
