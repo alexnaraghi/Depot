@@ -14,6 +14,15 @@ pub struct P4FileInfo {
     pub head_action: Option<String>,
 }
 
+/// Streaming batch for p4_fstat_stream
+/// Data variant contains file batches, Complete signals end of stream
+#[derive(Clone, Serialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum FstatStreamBatch {
+    Data { files: Vec<P4FileInfo>, total_received: u32 },
+    Complete { total_files: u32, success: bool, error: Option<String> },
+}
+
 /// Changelist information from p4 changes
 #[derive(Debug, Clone, Serialize)]
 pub struct P4Changelist {
