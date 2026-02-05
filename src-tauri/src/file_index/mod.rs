@@ -36,11 +36,13 @@ impl FileIndex {
         self.files.len()
     }
 
+    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.files.is_empty()
     }
 
     /// Get reference to files for searching
+    #[allow(dead_code)]
     pub fn files(&self) -> &[FileEntry] {
         &self.files
     }

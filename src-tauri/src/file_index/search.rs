@@ -1,4 +1,4 @@
-use super::{FileEntry, FileIndex};
+use super::FileIndex;
 use nucleo_matcher::pattern::{AtomKind, CaseMatching, Normalization, Pattern};
 use nucleo_matcher::{Config, Matcher};
 use serde::Serialize;

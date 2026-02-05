@@ -1,6 +1,8 @@
 mod commands;
+mod file_index;
 mod state;
 
+use file_index::create_file_index_state;
 use state::ProcessManager;
 use tauri::Manager;
 
@@ -11,6 +13,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_store::Builder::new().build())
+        .manage(create_file_index_state())
         .manage(ProcessManager::new())
         .invoke_handler(tauri::generate_handler![
             commands::spawn_p4_command,
@@ -55,6 +58,10 @@ pub fn run() {
             commands::p4_dirs,
             commands::p4_depots,
             commands::p4_annotate,
+            commands::search_workspace_files,
+            commands::add_files_to_index,
+            commands::clear_file_index,
+            commands::get_file_index_count,
         ])
         .setup(|app| {
             // Get process manager for cleanup
