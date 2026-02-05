@@ -10,9 +10,9 @@ Requirements for large depot scalability milestone. Makes P4Now work smoothly wi
 
 ### Streaming Workspace Loading
 
-- [ ] **STREAM-01**: Workspace file tree loads progressively via streaming (first files visible in <500ms)
-- [ ] **STREAM-02**: Streaming fstat sends batches of files incrementally (not all-or-nothing)
-- [ ] **STREAM-03**: User can cancel streaming load in progress
+- [x] **STREAM-01**: Workspace file tree loads progressively via streaming (first files visible in <500ms)
+- [x] **STREAM-02**: Streaming fstat sends batches of files incrementally (not all-or-nothing)
+- [x] **STREAM-03**: User can cancel streaming load in progress
 - [ ] **STREAM-04**: Backend uses tokio::process for non-blocking async process execution
 
 ### File Tree Performance
@@ -43,9 +43,9 @@ Requirements for large depot scalability milestone. Makes P4Now work smoothly wi
 
 ### Progress & Feedback
 
-- [ ] **PROG-01**: Operations longer than 2 seconds show progress indicator
-- [ ] **PROG-02**: Progress indicator shows file count / estimated total during streaming
-- [ ] **PROG-03**: All progress indicators support cancellation
+- [x] **PROG-01**: Operations longer than 2 seconds show progress indicator
+- [x] **PROG-02**: Progress indicator shows file count / estimated total during streaming
+- [x] **PROG-03**: All progress indicators support cancellation
 
 ## Future Requirements
 
@@ -103,9 +103,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| STREAM-01 | Phase 22 | Pending |
-| STREAM-02 | Phase 22 | Pending |
-| STREAM-03 | Phase 22 | Pending |
+| STREAM-01 | Phase 22 | Complete |
+| STREAM-02 | Phase 22 | Complete |
+| STREAM-03 | Phase 22 | Complete |
 | STREAM-04 | Phase 21 | Complete |
 | TREE-01 | Phase 23 | Pending |
 | TREE-02 | Phase 21 | Complete |
@@ -121,9 +121,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BATCH-01 | Phase 25 | Pending |
 | BATCH-02 | Phase 25 | Pending |
 | BATCH-03 | Phase 25 | Pending |
-| PROG-01 | Phase 22 | Pending |
-| PROG-02 | Phase 22 | Pending |
-| PROG-03 | Phase 22 | Pending |
+| PROG-01 | Phase 22 | Complete |
+| PROG-02 | Phase 22 | Complete |
+| PROG-03 | Phase 22 | Complete |
 
 **Coverage:**
 - v5.0 requirements: 21 total

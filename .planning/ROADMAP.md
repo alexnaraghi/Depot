@@ -236,9 +236,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 22-01-PLAN.md — Backend streaming fstat command with Channel output
-- [ ] 22-02-PLAN.md — Frontend streaming integration with batch accumulation
-- [ ] 22-03-PLAN.md — Progress indicator enhancement and cancellation UX
+- [x] 22-01-PLAN.md — Backend streaming fstat command with Channel output
+- [x] 22-02-PLAN.md — Frontend streaming integration with batch accumulation
+- [x] 22-03-PLAN.md — Progress indicator enhancement and cancellation UX
 
 #### Phase 23: FileIndex and Search
 **Goal**: User can instantly search across all workspace files with fuzzy matching powered by a persistent Rust-side index
@@ -300,7 +300,7 @@ Plans:
 | 19. Submit Enhancement | v4.0 | 2/2 | Complete | 2026-02-03 |
 | 20. Bug Fixes & UI Polish | v4.0 | 5/5 | Complete | 2026-02-03 |
 | 21. Async Foundation | v5.0 | 3/3 | Complete | 2026-02-04 |
-| 22. Streaming fstat + Progress | v5.0 | 0/TBD | Not started | - |
+| 22. Streaming fstat + Progress | v5.0 | 3/3 | Complete | 2026-02-04 |
 | 23. FileIndex and Search | v5.0 | 0/TBD | Not started | - |
 | 24. Tree Performance + Delta Refresh | v5.0 | 0/TBD | Not started | - |
 | 25. Batch Optimization | v5.0 | 0/TBD | Not started | - |
