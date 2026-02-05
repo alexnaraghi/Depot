@@ -1,5 +1,6 @@
-use std::io::{BufRead, BufReader};
-use std::process::{Command, Stdio};
+use tokio::process::Command;
+use std::process::Stdio;
+use tokio::io::{AsyncBufReadExt, BufReader};
 use tauri::ipc::Channel;
 use tauri::State;
 
@@ -36,12 +37,12 @@ pub async fn spawn_p4_command(
     let process_id = state.register(child).await;
     let process_id_clone = process_id.clone();
 
-    // Stream stdout in background thread
+    // Stream stdout in background task
     let on_output_clone = on_output.clone();
     if let Some(stdout) = stdout {
-        std::thread::spawn(move || {
-            let reader = BufReader::new(stdout);
-            for line in reader.lines().map_while(Result::ok) {
+        tokio::spawn(async move {
+            let mut lines = BufReader::new(stdout).lines();
+            while let Ok(Some(line)) = lines.next_line().await {
                 let _ = on_output_clone.send(OutputLine {
                     line,
                     is_stderr: false,
@@ -50,11 +51,11 @@ pub async fn spawn_p4_command(
         });
     }
 
-    // Stream stderr in background thread
+    // Stream stderr in background task
     if let Some(stderr) = stderr {
-        std::thread::spawn(move || {
-            let reader = BufReader::new(stderr);
-            for line in reader.lines().map_while(Result::ok) {
+        tokio::spawn(async move {
+            let mut lines = BufReader::new(stderr).lines();
+            while let Ok(Some(line)) = lines.next_line().await {
                 let _ = on_output.send(OutputLine {
                     line,
                     is_stderr: true,
@@ -73,6 +74,7 @@ pub async fn p4_command(args: Vec<String>) -> Result<String, String> {
     let output = Command::new("p4")
         .args(&args)
         .output()
+        .await
         .map_err(|e| format!("Failed to execute p4: {}", e))?;
 
     if output.status.success() {
