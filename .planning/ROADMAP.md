@@ -252,9 +252,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 23-01-PLAN.md — Create FileIndex module with nucleo fuzzy matching and Tauri commands
-- [ ] 23-02-PLAN.md — Frontend search integration with fuzzy/exact toggle and match count
-- [ ] 23-03-PLAN.md — Integrate FileIndex with streaming fstat for automatic rebuild
+- [x] 23-01-PLAN.md — Create FileIndex module with nucleo fuzzy matching and Tauri commands
+- [x] 23-02-PLAN.md — Frontend search integration with fuzzy/exact toggle and match count
+- [x] 23-03-PLAN.md — Integrate FileIndex with streaming fstat for automatic rebuild
 
 #### Phase 24: Tree Performance + Delta Refresh
 **Goal**: File tree updates are incremental (no full rebuilds) and auto-refresh is cheap (queries only changed files)
@@ -306,6 +306,6 @@ Plans:
 | 20. Bug Fixes & UI Polish | v4.0 | 5/5 | Complete | 2026-02-03 |
 | 21. Async Foundation | v5.0 | 3/3 | Complete | 2026-02-04 |
 | 22. Streaming fstat + Progress | v5.0 | 3/3 | Complete | 2026-02-04 |
-| 23. FileIndex and Search | v5.0 | 0/3 | Not started | - |
+| 23. FileIndex and Search | v5.0 | 3/3 | Complete | 2026-02-05 |
 | 24. Tree Performance + Delta Refresh | v5.0 | 0/TBD | Not started | - |
 | 25. Batch Optimization | v5.0 | 0/TBD | Not started | - |
