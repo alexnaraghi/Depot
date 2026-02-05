@@ -2,7 +2,7 @@ import { useCallback, useMemo, useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useFileTreeStore } from '@/stores/fileTreeStore';
 import { useConnectionStore } from '@/stores/connectionStore';
-import { invokeP4FstatStream, invokeP4Info, P4FileInfo, FstatStreamBatch } from '@/lib/tauri';
+import { invokeP4FstatStream, invokeP4Info, P4FileInfo, FstatStreamBatch, addFilesToIndex, clearFileIndex } from '@/lib/tauri';
 import { useOperationStore } from '@/store/operation';
 import { getVerboseLogging } from '@/lib/settings';
 import { buildFileTree } from '@/utils/treeBuilder';
@@ -78,10 +78,14 @@ export function useFileTree() {
   const accumulatedFilesRef = useRef<P4File[]>([]);
   const estimatedTotalRef = useRef(0);
 
-  // Clear store when disconnected
+  // Clear store and index when disconnected
   useEffect(() => {
     if (!isConnected) {
       useFileTreeStore.setState({ files: new Map(), rootPath: null, selectedFile: null, isLoading: false });
+      // Clear FileIndex when workspace changes/disconnects
+      clearFileIndex().catch(err => {
+        console.warn('Failed to clear file index on disconnect:', err);
+      });
     }
   }, [isConnected]);
 
@@ -125,6 +129,11 @@ export function useFileTree() {
     accumulatedFilesRef.current = [];
     estimatedTotalRef.current = 0;
 
+    // Clear FileIndex before starting new stream
+    clearFileIndex().catch(err => {
+      console.warn('Failed to clear file index:', err);
+    });
+
     const verbose = await getVerboseLogging();
     if (verbose) addOutputLine(`p4 fstat ${depotPath} (streaming)`, false);
 
@@ -134,6 +143,16 @@ export function useFileTree() {
           // Map backend types to frontend types
           const mappedBatch = batch.files.map(mapP4FileInfo);
           accumulatedFilesRef.current.push(...mappedBatch);
+
+          // Populate FileIndex incrementally (fire-and-forget for performance)
+          const indexEntries = batch.files.map(file => ({
+            depotPath: file.depot_path,
+            // headModTime will be available after Task 2, use 0 as placeholder for now
+            modTime: (file as P4FileInfo & { head_mod_time?: number }).head_mod_time ?? 0,
+          }));
+          addFilesToIndex(indexEntries).catch(err => {
+            console.warn('Failed to add files to index:', err);
+          });
 
           // Update estimate: first batch sets baseline, subsequent batches refine
           if (estimatedTotalRef.current === 0) {

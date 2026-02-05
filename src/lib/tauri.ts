@@ -595,3 +595,62 @@ export async function invokeP4Annotate(
 ): Promise<P4AnnotationLine[]> {
   return invoke<P4AnnotationLine[]>('p4_annotate', { depotPath, revision, ...getConnectionArgs() });
 }
+
+// ============================================================================
+// FileIndex / Search Commands (from 23-01)
+// ============================================================================
+
+/**
+ * Entry for adding to the file index.
+ * depotPath: Full depot path (e.g., "//depot/main/src/file.ts")
+ * modTime: Unix timestamp of head revision modification time (for recency bias)
+ */
+export interface FileIndexEntry {
+  depotPath: string;
+  modTime: number;
+}
+
+/**
+ * Search result from the file index.
+ */
+export interface SearchResult {
+  depotPath: string;
+  score: number;
+}
+
+/**
+ * Add files to the FileIndex (called from streaming fstat).
+ * Fire-and-forget pattern - don't await to avoid blocking batch processing.
+ * Returns the new total count of indexed files.
+ */
+export async function addFilesToIndex(files: FileIndexEntry[]): Promise<number> {
+  return invoke<number>('add_files_to_index', { files });
+}
+
+/**
+ * Clear the file index (called when workspace changes or new stream starts).
+ */
+export async function clearFileIndex(): Promise<void> {
+  return invoke<void>('clear_file_index');
+}
+
+/**
+ * Search workspace files using the persistent index.
+ * @param query - Search query (fuzzy matched)
+ * @param mode - "fuzzy" (default) or "exact"
+ * @param maxResults - Maximum results to return (default: 50)
+ */
+export async function searchWorkspaceFiles(
+  query: string,
+  mode: 'fuzzy' | 'exact' = 'fuzzy',
+  maxResults: number = 50
+): Promise<SearchResult[]> {
+  return invoke<SearchResult[]>('search_workspace_files', { query, mode, maxResults });
+}
+
+/**
+ * Get current count of indexed files.
+ */
+export async function getFileIndexCount(): Promise<number> {
+  return invoke<number>('get_file_index_count');
+}
