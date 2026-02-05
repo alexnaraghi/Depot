@@ -10,20 +10,20 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Milestone: v5.0 Large Depot Scale
-Phase: 22 of 25 (Streaming fstat + Progress) — IN PROGRESS
-Plan: 02 of 03
-Status: 22-02 complete, frontend streaming integration ready
-Last activity: 2026-02-05 — Completed 22-02-PLAN.md
+Phase: 22 of 25 (Streaming fstat + Progress) — COMPLETE
+Plan: 03 of 03
+Status: Phase 22 complete, progress indicator UX enhanced
+Last activity: 2026-02-05 — Completed 22-03-PLAN.md
 
-Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [█████░░░░░] 33% (5/15)
+Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [██████░░░░] 40% (6/15)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 79 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 5 v5.0)
+- Total plans completed: 80 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 6 v5.0)
 - Quick tasks completed: 10 (007 partial)
 - Average duration: 5 min
-- Total execution time: ~526 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 20 v5.0)
+- Total execution time: ~530 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 24 v5.0)
 
 **By Phase (v4.0):**
 
@@ -40,7 +40,7 @@ Progress: [████████████████████] 74/74 p
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 21 | 3 | 12 min | 4 min |
-| 22 | 2 | 6 min | 3 min |
+| 22 | 3 | 10 min | 3 min |
 
 *Updated after each plan completion*
 
@@ -79,6 +79,10 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Disable refetchOnWindowFocus during streaming to prevent conflicts
 - Estimate total files: first batch = 10% of total, refine when approaching 90%
 
+**22-03 Decisions:**
+- Extract file count from operation messages via regex for cleaner UI display
+- Display format "X files (Y%)" shows both absolute and relative progress
+
 ### Pending Todos
 
 19 pending — see `.planning/todos/pending/`
@@ -111,7 +115,7 @@ None
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed 22-02-PLAN.md, frontend streaming integration ready
+Stopped at: Completed 22-03-PLAN.md, Phase 22 complete
 Resume file: None
 
 ---
