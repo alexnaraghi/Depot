@@ -283,7 +283,11 @@ Plans:
   1. All shelved file lists load from a single batched backend call (not one p4 describe per changelist)
   2. If one changelist's shelved query fails, other changelists still show their shelved files
   3. Batch query executes sequentially to avoid triggering Perforce server rate limiting
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 25-01-PLAN.md — Backend batch command with streaming progress and error isolation
+- [ ] 25-02-PLAN.md — Frontend batch integration with progress indicator and toast notifications
 
 ## Progress
 
@@ -314,4 +318,4 @@ Plans:
 | 22. Streaming fstat + Progress | v5.0 | 3/3 | Complete | 2026-02-04 |
 | 23. FileIndex and Search | v5.0 | 3/3 | Complete | 2026-02-05 |
 | 24. Tree Performance + Delta Refresh | v5.0 | 4/4 | Complete | 2026-02-05 |
-| 25. Batch Optimization | v5.0 | 0/TBD | Not started | - |
+| 25. Batch Optimization | v5.0 | 0/2 | Not started | - |
