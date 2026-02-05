@@ -25,16 +25,14 @@ function AppContent() {
   useP4Events();
 
   return (
-    <div className="h-full bg-slate-900 text-slate-100 flex flex-col">
+    <div className="h-full bg-slate-900 text-slate-100 flex flex-col pb-6">
       {/* Main application layout */}
       <main className="flex-1 overflow-hidden">
         <MainLayout />
       </main>
 
-      {/* Output panel (above status bar) */}
-      <div className="fixed bottom-6 left-0 right-0">
-        <OutputPanel />
-      </div>
+      {/* Output panel (above status bar, part of layout flow) */}
+      <OutputPanel />
 
       {/* Status bar (fixed at bottom) */}
       <StatusBar />
