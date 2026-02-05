@@ -429,6 +429,79 @@ pub(super) fn parse_ztag_describe_shelved(output: &str) -> Result<Vec<P4ShelvedF
     Ok(files)
 }
 
+/// Parse p4 -ztag describe -S output for multiple changelists into HashMap
+/// Tracks changelist context via "change" field, extracts shelved files per CL
+/// Field indices (depotFile0, depotFile1, etc.) reset per changelist
+pub(super) fn parse_describe_shelved_batch(output: &str) -> HashMap<i32, Vec<P4ShelvedFile>> {
+    let records = parse_ztag_records(output);
+    let mut results: HashMap<i32, Vec<P4ShelvedFile>> = HashMap::new();
+    let mut current_cl_id: Option<i32> = None;
+    let mut current_fields: HashMap<String, String> = HashMap::new();
+
+    for record in records {
+        // Check if this record starts a new changelist
+        if let Some(change_str) = record.get("change") {
+            // Flush previous CL's files
+            if let Some(cl_id) = current_cl_id {
+                let files = extract_shelved_files_from_fields(&current_fields);
+                results.insert(cl_id, files);
+            }
+
+            // Start new CL context
+            current_cl_id = change_str.parse().ok();
+            current_fields.clear();
+        }
+
+        // Accumulate fields for current CL
+        current_fields.extend(record);
+    }
+
+    // Don't forget last CL
+    if let Some(cl_id) = current_cl_id {
+        let files = extract_shelved_files_from_fields(&current_fields);
+        results.insert(cl_id, files);
+    }
+
+    results
+}
+
+/// Extract shelved files from indexed fields (depotFile0, action0, type0, rev0, ...)
+fn extract_shelved_files_from_fields(fields: &HashMap<String, String>) -> Vec<P4ShelvedFile> {
+    let mut files = Vec::new();
+    let mut index = 0;
+
+    loop {
+        let depot_file_key = format!("depotFile{}", index);
+        if let Some(depot_path) = fields.get(&depot_file_key) {
+            let action = fields
+                .get(&format!("action{}", index))
+                .cloned()
+                .unwrap_or_default();
+            let file_type = fields
+                .get(&format!("type{}", index))
+                .cloned()
+                .unwrap_or_else(|| "text".to_string());
+            let revision = fields
+                .get(&format!("rev{}", index))
+                .and_then(|s| s.parse::<i32>().ok())
+                .unwrap_or(0);
+
+            files.push(P4ShelvedFile {
+                depot_path: depot_path.clone(),
+                action,
+                file_type,
+                revision,
+            });
+
+            index += 1;
+        } else {
+            break;
+        }
+    }
+
+    files
+}
+
 /// Parse p4 describe -ztag output into P4ChangelistDescription
 /// The output contains numbered fields for each file:
 /// depotFile0, rev0, action0, type0, depotFile1, rev1, action1, type1, ...
