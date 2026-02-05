@@ -10,20 +10,20 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Milestone: v5.0 Large Depot Scale
-Phase: 21 of 25 (Async Foundation) — COMPLETE
-Plan: —
-Status: Phase 21 verified, ready for Phase 22
-Last activity: 2026-02-04 — Phase 21 complete (3/3 plans, 4/4 must-haves verified)
+Phase: 22 of 25 (Streaming fstat + Progress) — IN PROGRESS
+Plan: 01 of 03
+Status: 22-01 complete, backend streaming infrastructure ready
+Last activity: 2026-02-05 — Completed 22-01-PLAN.md
 
-Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [██░░░░░░░░] 20% (3/TBD)
+Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [████░░░░░░] 27% (4/15)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 77 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 3 v5.0)
+- Total plans completed: 78 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 4 v5.0)
 - Quick tasks completed: 10 (007 partial)
 - Average duration: 5 min
-- Total execution time: ~520 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 14 v5.0)
+- Total execution time: ~523 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 17 v5.0)
 
 **By Phase (v4.0):**
 
@@ -40,6 +40,7 @@ Progress: [████████████████████] 74/74 p
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 21 | 3 | 12 min | 4 min |
+| 22 | 1 | 3 min | 3 min |
 
 *Updated after each plan completion*
 
@@ -65,6 +66,12 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Preserved std::process::Command inside spawn_blocking for merge tool (intentional blocking)
 - Updated all p4 commands to tokio::process with .output().await
 - Migrated p4_sync streaming from std::thread::spawn to tokio::spawn
+
+**22-01 Decisions:**
+- Batch size of 100 files for balance between first-batch latency and IPC overhead
+- Inline filtering of deleted-at-head files during parsing reduces payload by ~10-20%
+- Explicit completion signal with total count for frontend progress indicators
+- Separate stdout/stderr tokio tasks for parallel processing without blocking
 
 ### Pending Todos
 
@@ -97,8 +104,8 @@ None
 
 ## Session Continuity
 
-Last session: 2026-02-04
-Stopped at: Phase 21 complete, ready for Phase 22
+Last session: 2026-02-05
+Stopped at: Completed 22-01-PLAN.md, backend streaming ready
 Resume file: None
 
 ---
