@@ -203,7 +203,7 @@ Plans:
 
 </details>
 
-### 🚧 v5.0 Large Depot Scale (In Progress)
+### v5.0 Large Depot Scale (In Progress)
 
 **Milestone Goal:** Make P4Now work smoothly with 10,000+ file depots by replacing blocking all-or-nothing data flows with streaming, incremental, and cancellable operations. The app should feel instant even on large workspaces.
 
@@ -267,7 +267,13 @@ Plans:
   4. Auto-refresh (30s cycle) queries only opened/shelved files, not the entire workspace fstat
   5. A periodic full refresh (every 5 minutes) catches files changed outside the opened/shelved set
   6. Delta refresh merges incrementally with existing tree data (no flicker or scroll position loss)
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 24-01-PLAN.md — Install Immer, add settings for two-tier refresh, batch update action in store
+- [ ] 24-02-PLAN.md — Incremental tree update with Immer structural sharing
+- [ ] 24-03-PLAN.md — Backend p4_fstat_opened command for delta refresh
+- [ ] 24-04-PLAN.md — Two-tier auto-refresh integration in useFileTree
 
 #### Phase 25: Batch Optimization
 **Goal**: Shelved file queries execute as a single efficient operation instead of N+1 individual calls
@@ -307,5 +313,5 @@ Plans:
 | 21. Async Foundation | v5.0 | 3/3 | Complete | 2026-02-04 |
 | 22. Streaming fstat + Progress | v5.0 | 3/3 | Complete | 2026-02-04 |
 | 23. FileIndex and Search | v5.0 | 3/3 | Complete | 2026-02-05 |
-| 24. Tree Performance + Delta Refresh | v5.0 | 0/TBD | Not started | - |
+| 24. Tree Performance + Delta Refresh | v5.0 | 0/4 | Not started | - |
 | 25. Batch Optimization | v5.0 | 0/TBD | Not started | - |
