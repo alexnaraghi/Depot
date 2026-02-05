@@ -227,6 +227,62 @@ export function incrementalTreeUpdate(
 }
 
 /**
+ * Merge delta (changed) files with existing file map.
+ * Returns new Map with updates applied.
+ *
+ * @param existingFiles - Current file map
+ * @param deltaFiles - Array of updated P4File objects
+ * @returns New Map with delta files merged in
+ */
+export function mergeDeltaFiles(
+  existingFiles: Map<string, P4File>,
+  deltaFiles: P4File[]
+): Map<string, P4File> {
+  if (deltaFiles.length === 0) return existingFiles;
+
+  const merged = new Map(existingFiles);
+  for (const file of deltaFiles) {
+    merged.set(file.depotPath, file);
+  }
+  return merged;
+}
+
+/**
+ * Create a change map from delta files for incremental tree update.
+ * Compares with existing files to identify actual changes.
+ *
+ * @param existingFiles - Current file map
+ * @param deltaFiles - Array of P4File from delta query
+ * @returns Map of depot path to P4File for files that actually changed
+ */
+export function createChangeMap(
+  existingFiles: Map<string, P4File>,
+  deltaFiles: P4File[]
+): Map<string, P4File> {
+  const changes = new Map<string, P4File>();
+
+  for (const file of deltaFiles) {
+    const existing = existingFiles.get(file.depotPath);
+    if (!existing) {
+      // New file
+      changes.set(file.depotPath, file);
+    } else if (
+      existing.revision !== file.revision ||
+      existing.headRevision !== file.headRevision ||
+      existing.status !== file.status ||
+      existing.action !== file.action ||
+      existing.changelist !== file.changelist
+    ) {
+      // File changed
+      changes.set(file.depotPath, file);
+    }
+    // If no changes detected, skip (preserves reference)
+  }
+
+  return changes;
+}
+
+/**
  * Build changelist tree from list of changelists
  * Each changelist becomes a parent node, files are children, followed by shelved-section
  *
