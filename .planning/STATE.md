@@ -11,19 +11,19 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 
 Milestone: v5.0 Large Depot Scale
 Phase: 23 of 25 (FileIndex and Search)
-Plan: 1 of 3 complete
-Status: In progress
-Last activity: 2026-02-05 — Completed 23-01-PLAN.md (FileIndex module)
+Plan: 3 of 3 complete
+Status: Phase complete
+Last activity: 2026-02-05 — Completed 23-03-PLAN.md (Streaming integration)
 
-Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [█████░░░░░] 47% (7/TBD)
+Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [██████░░░░] 60% (9/TBD)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 81 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 7 v5.0)
+- Total plans completed: 83 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 9 v5.0)
 - Quick tasks completed: 10 (007 partial)
 - Average duration: 5 min
-- Total execution time: ~534 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 28 v5.0)
+- Total execution time: ~546 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 40 v5.0)
 
 **By Phase (v4.0):**
 
@@ -41,7 +41,7 @@ Progress: [████████████████████] 74/74 p
 |-------|-------|-------|----------|
 | 21 | 3 | 12 min | 4 min |
 | 22 | 3 | 10 min | 3 min |
-| 23 | 1 | 4 min | 4 min |
+| 23 | 3 | 18 min | 6 min |
 
 *Updated after each plan completion*
 
@@ -89,6 +89,12 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Arc<Mutex<FileIndex>> pattern matching ProcessManager for consistency
 - Recency bias: 1.5x score boost for files modified in last 7 days
 - Glob exports (pub use search::*) required for Tauri command macros
+
+**23-02 Decisions:**
+- Removed microfuzz for file tree filtering (Rust nucleo faster at scale)
+- 150ms debounce in both useDebounce hook and useFileSearch
+- Search mode preserved across filter clears (user preference)
+- Max 500 results from backend for hierarchical filtering
 
 ### Pending Todos
 
