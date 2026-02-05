@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useDeferredValue } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Tree } from 'react-arborist';
 import { useFileTree } from './useFileTree';
 import { FileNode, FileNodeData } from './FileNode';
@@ -14,6 +14,7 @@ import { useDndManager } from '@/contexts/DndContext';
 import createFuzzySearch from '@nozbe/microfuzz';
 import { cn } from '@/lib/utils';
 import { useCommand } from '@/hooks/useCommand';
+import { useDebounce } from '@/hooks/useDebounce';
 
 /**
  * Main file tree component
@@ -43,7 +44,7 @@ export function FileTree() {
   const filterTerm = useSearchFilterStore(s => s.filterTerm);
   const isActive = useSearchFilterStore(s => s.isActive);
   const setFileTreeMatchCount = useSearchFilterStore(s => s.setFileTreeMatchCount);
-  const deferredFilterTerm = useDeferredValue(filterTerm);
+  const debouncedFilterTerm = useDebounce(filterTerm, 150);
 
   // Measure container height and update on resize
   useEffect(() => {
@@ -172,7 +173,7 @@ export function FileTree() {
   }, []);
 
   // Apply filter and report match count
-  const { tree: filteredTree, matchCount } = filterResults(tree, deferredFilterTerm);
+  const { tree: filteredTree, matchCount } = filterResults(tree, debouncedFilterTerm);
 
   useEffect(() => {
     setFileTreeMatchCount(matchCount);
