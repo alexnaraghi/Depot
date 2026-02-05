@@ -9,6 +9,8 @@ export const settingsSchema = z.object({
   editorPath: z.string(),
   verboseLogging: z.boolean(),
   autoRefreshInterval: z.number().min(0).max(600000),
+  deltaRefreshInterval: z.number().min(0).max(600000),
+  fullRefreshInterval: z.number().min(0).max(3600000),
   showDeletedDepotFiles: z.boolean(),
 });
 
@@ -23,5 +25,7 @@ export const defaultSettings: P4Settings = {
   editorPath: '',
   verboseLogging: false,
   autoRefreshInterval: 300000,
+  deltaRefreshInterval: 30000,
+  fullRefreshInterval: 300000,
   showDeletedDepotFiles: false,
 };
