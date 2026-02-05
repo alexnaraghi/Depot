@@ -216,7 +216,12 @@ Plans:
   2. tokio feature flags (process, io-util) are enabled and a basic async p4 command executes without blocking the runtime
   3. A useDebounce hook exists and prevents rapid-fire callbacks (150ms default delay)
   4. Existing p4 commands continue to work unchanged (no regressions from ProcessManager update)
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 21-01-PLAN.md — Enable tokio process features, migrate ProcessManager and streaming commands to async
+- [ ] 21-02-PLAN.md — Migrate all p4 handler commands to tokio::process::Command
+- [ ] 21-03-PLAN.md — Create useDebounce hook and integrate into FileTree filter
 
 #### Phase 22: Streaming fstat + Progress
 **Goal**: Users see workspace files appearing progressively instead of waiting for a single blocking load
@@ -289,7 +294,7 @@ Plans:
 | 18. Table Stakes UI | v4.0 | 3/3 | Complete | 2026-02-03 |
 | 19. Submit Enhancement | v4.0 | 2/2 | Complete | 2026-02-03 |
 | 20. Bug Fixes & UI Polish | v4.0 | 5/5 | Complete | 2026-02-03 |
-| 21. Async Foundation | v5.0 | 0/TBD | Not started | - |
+| 21. Async Foundation | v5.0 | 0/3 | Not started | - |
 | 22. Streaming fstat + Progress | v5.0 | 0/TBD | Not started | - |
 | 23. FileIndex and Search | v5.0 | 0/TBD | Not started | - |
 | 24. Tree Performance + Delta Refresh | v5.0 | 0/TBD | Not started | - |
