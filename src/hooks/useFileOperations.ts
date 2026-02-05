@@ -1,7 +1,9 @@
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useOperationStore } from '@/store/operation';
-import { invokeP4Edit, invokeP4Revert, invokeP4Submit } from '@/lib/tauri';
+import { invokeP4Edit, invokeP4Revert, invokeP4Submit, invokeP4Fstat, P4FileInfo } from '@/lib/tauri';
+import { useFileTreeStore } from '@/stores/fileTreeStore';
+import { P4File, FileStatus, FileAction } from '@/types/p4';
 import toast from 'react-hot-toast';
 
 interface RunOperationOptions<T> {
@@ -13,6 +15,49 @@ interface RunOperationOptions<T> {
   successMessage: string | ((result: T) => string);
   errorMessage: string;
   invalidateKeys: string[][];
+}
+
+/**
+ * Maps P4FileInfo from backend to P4File type for frontend
+ * (duplicated from useFileTree.ts to avoid circular dependency)
+ */
+function mapP4FileInfo(info: P4FileInfo): P4File {
+  let status: FileStatus;
+  if (info.action) {
+    switch (info.action) {
+      case 'add':
+        status = FileStatus.Added;
+        break;
+      case 'delete':
+        status = FileStatus.Deleted;
+        break;
+      case 'edit':
+        status = FileStatus.CheckedOut;
+        break;
+      default:
+        status = FileStatus.CheckedOut;
+    }
+  } else if (info.revision < info.head_revision) {
+    status = FileStatus.OutOfDate;
+  } else if (info.status === 'conflict') {
+    status = FileStatus.Conflict;
+  } else if (info.status === 'modified') {
+    status = FileStatus.Modified;
+  } else {
+    status = FileStatus.Synced;
+  }
+
+  return {
+    depotPath: info.depot_path,
+    localPath: info.local_path,
+    status,
+    action: info.action as FileAction | undefined,
+    revision: info.revision,
+    headRevision: info.head_revision,
+    changelist: info.changelist,
+    fileType: info.file_type,
+    isDirectory: false,
+  };
 }
 
 /**
@@ -28,6 +73,49 @@ interface RunOperationOptions<T> {
 export function useFileOperations() {
   const queryClient = useQueryClient();
   const { startOperation, completeOperation, addOutputLine } = useOperationStore();
+
+  /**
+   * Update file tree store with fresh data for specific files
+   * @param depotPaths - Array of depot paths to refresh
+   */
+  const updateAffectedFiles = useCallback(async (depotPaths: string[]) => {
+    if (depotPaths.length === 0) return;
+
+    try {
+      // Query fresh data for affected files only
+      const updatedFileInfos = await invokeP4Fstat(depotPaths);
+      const updatedFiles = updatedFileInfos.map(mapP4FileInfo);
+
+      // Update file tree store with new data
+      const fileTreeStore = useFileTreeStore.getState();
+      const updatesMap = new Map<string, Partial<P4File>>();
+
+      updatedFiles.forEach((file) => {
+        updatesMap.set(file.depotPath, file);
+      });
+
+      // Use batch update for efficiency
+      fileTreeStore.batchUpdateFiles(updatesMap);
+
+      // Also update ALL query cache entries for file tree (there may be multiple with different depotPath values)
+      queryClient.setQueriesData(
+        { queryKey: ['fileTree'] },
+        (oldData: P4File[] | undefined) => {
+          if (!oldData) return oldData;
+
+          // Update the affected files in the cache
+          return oldData.map((file) => {
+            const update = updatesMap.get(file.depotPath);
+            return update ? { ...file, ...update } : file;
+          });
+        }
+      );
+    } catch (error) {
+      console.warn('Failed to update affected files:', error);
+      // Fall back to invalidation if targeted update fails
+      await queryClient.invalidateQueries({ queryKey: ['fileTree'] });
+    }
+  }, [queryClient]);
 
   /**
    * Helper to run an operation with standard boilerplate
@@ -90,7 +178,7 @@ export function useFileOperations() {
    * @returns Array of checked out file info
    */
   const checkout = useCallback(async (paths: string[], changelist?: number) => {
-    return runOperation({
+    const result = await runOperation({
       operationId: `edit-${Date.now()}`,
       operationName: `Checking out ${paths.length} file(s)`,
       command: `p4 edit ${paths.join(' ')}`,
@@ -104,12 +192,17 @@ export function useFileOperations() {
       successMessage: (result) => `Checked out ${result.length} file(s)`,
       errorMessage: 'Checkout failed',
       invalidateKeys: [
-        ['fileTree'],
+        // Don't invalidate fileTree - use targeted update instead
         ['p4', 'opened'],
         ['p4', 'changes'],
       ],
     });
-  }, [runOperation, addOutputLine]);
+
+    // Update only the affected files instead of invalidating entire tree
+    await updateAffectedFiles(paths);
+
+    return result;
+  }, [runOperation, addOutputLine, updateAffectedFiles]);
 
   /**
    * Revert files to depot state (discard local changes)
@@ -118,7 +211,7 @@ export function useFileOperations() {
    * @returns Array of reverted depot paths
    */
   const revert = useCallback(async (paths: string[]) => {
-    return runOperation({
+    const result = await runOperation({
       operationId: `revert-${Date.now()}`,
       operationName: `Reverting ${paths.length} file(s)`,
       command: `p4 revert ${paths.join(' ')}`,
@@ -132,12 +225,17 @@ export function useFileOperations() {
       successMessage: (reverted) => `Reverted ${reverted.length} file(s)`,
       errorMessage: 'Revert failed',
       invalidateKeys: [
-        ['fileTree'],
+        // Don't invalidate fileTree - use targeted update instead
         ['p4', 'opened'],
         ['p4', 'changes'],
       ],
     });
-  }, [runOperation, addOutputLine]);
+
+    // Update only the affected files instead of invalidating entire tree
+    await updateAffectedFiles(paths);
+
+    return result;
+  }, [runOperation, addOutputLine, updateAffectedFiles]);
 
   /**
    * Submit changelist to depot
