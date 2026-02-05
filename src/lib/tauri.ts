@@ -55,6 +55,15 @@ export interface SyncProgress {
   is_conflict: boolean;
 }
 
+/**
+ * Streaming batch from p4_fstat_stream
+ * type: "data" contains file batches
+ * type: "complete" signals end of stream
+ */
+export type FstatStreamBatch =
+  | { type: 'data'; files: P4FileInfo[]; totalReceived: number }
+  | { type: 'complete'; totalFiles: number; success: boolean; error?: string };
+
 export interface P4ClientInfo {
   client_name: string;
   client_root: string;
@@ -128,6 +137,29 @@ export async function invokeP4Info(): Promise<P4ClientInfo> {
  */
 export async function invokeP4Fstat(paths: string[] = [], depotPath?: string): Promise<P4FileInfo[]> {
   return invoke<P4FileInfo[]>('p4_fstat', { paths, depotPath, ...getConnectionArgs() });
+}
+
+/**
+ * Stream file status for workspace files with batched progress.
+ * Use for large workspaces where all-or-nothing loading causes UI freeze.
+ * @param paths - Specific paths to query, or empty for all workspace files
+ * @param depotPath - Depot path to query (e.g., "//stream/main/...") when paths is empty
+ * @param onBatch - Callback for streaming batches (data + completion signal)
+ * @returns Process ID for cancellation
+ */
+export async function invokeP4FstatStream(
+  paths: string[],
+  depotPath: string | undefined,
+  onBatch: (batch: FstatStreamBatch) => void
+): Promise<string> {
+  const channel = new Channel<FstatStreamBatch>();
+  channel.onmessage = onBatch;
+  return invoke<string>('p4_fstat_stream', {
+    paths,
+    depotPath,
+    ...getConnectionArgs(),
+    onBatch: channel,
+  });
 }
 
 /**
