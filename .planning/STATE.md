@@ -10,20 +10,20 @@ See: .planning/PROJECT.md (updated 2026-02-04)
 ## Current Position
 
 Milestone: v5.0 Large Depot Scale
-Phase: 24 of 25 (Tree Performance + Delta Refresh) -- COMPLETE
-Plan: 04 of 04 complete (Phase complete!)
-Status: Phase complete
-Last activity: 2026-02-05 — Completed 24-04-PLAN.md (two-tier auto-refresh integration)
+Phase: 25 of 25 (Batch Optimization)
+Plan: 01 of 03 complete
+Status: In progress
+Last activity: 2026-02-05 — Completed 25-01-PLAN.md (backend batch command)
 
-Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [█████████░] 87% (13/15)
+Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [█████████░] 93% (14/15)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 87 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 13 v5.0)
+- Total plans completed: 88 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 14 v5.0)
 - Quick tasks completed: 10 (007 partial)
 - Average duration: 5 min
-- Total execution time: ~563 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 57 v5.0)
+- Total execution time: ~567 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 61 v5.0)
 
 **By Phase (v4.0):**
 
@@ -43,6 +43,7 @@ Progress: [████████████████████] 74/74 p
 | 22 | 3 | 10 min | 3 min |
 | 23 | 3 | 18 min | 6 min |
 | 24 | 4 | 17 min | 4 min |
+| 25 | 1 | 4 min | 4 min |
 
 *Updated after each plan completion*
 
@@ -124,6 +125,12 @@ Decisions are logged in PROJECT.md Key Decisions table.
 - Both delta and full refresh pause when window loses focus
 - On focus return, immediate refresh if interval elapsed while unfocused
 
+**25-01 Decisions:**
+- Progress updates every 5 CLs to avoid IPC channel flooding
+- CLs without shelved files return Some(vec![]) not error for partial success
+- Field indices reset per CL - track context via 'change' field
+- Use .send() for all Channel messages (try_send not available)
+
 ### Pending Todos
 
 20 pending — see `.planning/todos/pending/`
@@ -157,7 +164,7 @@ None
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed 24-04-PLAN.md, Phase 24 COMPLETE (04/04)
+Stopped at: Completed 25-01-PLAN.md (backend batch command)
 Resume file: None
 
 ---
