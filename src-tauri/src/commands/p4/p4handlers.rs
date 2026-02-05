@@ -1259,6 +1259,127 @@ pub async fn p4_describe_shelved(
     parse_ztag_describe_shelved(&stdout)
 }
 
+/// Batch describe shelved files for multiple changelists
+/// Sends progress updates via Channel, isolates errors per CL
+#[tauri::command]
+pub async fn p4_describe_shelved_batch(
+    changelist_ids: Vec<i32>,
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+    on_progress: Channel<ShelvedBatchProgress>,
+    state: State<'_, ProcessManager>,
+) -> Result<String, String> {
+    if changelist_ids.is_empty() {
+        return Ok("".to_string());
+    }
+
+    let total = changelist_ids.len() as u32;
+    let mut cmd = Command::new("p4");
+    apply_connection_args(&mut cmd, &server, &user, &client);
+
+    cmd.arg("-ztag");
+    cmd.arg("describe");
+    cmd.arg("-s");  // suppress diffs
+    cmd.arg("-S");  // show shelved files
+
+    for cl_id in &changelist_ids {
+        cmd.arg(cl_id.to_string());
+    }
+
+    cmd.stdout(Stdio::piped());
+    cmd.stderr(Stdio::piped());
+
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("Failed to spawn p4 describe: {}", e))?;
+
+    let stdout = child.stdout.take();
+    let stderr = child.stderr.take();
+
+    // Register process for cancellation
+    let process_id = state.register(child).await;
+    let process_id_clone = process_id.clone();
+
+    // Parse stdout in background
+    let changelist_ids_clone = changelist_ids.clone();
+    if let Some(stdout) = stdout {
+        let on_progress_clone = on_progress.clone();
+        tokio::spawn(async move {
+            use tokio::io::AsyncReadExt;
+
+            let mut output = String::new();
+            let mut reader = stdout;
+            let _ = reader.read_to_string(&mut output).await;
+
+            let results = parse_describe_shelved_batch(&output);
+
+            let mut success_count = 0;
+            let mut error_count = 0;
+
+            for (index, cl_id) in changelist_ids_clone.iter().enumerate() {
+                let files = results.get(cl_id).cloned();
+
+                let result = if let Some(files) = files {
+                    success_count += 1;
+                    ShelvedBatchResult {
+                        changelist_id: *cl_id,
+                        files: Some(files),
+                        error: None,
+                    }
+                } else {
+                    error_count += 1;
+                    ShelvedBatchResult {
+                        changelist_id: *cl_id,
+                        files: None,
+                        error: Some(format!("No data returned for changelist {}", cl_id)),
+                    }
+                };
+
+                // Send result for this CL
+                let _ = on_progress_clone.send(ShelvedBatchProgress::Result { result });
+
+                // Send progress update every 5 CLs
+                if (index + 1) % 5 == 0 || index + 1 == changelist_ids_clone.len() {
+                    let _ = on_progress_clone.send(ShelvedBatchProgress::Progress {
+                        loaded: (index + 1) as u32,
+                        total,
+                        message: format!("Loading shelved files... ({}/{})", index + 1, total),
+                    });
+                }
+            }
+
+            // Send completion
+            let _ = on_progress_clone.send(ShelvedBatchProgress::Complete {
+                success_count,
+                error_count,
+                cancelled: false,
+            });
+        });
+    }
+
+    // Handle stderr in background - log errors but don't fail batch
+    if let Some(stderr) = stderr {
+        tokio::spawn(async move {
+            let mut lines = BufReader::new(stderr).lines();
+            while let Ok(Some(line)) = lines.next_line().await {
+                let line_lower = line.to_lowercase();
+                // Skip known empty-result messages
+                if line_lower.contains("no shelved files")
+                    || line_lower.contains("not shelved")
+                    || line_lower.contains("no shelf")
+                {
+                    continue;
+                }
+                // Log actual errors
+                eprintln!("p4 describe shelved batch stderr: {}", line);
+            }
+        });
+    }
+
+    Ok(process_id_clone)
+}
+
 /// Describe a submitted changelist (metadata and file list, no diffs)
 /// Uses -s flag to suppress diff output for performance with large changelists
 #[tauri::command]

@@ -44,6 +44,7 @@ pub fn run() {
             commands::p4_shelve,
             commands::p4_describe,
             commands::p4_describe_shelved,
+            commands::p4_describe_shelved_batch,
             commands::p4_unshelve,
             commands::p4_delete_shelf,
             commands::p4_reconcile_preview,
