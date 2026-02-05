@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Tree } from 'react-arborist';
 import { useFileTree } from './useFileTree';
 import { FileNode, FileNodeData } from './FileNode';
@@ -11,10 +11,10 @@ import { useSearchFilterStore } from '@/stores/searchFilterStore';
 import { P4File } from '@/types/p4';
 import { AlertCircle } from 'lucide-react';
 import { useDndManager } from '@/contexts/DndContext';
-import createFuzzySearch from '@nozbe/microfuzz';
 import { cn } from '@/lib/utils';
 import { useCommand } from '@/hooks/useCommand';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useFileSearch } from '@/hooks/useFileSearch';
 
 /**
  * Main file tree component
@@ -88,96 +88,60 @@ export function FileTree() {
     }
   });
 
-  // Apply fuzzy filtering to tree
-  const filterResults = useCallback((data: FileNodeData[], term: string) => {
-    if (!term.trim()) {
-      // No filter - return all nodes as matching with no highlights
-      return {
-        tree: data,
-        matchCount: 0,
-      };
+  // Backend search query
+  const { data: searchResults } = useFileSearch(filterTerm);
+
+  // Build set of matching depot paths from backend results
+  const matchPaths = useMemo(() => {
+    if (!searchResults || searchResults.length === 0 || !debouncedFilterTerm.trim()) {
+      return new Set<string>();
+    }
+    return new Set(searchResults.map(r => r.depotPath));
+  }, [searchResults, debouncedFilterTerm]);
+
+  // Apply filtering based on backend search results
+  const applyFilter = useCallback((data: FileNodeData[], matchSet: Set<string>): FileNodeData[] => {
+    if (matchSet.size === 0) {
+      // No filter active - return all nodes without dimming
+      return data;
     }
 
-    // Collect all file paths for fuzzy searching
-    const collectFiles = (nodes: FileNodeData[]): Array<{ path: string; name: string; node: FileNodeData }> => {
-      const files: Array<{ path: string; name: string; node: FileNodeData }> = [];
-      for (const node of nodes) {
-        if (!node.isFolder && node.file) {
-          // Match against file name (last segment)
-          const fileName = node.name;
-          files.push({ path: node.file.depotPath, name: fileName, node });
-        }
-        if (node.children) {
-          files.push(...collectFiles(node.children));
-        }
+    return data.map(node => {
+      if (node.isFolder) {
+        // Folder: recursively process children
+        const filteredChildren = node.children ? applyFilter(node.children, matchSet) : undefined;
+        // Folder is dimmed if ALL its children are dimmed
+        const allChildrenDimmed = filteredChildren && filteredChildren.length > 0
+          && filteredChildren.every(child => child.dimmed);
+        return {
+          ...node,
+          children: filteredChildren,
+          dimmed: allChildrenDimmed,
+        };
+      } else {
+        // File: check if depot path is in match set
+        const depotPath = node.file?.depotPath;
+        const matches = depotPath && matchSet.has(depotPath);
+        return {
+          ...node,
+          dimmed: !matches,
+        };
       }
-      return files;
-    };
-
-    const allFiles = collectFiles(data);
-
-    // Create fuzzy searcher over file metadata objects
-    const fuzzySearch = createFuzzySearch(allFiles, { getText: (item) => [item.name] });
-    const matchResults = fuzzySearch(term);
-
-    // Build set of matching depot paths and their highlight ranges
-    const matchMap = new Map<string, [number, number][]>();
-    for (const result of matchResults) {
-      // result.item is the file object
-      const file = result.item;
-      // matches is FuzzyMatches = Array<HighlightRanges | null>
-      // For single-string matching, we just use the first element
-      const highlightRanges = result.matches[0];
-      if (highlightRanges) {
-        matchMap.set(file.path, highlightRanges);
-      }
-    }
-
-    // Recursively mark nodes as dimmed or highlighted
-    const applyFilter = (nodes: FileNodeData[]): FileNodeData[] => {
-      return nodes.map(node => {
-        if (node.isFolder) {
-          // Folder: recursively process children
-          const filteredChildren = node.children ? applyFilter(node.children) : undefined;
-          // Folder is dimmed if ALL its children are dimmed
-          const allChildrenDimmed = filteredChildren && filteredChildren.length > 0
-            && filteredChildren.every(child => child.dimmed);
-          return {
-            ...node,
-            children: filteredChildren,
-            dimmed: allChildrenDimmed,
-          };
-        } else {
-          // File: check if it matches
-          const depotPath = node.file?.depotPath;
-          if (depotPath && matchMap.has(depotPath)) {
-            return {
-              ...node,
-              dimmed: false,
-              highlightRanges: matchMap.get(depotPath),
-            };
-          } else {
-            return {
-              ...node,
-              dimmed: true,
-            };
-          }
-        }
-      });
-    };
-
-    return {
-      tree: applyFilter(data),
-      matchCount: matchResults.length,
-    };
+    });
   }, []);
 
-  // Apply filter and report match count
-  const { tree: filteredTree, matchCount } = filterResults(tree, debouncedFilterTerm);
+  // Apply filter to tree
+  const filteredTree = useMemo(() => {
+    if (!debouncedFilterTerm.trim()) {
+      return tree;
+    }
+    return applyFilter(tree, matchPaths);
+  }, [tree, matchPaths, debouncedFilterTerm, applyFilter]);
 
+  // Report match count
   useEffect(() => {
-    setFileTreeMatchCount(matchCount);
-  }, [matchCount, setFileTreeMatchCount]);
+    setFileTreeMatchCount(matchPaths.size);
+  }, [matchPaths.size, setFileTreeMatchCount]);
 
   // Attach onContextMenu handler to tree data
   const enhancedTree = useCallback(
