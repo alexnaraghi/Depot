@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** The user is never blocked — operations are always cancellable, errors are non-blocking, and the app remains responsive even during network issues or long-running operations.
-**Current focus:** v5.0 Large Depot Scale
+**Current focus:** v5.0 Large Depot Scale -- Phase 21: Async Foundation
 
 ## Current Position
 
 Milestone: v5.0 Large Depot Scale
-Phase: Not started (defining requirements)
+Phase: 21 of 25 (Async Foundation)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-02-04 — Milestone v5.0 started
+Status: Ready to plan
+Last activity: 2026-02-04 — Roadmap created for v5.0 (Phases 21-25)
 
-Progress: [████████████████████] 74/74 plans complete (v1.0: 14, v2.0: 17, v3.0: 27, v4.0: 16)
+Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [░░░░░░░░░░] 0% (0/TBD)
 
 ## Performance Metrics
 
@@ -24,19 +24,6 @@ Progress: [████████████████████] 74/74 p
 - Quick tasks completed: 10 (007 partial)
 - Average duration: 5 min
 - Total execution time: ~506 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0)
-
-**By Phase (v3.0):**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 09 | 3 | 16 min | 5 min |
-| 10 | 2 | 9 min | 5 min |
-| 11 | 2 | 9 min | 5 min |
-| 11.1 | 5 | 44 min | 9 min |
-| 12 | 4 | 38 min | 10 min |
-| 13 | 5 | 25 min | 5 min |
-| 14 | 3 | 15 min | 5 min |
-| 15 | 2 | 10 min | 5 min |
 
 **By Phase (v4.0):**
 
@@ -56,18 +43,12 @@ Progress: [████████████████████] 74/74 p
 
 Decisions are logged in PROJECT.md Key Decisions table.
 
-**v4.0 Phase Structure:**
-- Phase 16 (Foundational): File Content Viewer enables submit preview, addresses p4_print tech debt
-- Phase 17 (Complex): File Annotations has most requirements (6), establishes long-running command patterns
-- Phase 18 (Quick wins): Sync Status + CL File List, addresses p4_describe tech debt
-- Phase 19 (Enhancement): Submit Preview with action badges - COMPLETE
-
-**Quick Task 009 Decisions:**
-- Backend: Return Ok(vec![]) for CLs without shelved files instead of Err
-- Backend: Check stderr for "no shelved files" patterns before treating as error
-- Backend: Add -s flag to p4 describe to suppress diffs for performance
-- Frontend: Catch errors in queryFn and return [] instead of throwing
-- Frontend: Set retry: 1 to reduce from default 3 retries
+**v5.0 Roadmap Decisions:**
+- Phase 21 (Foundation): ProcessManager tokio support + debounce hook. Zero dependencies, unblocks all streaming work.
+- Phase 22 (Streaming): Highest-impact change. Generalizes proven p4_sync Channel pattern to p4_fstat.
+- Phase 23 (Search): nucleo-powered FileIndex on Rust side. Depends on streaming data pipeline from Phase 22.
+- Phase 24 (Tree): Incremental tree builder + delta refresh. Soft dependency on Phase 22 (can overlap with 23).
+- Phase 25 (Batch): N+1 shelved query fix. Independent of streaming pipeline, depends only on Phase 21.
 
 ### Pending Todos
 
@@ -85,10 +66,8 @@ None
 
 **Research notes:**
 - Large depot scalability analysis: `reports/large-depot-scalability-analysis.md`
-- 12 issues identified, P0+P1 (7 issues) scoped for v5.0
-- Key insight: Use p4 have + p4 files (not p4 fstat) for sync status (10-100x faster)
-- Key insight: Use tokio::process::Command to avoid blocking async runtime
-- Key insight: Build Rust-side file index for instant workspace search
+- Research summary: `.planning/research/SUMMARY.md`
+- Key pitfalls: zombie processes, channel backpressure, TanStack Query race conditions, structural sharing breaks, batch error isolation
 
 ### Quick Tasks Completed
 
@@ -103,7 +82,7 @@ None
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Starting v5.0 Large Depot Scale milestone
+Stopped at: v5.0 roadmap created (Phases 21-25), ready to plan Phase 21
 Resume file: None
 
 ---

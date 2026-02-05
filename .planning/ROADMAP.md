@@ -6,6 +6,7 @@
 - ✅ **v2.0 Feature Complete** - Phases 03-08 (shipped 2026-01-30)
 - ✅ **v3.0 Daily Driver** - Phases 09-15 (shipped 2026-02-01)
 - ✅ **v4.0 Road to P4V Killer** - Phases 16-20 (shipped 2026-02-03)
+- 🚧 **v5.0 Large Depot Scale** - Phases 21-25 (in progress)
 
 ## Phases
 
@@ -202,6 +203,67 @@ Plans:
 
 </details>
 
+### 🚧 v5.0 Large Depot Scale (In Progress)
+
+**Milestone Goal:** Make P4Now work smoothly with 10,000+ file depots by replacing blocking all-or-nothing data flows with streaming, incremental, and cancellable operations. The app should feel instant even on large workspaces.
+
+#### Phase 21: Async Foundation
+**Goal**: Backend process infrastructure supports non-blocking async execution for all subsequent streaming work
+**Depends on**: Phase 20
+**Requirements**: STREAM-04, TREE-02
+**Success Criteria** (what must be TRUE):
+  1. ProcessManager tracks and cleanly terminates tokio::process child processes (no zombie p4.exe accumulation)
+  2. tokio feature flags (process, io-util) are enabled and a basic async p4 command executes without blocking the runtime
+  3. A useDebounce hook exists and prevents rapid-fire callbacks (150ms default delay)
+  4. Existing p4 commands continue to work unchanged (no regressions from ProcessManager update)
+**Plans**: TBD
+
+#### Phase 22: Streaming fstat + Progress
+**Goal**: Users see workspace files appearing progressively instead of waiting for a single blocking load
+**Depends on**: Phase 21
+**Requirements**: STREAM-01, STREAM-02, STREAM-03, PROG-01, PROG-02, PROG-03
+**Success Criteria** (what must be TRUE):
+  1. Workspace file tree begins populating within 500ms of opening a large workspace (first batch visible)
+  2. Files arrive in incremental batches during loading (not all-or-nothing)
+  3. User can cancel an in-progress workspace load and the partial results remain visible
+  4. Operations longer than 2 seconds show a progress indicator with file count / estimated total
+  5. All progress indicators have a cancel button that stops the underlying p4 process
+**Plans**: TBD
+
+#### Phase 23: FileIndex and Search
+**Goal**: User can instantly search across all workspace files with fuzzy matching powered by a persistent Rust-side index
+**Depends on**: Phase 22
+**Requirements**: SEARCH-01, SEARCH-02, SEARCH-03, TREE-01
+**Success Criteria** (what must be TRUE):
+  1. User can search workspace file paths and get results in under 5ms (even with 100K files)
+  2. FileIndex rebuilds automatically after streaming fstat completes (no manual trigger needed)
+  3. Search results use fuzzy matching that handles typos and partial paths (nucleo-quality results)
+  4. File tree filter uses the persistent FileIndex instead of rebuilding a match set per keystroke
+**Plans**: TBD
+
+#### Phase 24: Tree Performance + Delta Refresh
+**Goal**: File tree updates are incremental (no full rebuilds) and auto-refresh is cheap (queries only changed files)
+**Depends on**: Phase 22
+**Requirements**: TREE-03, TREE-04, TREE-05, DELTA-01, DELTA-02, DELTA-03
+**Success Criteria** (what must be TRUE):
+  1. When less than 10% of files change, the tree updates incrementally without rebuilding from scratch
+  2. Unchanged subtrees preserve object identity (react-arborist does not re-render stable branches)
+  3. File tree store applies batch updates (not one Map copy per individual file change)
+  4. Auto-refresh (30s cycle) queries only opened/shelved files, not the entire workspace fstat
+  5. A periodic full refresh (every 5 minutes) catches files changed outside the opened/shelved set
+  6. Delta refresh merges incrementally with existing tree data (no flicker or scroll position loss)
+**Plans**: TBD
+
+#### Phase 25: Batch Optimization
+**Goal**: Shelved file queries execute as a single efficient operation instead of N+1 individual calls
+**Depends on**: Phase 21
+**Requirements**: BATCH-01, BATCH-02, BATCH-03
+**Success Criteria** (what must be TRUE):
+  1. All shelved file lists load from a single batched backend call (not one p4 describe per changelist)
+  2. If one changelist's shelved query fails, other changelists still show their shelved files
+  3. Batch query executes sequentially to avoid triggering Perforce server rate limiting
+**Plans**: TBD
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -227,3 +289,8 @@ Plans:
 | 18. Table Stakes UI | v4.0 | 3/3 | Complete | 2026-02-03 |
 | 19. Submit Enhancement | v4.0 | 2/2 | Complete | 2026-02-03 |
 | 20. Bug Fixes & UI Polish | v4.0 | 5/5 | Complete | 2026-02-03 |
+| 21. Async Foundation | v5.0 | 0/TBD | Not started | - |
+| 22. Streaming fstat + Progress | v5.0 | 0/TBD | Not started | - |
+| 23. FileIndex and Search | v5.0 | 0/TBD | Not started | - |
+| 24. Tree Performance + Delta Refresh | v5.0 | 0/TBD | Not started | - |
+| 25. Batch Optimization | v5.0 | 0/TBD | Not started | - |

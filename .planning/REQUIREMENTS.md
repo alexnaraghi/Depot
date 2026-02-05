@@ -1,75 +1,85 @@
-# Requirements: P4Now v4.0 Road to P4V Killer
+# Requirements: P4Now v5.0 Large Depot Scale
 
-**Defined:** 2026-02-03
-**Core Value:** The user is never blocked — operations are always cancellable, errors are non-blocking, and the app remains responsive.
+**Defined:** 2026-02-04
+**Core Value:** The user is never blocked — operations are always cancellable, errors are non-blocking, and the app remains responsive even during network issues or long-running operations.
+**Source:** `reports/large-depot-scalability-analysis.md` + domain research
 
-## v4.0 Requirements
+## v5.0 Requirements
 
-Requirements for P4V parity milestone. Each maps to roadmap phases.
+Requirements for large depot scalability milestone. Makes P4Now work smoothly with 10,000+ file depots.
 
-### File Content Viewer
+### Streaming Workspace Loading
 
-- [x] **VIEWER-01**: User can view file content at any revision in detail pane
-- [x] **VIEWER-02**: File content is syntax highlighted based on file extension
-- [x] **VIEWER-03**: Large files show size warning with option to load anyway
+- [ ] **STREAM-01**: Workspace file tree loads progressively via streaming (first files visible in <500ms)
+- [ ] **STREAM-02**: Streaming fstat sends batches of files incrementally (not all-or-nothing)
+- [ ] **STREAM-03**: User can cancel streaming load in progress
+- [ ] **STREAM-04**: Backend uses tokio::process for non-blocking async process execution
 
-### File Annotations (Blame)
+### File Tree Performance
 
-- [x] **BLAME-01**: User can view per-line author, revision, and date for a file
-- [x] **BLAME-02**: User can click annotation to view that revision's changelist
-- [x] **BLAME-03**: User can navigate annotations with keyboard (up/down between changes)
-- [x] **BLAME-04**: Annotations show age heatmap coloring (recent = hot, old = cold)
-- [x] **BLAME-05**: User can hover annotation to see full commit message tooltip
-- [x] **BLAME-06**: User can "blame prior revision" to peel back history layers
+- [ ] **TREE-01**: File tree filter uses persistent fuzzy index (built once, queried per keystroke)
+- [ ] **TREE-02**: Filter input is debounced (150ms) to prevent redundant computation
+- [ ] **TREE-03**: Tree builder uses structural sharing (unchanged subtrees preserve object identity)
+- [ ] **TREE-04**: Tree updates incrementally when <10% of files change (no full rebuild)
+- [ ] **TREE-05**: File tree store batches updates (no Map copy per individual file)
 
-### Workspace Sync Status
+### Search Architecture
 
-- [x] **SYNC-01**: File tree shows icon overlay indicating out-of-date files
-- [x] **SYNC-02**: Sync status compares have-rev vs head-rev
-- [x] **SYNC-03**: Sync status visible in tree without expanding folders
+- [ ] **SEARCH-01**: Rust-side FileIndex provides instant workspace file search (<5ms for 100K files)
+- [ ] **SEARCH-02**: FileIndex rebuilds automatically after workspace data loads
+- [ ] **SEARCH-03**: FileIndex uses nucleo fuzzy matching for high-quality results
 
-### Submit Dialog Preview
+### Delta Refresh
 
-- [x] **SUBMIT-01**: Submit action shows preview dialog before executing
-- [x] **SUBMIT-02**: Preview dialog shows changelist description
-- [x] **SUBMIT-03**: Preview dialog shows list of files to be submitted
-- [x] **SUBMIT-04**: User can cancel, edit description, or proceed with submit
+- [ ] **DELTA-01**: Auto-refresh (30s) queries only opened/shelved files, not full fstat
+- [ ] **DELTA-02**: Periodic full refresh occurs less frequently (e.g., every 5 minutes)
+- [ ] **DELTA-03**: Delta refresh merges incrementally with existing file tree data
 
-### Submitted Changelist File List
+### Batch Operations
 
-- [x] **CLFILE-01**: User can view all files in a submitted changelist
-- [x] **CLFILE-02**: Files show action indicators (add, edit, delete, integrate)
-- [x] **CLFILE-03**: User can click file to view that revision
+- [ ] **BATCH-01**: Shelved file queries use single batched backend call (not N+1 per changelist)
+- [ ] **BATCH-02**: Batch query isolates errors per changelist (one failure doesn't hide all results)
+- [ ] **BATCH-03**: Batch query uses sequential execution to avoid server rate limiting
+
+### Progress & Feedback
+
+- [ ] **PROG-01**: Operations longer than 2 seconds show progress indicator
+- [ ] **PROG-02**: Progress indicator shows file count / estimated total during streaming
+- [ ] **PROG-03**: All progress indicators support cancellation
 
 ## Future Requirements
 
-Deferred to later milestones. Tracked but not in v4.0 roadmap.
+Deferred to later milestones. Tracked but not in v5.0 roadmap.
 
-### Bookmarks
+### Unified Search
+
+- **USEARCH-01**: Single search UI shows results from workspace, depot, and changelists
+- **USEARCH-02**: Search results stream in progressively from each source
+- **USEARCH-03**: Command palette triggers deep search mode
+
+### Workspace Optimization
+
+- **WSOPT-01**: Depot browser restricts to workspace mapping by default
+- **WSOPT-02**: Server queries use -m flag with "Load More" pagination
+- **WSOPT-03**: Scoped reconcile for directory-level operations
+
+### Viewer Enhancement
+
+- **VIEW-01**: Virtualized code viewer handles files with 100K+ lines
+
+### Previously Deferred (from v4.0)
 
 - **BKMK-01**: User can add bookmark from depot/workspace tree
 - **BKMK-02**: User can view bookmarks list in sidebar
 - **BKMK-03**: User can remove bookmarks
 - **BKMK-04**: Bookmarks persist across sessions
-
-### File Content Viewer (Enhanced)
-
 - **VIEWER-04**: Viewer shows line numbers with selection
 - **VIEWER-05**: User can copy file content to clipboard
 - **VIEWER-06**: User can open file directly in external editor from viewer
-
-### Workspace Sync Status (Enhanced)
-
 - **SYNC-04**: User can click to sync individual out-of-date file
 - **SYNC-05**: User can filter tree to show only out-of-date files
-
-### Submit Dialog (Enhanced)
-
 - **SUBMIT-05**: User can edit description inline in preview dialog
 - **SUBMIT-06**: Preview shows diff summary for files
-
-### Submitted Changelist File List (Enhanced)
-
 - **CLFILE-04**: User can filter/search within file list
 - **CLFILE-05**: File list virtualized for 1000+ file changelists
 
@@ -79,10 +89,13 @@ Explicitly excluded. Documented to prevent scope creep.
 
 | Feature | Reason |
 |---------|--------|
-| Inline blame gutter mode | High complexity; standard blame view sufficient for v4.0 |
-| Bookmark folders/categories | Deferred with all bookmark features |
-| Real-time blame updates | Would require file watching; static blame sufficient |
-| Blame across renames | p4 annotate -i adds significant complexity |
+| Full-text content search / grep | Prohibitively expensive at scale, no P4 protocol support |
+| Real-time file system watching | No Perforce protocol for push notifications |
+| Offline mode / local caching | Perforce is server-authoritative |
+| Automatic background syncing | Dangerous; user should always initiate sync |
+| Client-side CL history beyond 500 | Diminishing returns, server-side search sufficient |
+| Unified search UI | Deferred to post-v5.0; workspace search tier included |
+| Workspace-restricted depot view | P1 but not on critical path for 7 core bottlenecks |
 
 ## Traceability
 
@@ -90,37 +103,33 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| VIEWER-01 | Phase 16 | Complete |
-| VIEWER-02 | Phase 16 | Complete |
-| VIEWER-03 | Phase 16 | Complete |
-| BLAME-01 | Phase 17 | Complete |
-| BLAME-02 | Phase 17 | Complete |
-| BLAME-03 | Phase 17 | Complete |
-| BLAME-04 | Phase 17 | Complete |
-| BLAME-05 | Phase 17 | Complete |
-| BLAME-06 | Phase 17 | Complete |
-| SYNC-01 | Phase 18 | Complete |
-| SYNC-02 | Phase 18 | Complete |
-| SYNC-03 | Phase 18 | Complete |
-| SUBMIT-01 | Phase 19 | Complete |
-| SUBMIT-02 | Phase 19 | Complete |
-| SUBMIT-03 | Phase 19 | Complete |
-| SUBMIT-04 | Phase 19 | Complete |
-| CLFILE-01 | Phase 18 | Complete |
-| CLFILE-02 | Phase 18 | Complete |
-| CLFILE-03 | Phase 18 | Complete |
+| STREAM-01 | Phase 22 | Pending |
+| STREAM-02 | Phase 22 | Pending |
+| STREAM-03 | Phase 22 | Pending |
+| STREAM-04 | Phase 21 | Pending |
+| TREE-01 | Phase 23 | Pending |
+| TREE-02 | Phase 21 | Pending |
+| TREE-03 | Phase 24 | Pending |
+| TREE-04 | Phase 24 | Pending |
+| TREE-05 | Phase 24 | Pending |
+| SEARCH-01 | Phase 23 | Pending |
+| SEARCH-02 | Phase 23 | Pending |
+| SEARCH-03 | Phase 23 | Pending |
+| DELTA-01 | Phase 24 | Pending |
+| DELTA-02 | Phase 24 | Pending |
+| DELTA-03 | Phase 24 | Pending |
+| BATCH-01 | Phase 25 | Pending |
+| BATCH-02 | Phase 25 | Pending |
+| BATCH-03 | Phase 25 | Pending |
+| PROG-01 | Phase 22 | Pending |
+| PROG-02 | Phase 22 | Pending |
+| PROG-03 | Phase 22 | Pending |
 
 **Coverage:**
-- v4.0 requirements: 19 total
-- Mapped to phases: 19
+- v5.0 requirements: 21 total
+- Mapped to phases: 21
 - Unmapped: 0
 
-**Phase breakdown:**
-- Phase 16 (File Content Viewer): 3 requirements
-- Phase 17 (File Annotations): 6 requirements
-- Phase 18 (Table Stakes UI): 6 requirements (3 sync + 3 CL file list)
-- Phase 19 (Submit Enhancement): 4 requirements
-
 ---
-*Requirements defined: 2026-02-03*
-*Last updated: 2026-02-03 after roadmap creation*
+*Requirements defined: 2026-02-04*
+*Last updated: 2026-02-04*
