@@ -1,5 +1,6 @@
 import { P4File, P4Changelist, FileStatus } from '@/types/p4';
 import { P4ShelvedFile } from '@/lib/tauri';
+import { produce } from 'immer';
 
 /**
  * File tree node for react-arborist
@@ -123,7 +124,7 @@ export function buildFileTree(files: P4File[], rootPath: string): FileTreeNode[]
  * Recursively aggregate sync status from files up to folders
  * Folders are marked as having out-of-date descendants if any child file or folder has out-of-date files
  */
-function aggregateSyncStatus(node: FileTreeNode): void {
+export function aggregateSyncStatus(node: FileTreeNode): void {
   if (!node.isFolder || !node.children || node.children.length === 0) {
     return;
   }
@@ -149,6 +150,80 @@ function aggregateSyncStatus(node: FileTreeNode): void {
 
   node.hasOutOfDateDescendants = hasOutOfDate;
   node.outOfDateCount = outOfDateCount;
+}
+
+/**
+ * Determine if incremental update should be used based on change volume.
+ * If more than 10% of existing files changed, full rebuild is more efficient.
+ *
+ * @param existingFileCount - Current number of files in tree
+ * @param changedFileCount - Number of files that changed
+ * @returns true if incremental update should be used
+ */
+export function shouldUseIncrementalUpdate(
+  existingFileCount: number,
+  changedFileCount: number
+): boolean {
+  if (existingFileCount === 0) return false; // No existing tree, need full build
+  return changedFileCount < existingFileCount * 0.1;
+}
+
+/**
+ * Re-aggregate sync status for folders that had file updates.
+ * More efficient than full tree walk when only a few branches changed.
+ */
+function reAggregateSyncStatus(
+  tree: FileTreeNode[],
+  _modifiedFolders: Set<string>
+): void {
+  // For simplicity and correctness, re-aggregate from root when there are changes
+  // The cost is O(n) but only runs when there are actual modifications
+  // Future optimization: walk only modified branches using _modifiedFolders
+  tree.forEach(aggregateSyncStatus);
+}
+
+/**
+ * Update tree incrementally using Immer structural sharing.
+ * Only modified branches get new references; unchanged subtrees preserve identity.
+ *
+ * @param tree - Existing tree structure
+ * @param changedFiles - Map of depot path to updated P4File
+ * @returns Updated tree with structural sharing
+ */
+export function incrementalTreeUpdate(
+  tree: FileTreeNode[],
+  changedFiles: Map<string, P4File>
+): FileTreeNode[] {
+  if (changedFiles.size === 0) return tree;
+
+  const modifiedFolders = new Set<string>();
+
+  const updatedTree = produce(tree, draft => {
+    function updateSubtree(nodes: FileTreeNode[], parentPath: string) {
+      for (const node of nodes) {
+        if (!node.isFolder && node.file) {
+          const update = changedFiles.get(node.file.depotPath);
+          if (update) {
+            // Immer tracks this mutation and creates new references up the tree
+            Object.assign(node.file, update);
+            // Track which folders need sync status re-aggregation
+            modifiedFolders.add(parentPath);
+          }
+        }
+        if (node.children) {
+          updateSubtree(node.children, node.id);
+        }
+      }
+    }
+    updateSubtree(draft, '');
+  });
+
+  // Re-aggregate sync status only for modified subtrees
+  if (modifiedFolders.size > 0) {
+    reAggregateSyncStatus(updatedTree, modifiedFolders);
+  }
+
+  return updatedTree;
 }
 
 /**
