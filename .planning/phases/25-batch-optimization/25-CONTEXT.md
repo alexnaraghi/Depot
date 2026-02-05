@@ -30,7 +30,7 @@ Batch shelved file queries to eliminate N+1 p4 describe calls per changelist. Al
 ### UI Feedback
 - Overall progress indicator in status bar showing count-based progress: "Loading shelved files... (8/12)"
 - All p4 commands must print to output window (existing pattern)
-- Operation is cancellable via contextual cancel button on main toolbar
+- Operation is cancellable via small cancel button in status bar next to spinner/progress indicator
 - Trigger on panel load (automatic when changelist panel opens/refreshes)
 - Partial results kept when user cancels mid-batch
 
