@@ -66,7 +66,7 @@ export function useShelve() {
       addOutputLine(String(data), false);
       toast.success(`Shelved ${variables.filePaths.length} file(s)`);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['p4', 'shelved'] }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'shelved-batch'] }),
         queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
         queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] }),
       ]);
@@ -139,7 +139,7 @@ export function useUnshelve() {
         : 'Unshelved files successfully';
       toast.success(message);
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['p4', 'shelved'] }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'shelved-batch'] }),
         queryClient.invalidateQueries({ queryKey: ['p4', 'opened'] }),
         queryClient.invalidateQueries({ queryKey: ['p4', 'changes'] }),
       ]);
@@ -185,7 +185,7 @@ export function useDeleteShelf() {
     onSuccess: async (data) => {
       addOutputLine(String(data), false);
       toast.success('Deleted shelf successfully');
-      await queryClient.invalidateQueries({ queryKey: ['p4', 'shelved'] });
+      await queryClient.invalidateQueries({ queryKey: ['p4', 'shelved-batch'] });
     },
     onError: (error) => {
       addOutputLine(`Error: ${error}`, true);

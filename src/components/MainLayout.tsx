@@ -104,7 +104,7 @@ export function MainLayout() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['p4', 'opened'], refetchType: 'all' }),
         queryClient.invalidateQueries({ queryKey: ['p4', 'changes'], refetchType: 'all' }),
-        queryClient.invalidateQueries({ queryKey: ['p4', 'shelved'], refetchType: 'all' }),
+        queryClient.invalidateQueries({ queryKey: ['p4', 'shelved-batch'], refetchType: 'all' }),
       ]);
       toast.success('Workspace refreshed');
     } finally {
