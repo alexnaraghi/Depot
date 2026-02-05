@@ -172,6 +172,15 @@ export async function invokeP4Opened(): Promise<P4FileInfo[]> {
 }
 
 /**
+ * Get fstat info for currently opened files only.
+ * Use for fast delta refresh (queries ~10-50 files instead of entire workspace).
+ * Returns same P4FileInfo type as regular fstat.
+ */
+export async function invokeP4FstatOpened(): Promise<P4FileInfo[]> {
+  return invoke<P4FileInfo[]>('p4_fstat_opened', getConnectionArgs());
+}
+
+/**
  * Get changelists (pending, submitted, or all).
  * Use for displaying changelist panel.
  */
