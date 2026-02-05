@@ -98,6 +98,24 @@ pub struct P4ShelvedFile {
     pub revision: i32,
 }
 
+/// Result for a single changelist in batch shelved file query
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ShelvedBatchResult {
+    pub changelist_id: i32,
+    pub files: Option<Vec<P4ShelvedFile>>,
+    pub error: Option<String>,
+}
+
+/// Progress updates for batch shelved file query via Channel
+#[derive(Clone, Serialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum ShelvedBatchProgress {
+    Progress { loaded: u32, total: u32, message: String },
+    Result { result: ShelvedBatchResult },
+    Complete { success_count: u32, error_count: u32, cancelled: bool },
+}
+
 /// File info from p4 describe output
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
