@@ -5,25 +5,25 @@
 See: .planning/PROJECT.md (updated 2026-02-04)
 
 **Core value:** The user is never blocked — operations are always cancellable, errors are non-blocking, and the app remains responsive even during network issues or long-running operations.
-**Current focus:** v5.0 Large Depot Scale -- Phase 21: Async Foundation
+**Current focus:** v5.0 Large Depot Scale -- Phase 22: Streaming fstat + Progress
 
 ## Current Position
 
 Milestone: v5.0 Large Depot Scale
-Phase: 21 of 25 (Async Foundation)
-Plan: 21-02 completed
-Status: In progress
-Last activity: 2026-02-05 — Completed 21-02-PLAN.md (p4handlers async migration)
+Phase: 21 of 25 (Async Foundation) — COMPLETE
+Plan: —
+Status: Phase 21 verified, ready for Phase 22
+Last activity: 2026-02-04 — Phase 21 complete (3/3 plans, 4/4 must-haves verified)
 
-Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [██████░░░░] 67% (2/3)
+Progress: [████████████████████] 74/74 plans complete (v1-v4) | v5.0: [██░░░░░░░░] 20% (3/TBD)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 76 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 2 v5.0)
+- Total plans completed: 77 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 3 v5.0)
 - Quick tasks completed: 10 (007 partial)
 - Average duration: 5 min
-- Total execution time: ~518 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 12 v5.0)
+- Total execution time: ~520 min (104 v1.0 + ~112 v2.0 + 160 v3.0 + 36 quick + 94 v4.0 + 14 v5.0)
 
 **By Phase (v4.0):**
 
@@ -39,7 +39,7 @@ Progress: [████████████████████] 74/74 p
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 21 | 2 | 10 min | 5 min |
+| 21 | 3 | 12 min | 4 min |
 
 *Updated after each plan completion*
 
@@ -97,8 +97,8 @@ None
 
 ## Session Continuity
 
-Last session: 2026-02-05
-Stopped at: Completed 21-02-PLAN.md (p4handlers async migration)
+Last session: 2026-02-04
+Stopped at: Phase 21 complete, ready for Phase 22
 Resume file: None
 
 ---

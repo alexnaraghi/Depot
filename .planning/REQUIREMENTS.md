@@ -106,9 +106,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | STREAM-01 | Phase 22 | Pending |
 | STREAM-02 | Phase 22 | Pending |
 | STREAM-03 | Phase 22 | Pending |
-| STREAM-04 | Phase 21 | Pending |
+| STREAM-04 | Phase 21 | Complete |
 | TREE-01 | Phase 23 | Pending |
-| TREE-02 | Phase 21 | Pending |
+| TREE-02 | Phase 21 | Complete |
 | TREE-03 | Phase 24 | Pending |
 | TREE-04 | Phase 24 | Pending |
 | TREE-05 | Phase 24 | Pending |
