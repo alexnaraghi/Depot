@@ -24,6 +24,7 @@ pub fn run() {
             commands::p4_fstat,
             commands::p4_fstat_stream,
             commands::p4_opened,
+            commands::p4_fstat_opened,
             commands::p4_changes,
             commands::p4_edit,
             commands::p4_revert,

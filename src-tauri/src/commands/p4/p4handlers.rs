@@ -250,6 +250,20 @@ pub async fn p4_opened(
     Ok(files)
 }
 
+/// Get fstat info for currently opened files only.
+/// Much faster than full workspace fstat for delta refresh.
+/// Returns full P4FileInfo including head revision info for sync status detection.
+#[tauri::command]
+pub async fn p4_fstat_opened(
+    server: Option<String>,
+    user: Option<String>,
+    client: Option<String>,
+) -> Result<Vec<P4FileInfo>, String> {
+    // p4_opened already uses "p4 fstat -Ro" which returns full P4FileInfo
+    // including head revision info needed for delta refresh
+    p4_opened(server, user, client).await
+}
+
 /// Get changelists for current user
 #[tauri::command]
 pub async fn p4_changes(
