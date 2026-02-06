@@ -90,37 +90,44 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEC-01 | TBD | Pending |
-| SEC-02 | TBD | Pending |
-| SEC-03 | TBD | Pending |
-| SEC-04 | TBD | Pending |
-| REPO-01 | TBD | Pending |
-| REPO-02 | TBD | Pending |
-| REPO-03 | TBD | Pending |
-| REPO-04 | TBD | Pending |
-| REPO-05 | TBD | Pending |
-| REPO-06 | TBD | Pending |
-| REPO-07 | TBD | Pending |
-| REPO-08 | TBD | Pending |
-| DOCS-01 | TBD | Pending |
-| DOCS-02 | TBD | Pending |
-| DOCS-03 | TBD | Pending |
-| DOCS-04 | TBD | Pending |
-| DOCS-05 | TBD | Pending |
-| DOCS-06 | TBD | Pending |
-| DOCS-07 | TBD | Pending |
-| DOCS-08 | TBD | Pending |
-| DIST-01 | TBD | Pending |
-| DIST-02 | TBD | Pending |
-| DIST-03 | TBD | Pending |
-| DIST-04 | TBD | Pending |
-| DIST-05 | TBD | Pending |
+| SEC-01 | Phase 26 | Pending |
+| SEC-02 | Phase 26 | Pending |
+| SEC-03 | Phase 26 | Pending |
+| SEC-04 | Phase 26 | Pending |
+| REPO-01 | Phase 27 | Pending |
+| REPO-02 | Phase 27 | Pending |
+| REPO-03 | Phase 27 | Pending |
+| REPO-04 | Phase 27 | Pending |
+| REPO-05 | Phase 27 | Pending |
+| REPO-06 | Phase 27 | Pending |
+| REPO-07 | Phase 27 | Pending |
+| REPO-08 | Phase 27 | Pending |
+| DOCS-01 | Phase 28 | Pending |
+| DOCS-02 | Phase 28 | Pending |
+| DOCS-03 | Phase 28 | Pending |
+| DOCS-04 | Phase 28 | Pending |
+| DOCS-05 | Phase 28 | Pending |
+| DOCS-06 | Phase 28 | Pending |
+| DOCS-07 | Phase 28 | Pending |
+| DOCS-08 | Phase 28 | Pending |
+| DIST-01 | Phase 29 | Pending |
+| DIST-02 | Phase 29 | Pending |
+| DIST-03 | Phase 30 | Pending |
+| DIST-04 | Phase 29 | Pending |
+| DIST-05 | Phase 30 | Pending |
 
 **Coverage:**
 - v6.0 requirements: 25 total
-- Mapped to phases: 0 (will be mapped during roadmap creation)
-- Unmapped: 25 ⚠️
+- Mapped to phases: 25/25 ✓
+- Unmapped: 0 ✓
+
+**Phase mapping:**
+- Phase 26 (Security Audit): 4 requirements
+- Phase 27 (Application Rename): 8 requirements
+- Phase 28 (Documentation): 8 requirements
+- Phase 29 (Release Automation): 3 requirements
+- Phase 30 (Final Validation): 2 requirements
 
 ---
 *Requirements defined: 2026-02-05*
-*Last updated: 2026-02-05 after initial definition*
+*Last updated: 2026-02-05 after roadmap creation*

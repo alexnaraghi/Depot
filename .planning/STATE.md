@@ -5,17 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-05)
 
 **Core value:** The user is never blocked — operations are always cancellable, errors are non-blocking, and the app remains responsive even during network issues or long-running operations.
-**Current focus:** v6.0 Public Launch Preparation — defining requirements
+
+**Current focus:** Phase 26: Security Audit (v6.0 Public Launch Preparation)
 
 ## Current Position
 
-Milestone: v6.0 Public Launch Preparation — DEFINING REQUIREMENTS
-Phase: Not started
-Plan: —
-Status: Defining requirements
-Last activity: 2026-02-05 — Milestone v6.0 started
+Phase: 26 of 30 (Security Audit)
+Plan: 0 of 0 (not yet planned)
+Status: Ready to plan
+Last activity: 2026-02-05 — v6.0 roadmap created
 
-Previous Progress: [████████████████████] 89/89 plans complete (v1-v5)
+Progress: [████████████████████] 100% of v1-v5 complete (89 plans), v6.0 started
 
 ## Performance Metrics
 
@@ -25,156 +25,83 @@ Previous Progress: [████████████████████
 - Average duration: ~5 min per plan
 - Total development time: ~9 days (2026-01-27 → 2026-02-05)
 
-**By Phase (v4.0):**
+**By Milestone:**
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 16 | 3 | 14 min | 5 min |
-| 17 | 3 | 41 min | 14 min |
-| 18 | 3 | 14 min | 5 min |
-| 19 | 2 | 9 min | 5 min |
-| 20 | 5 | 16 min | 3 min |
+| Milestone | Phases | Plans | Status |
+|-----------|--------|-------|--------|
+| v1.0 MVP | 1-2 | 14 | Complete |
+| v2.0 Feature Complete | 3-8 | 17 | Complete |
+| v3.0 Daily Driver | 9-15 | 27 | Complete |
+| v4.0 Road to P4V Killer | 16-20 | 16 | Complete |
+| v5.0 Large Depot Scale | 21-25 | 15 | Complete |
+| v6.0 Public Launch Prep | 26-30 | TBD | Not started |
 
-**By Phase (v5.0):**
+**Recent Trend:**
+- v5.0 completed in ~6 hours (2026-02-04 → 2026-02-05)
+- Velocity improving with mature codebase and clear patterns
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 21 | 3 | 12 min | 4 min |
-| 22 | 3 | 10 min | 3 min |
-| 23 | 3 | 18 min | 6 min |
-| 24 | 4 | 17 min | 4 min |
-| 25 | 2 | 8 min | 4 min |
-
-*Updated after each plan completion*
+*Metrics updated: 2026-02-05*
 
 ## Accumulated Context
+
+### Roadmap
+
+See: .planning/ROADMAP.md
+
+**v6.0 Milestone (Phases 26-30):**
+- Phase 26: Security Audit (BLOCKING — must complete first)
+- Phase 27: Application Rename (BLOCKING — depends on security)
+- Phase 28: Documentation
+- Phase 29: Release Automation
+- Phase 30: Final Validation
+
+**Critical dependencies:**
+- Security audit gates ALL work (credentials in Git history cannot be unpublished)
+- Rename gates documentation (docs reference new name throughout)
+- Final validation gates public launch (quality gate)
 
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
 
-**v5.0 Roadmap Decisions:**
-- Phase 21 (Foundation): ProcessManager tokio support + debounce hook. Zero dependencies, unblocks all streaming work.
-- Phase 22 (Streaming): Highest-impact change. Generalizes proven p4_sync Channel pattern to p4_fstat.
-- Phase 23 (Search): nucleo-powered FileIndex on Rust side. Depends on streaming data pipeline from Phase 22.
-- Phase 24 (Tree): Incremental tree builder + delta refresh. Soft dependency on Phase 22 (can overlap with 23).
-- Phase 25 (Batch): N+1 shelved query fix. Independent of streaming pipeline, depends only on Phase 21.
+Recent decisions affecting v6.0:
 
-**21-01 Decisions:**
-- Migrated from std::process to tokio::process for non-blocking async execution
-- Added explicit .wait().await after every .kill().await to prevent zombie processes
-- Changed streaming tasks from std::thread::spawn to tokio::spawn
-
-**21-02 Decisions:**
-- Preserved std::process::Command inside spawn_blocking for merge tool (intentional blocking)
-- Updated all p4 commands to tokio::process with .output().await
-- Migrated p4_sync streaming from std::thread::spawn to tokio::spawn
-
-**22-01 Decisions:**
-- Batch size of 100 files for balance between first-batch latency and IPC overhead
-- Inline filtering of deleted-at-head files during parsing reduces payload by ~10-20%
-- Explicit completion signal with total count for frontend progress indicators
-- Separate stdout/stderr tokio tasks for parallel processing without blocking
-
-**22-02 Decisions:**
-- Use isStreaming state to prevent concurrent streams during active loading
-- Update query cache with new array references via spread operator (TanStack Query v5 API)
-- Disable refetchOnWindowFocus during streaming to prevent conflicts
-- Estimate total files: first batch = 10% of total, refine when approaching 90%
-
-**22-03 Decisions:**
-- Extract file count from operation messages via regex for cleaner UI display
-- Display format "X files (Y%)" shows both absolute and relative progress
-
-**23-01 Decisions:**
-- nucleo-matcher 0.3 for fuzzy matching (low-level API for direct control)
-- Arc<Mutex<FileIndex>> pattern matching ProcessManager for consistency
-- Recency bias: 1.5x score boost for files modified in last 7 days
-- Glob exports (pub use search::*) required for Tauri command macros
-
-**23-02 Decisions:**
-- Removed microfuzz for file tree filtering (Rust nucleo faster at scale)
-- 150ms debounce in both useDebounce hook and useFileSearch
-- Search mode preserved across filter clears (user preference)
-- Max 500 results from backend for hierarchical filtering
-
-**23-03 Decisions:**
-- Fire-and-forget pattern for index operations to avoid blocking batch processing
-- Clear index on stream start AND on disconnect for workspace change scenarios
-- headModTime field added to P4FileInfo for recency-weighted search
-
-**24-01 Decisions:**
-- Keep autoRefreshInterval for backwards compatibility (changelists still use it)
-- batchUpdateFiles only creates new Map if at least one update applied (avoids unnecessary re-renders)
-- Immer produce() usage will be in treeBuilder.ts (Plan 02), store just needs efficient Map updates
-
-**24-02 Decisions:**
-- Use Immer produce() for structural sharing - unchanged subtrees preserve object identity (===)
-- 10% threshold: incremental update when changed files < 10% of existing files
-- Change detection compares: revision, headRevision, status, action, changelist
-- Full re-aggregation of sync status after incremental updates (future optimization: partial branch)
-
-**24-03 Decisions:**
-- Delegate p4_fstat_opened to existing p4_opened (already uses fstat -Ro for full info)
-- No new types needed - returns same P4FileInfo[] as regular fstat
-
-**24-04 Decisions:**
-- Delta refresh tracks lastDeltaRefreshRef for focus-return logic
-- Full refresh tracks lastFullRefreshRef for focus-return logic
-- Incremental tree update applied when prevTreeRef has data and <10% threshold met
-- Both delta and full refresh pause when window loses focus
-- On focus return, immediate refresh if interval elapsed while unfocused
-
-**25-01 Decisions:**
-- Progress updates every 5 CLs to avoid IPC channel flooding
-- CLs without shelved files return Some(vec![]) not error for partial success
-- Field indices reset per CL - track context via 'change' field
-- Use .send() for all Channel messages (try_send not available)
-
-**25-02 Decisions:**
-- Progress format: "Loading shelved files... (X/Y)" per CONTEXT.md
-- Yellow toast on partial failure shows count summary only
-- 100ms wait after batch completes for Channel message delivery
-- Query key changed from 'shelved' to 'shelved-batch' to distinguish patterns
+- **Dual versioning strategy**: Internal v6.0 for milestone tracking, public v0.1.0 for releases (signals early testing phase)
+- **Keep .planning/ directory public**: Showcase agentic development methodology (with sensitive content audit in Phase 26)
+- **Unsigned binaries for v0.1**: Acceptable with prominent README disclaimer; defer code signing to post-v0.1 based on adoption
+- **Permanent bundle identifier**: Choose "com.depot.app" in Phase 27; changing after public release breaks user installations
 
 ### Pending Todos
 
-13 pending — see `.planning/todos/pending/`
-- 5 from previous sessions (2 resolved: unshelve conflicts, settings scrollable)
-- 2 from testing (6 resolved: CL details regression, client spec error, connection dialog, depot disappearing, toolbar layout, workspace dropdown)
-- 1 new: Add standard file menu bar (File, Edit, View, Help)
-- 1 new: Rename app from p4now to Depot
-- 1 new: Prepare repository for public GitHub publish
-- 1 new: Unshelve shows success message even when user cancels
-- 1 new: Offline mode with cached repository
-- 1 new: File click does not update contextual toolbar icons
-- 1 new: Shelve and unshelve do not update UI
-- 1 new: Unify async loading indicators across the app
+From .planning/todos/pending/:
+
+13 pending todos exist (captured during v1.0-v5.0 development).
+
+See `/gsd:check-todos` for full list. Most are future enhancements deferred to post-v6.0.
 
 ### Blockers/Concerns
 
-None
+**Phase 26 (Security Audit):**
+- HIGH RISK: Credentials in Git history cannot be unpublished after repo is public
+- Gitleaks + TruffleHog scans must complete with zero findings before proceeding
 
-**Research notes:**
-- Large depot scalability analysis: `reports/large-depot-scalability-analysis.md`
-- Research summary: `.planning/research/SUMMARY.md`
-- Key pitfalls: zombie processes, channel backpressure, TanStack Query race conditions, structural sharing breaks, batch error isolation
+**Phase 27 (Application Rename):**
+- CRITICAL: Bundle identifier change (com.a.p4now → com.depot.app) is permanent
+- Breaking change for existing installations (settings lost); document migration in README
 
-### Quick Tasks Completed
+**Phase 30 (Final Validation):**
+- Clean Windows VM needed for installer testing
+- Smoke test must cover all validated features from PROJECT.md requirements
 
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 005 | Fix detail pane selection and CL click behavior | 2026-02-01 | 1c7a040 | [005-fix-detail-pane-selection-and-cl-click](./quick/005-fix-detail-pane-selection-and-cl-click/) |
-| 006 | Architecture report short-term fixes | 2026-02-02 | 9b2e63b | [006-architecture-report-short-term-fixes](./quick/006-architecture-report-short-term-fixes/) |
-| 007 | Address "now" architecture improvements | 2026-02-02 | e481331 | [007-address-now-architecture-improvements](./quick/007-address-now-architecture-improvements/) |
-| 008 | Large depot scalability analysis | 2026-02-03 | 584ef65 | [008-analyze-large-depot-scalability-report](./quick/008-analyze-large-depot-scalability-report/) |
-| 009 | Fix shelved file lists not showing up | 2026-02-04 | cdb4d35 | [009-shelved-file-lists-still-do-not-show-up-](./quick/009-shelved-file-lists-still-do-not-show-up-/) |
+None blocking immediate Phase 26 planning.
 
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: v5.0 milestone complete and archived
+Stopped at: v6.0 roadmap created, ready to plan Phase 26
 Resume file: None
 
 ---
-**Ready for next milestone:** Use `/gsd:new-milestone` to start v6.0
+
+*State initialized: 2026-02-05*
+*Last updated: 2026-02-05 after v6.0 roadmap creation*
