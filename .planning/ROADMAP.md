@@ -98,10 +98,13 @@ Plans:
   6. Application builds successfully with `npm run tauri build`
   7. Built application runs and displays "Depot" branding throughout UI
 
-**Plans**: TBD
+**Plans**: 4 plans
 
 Plans:
-- [ ] 27-01: TBD
+- [ ] 27-01-PLAN.md - Core rename (Cargo.toml, tauri.conf.json, package.json, index.html)
+- [ ] 27-02-PLAN.md - E2E test configuration updates
+- [ ] 27-03-PLAN.md - Version display and dynamic window title
+- [ ] 27-04-PLAN.md - Verification grep and build/launch test
 
 ### Phase 28: Documentation
 **Goal**: Comprehensive documentation exists for public GitHub repository with README, quick start, P4V comparison, and community guidelines
@@ -172,7 +175,7 @@ Phases execute in numeric order: 26 → 27 → 28 → 29 → 30
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 26. Security Audit | v6.0 | 2/2 | Complete | 2026-02-05 |
-| 27. Application Rename | v6.0 | 0/0 | Not started | - |
+| 27. Application Rename | v6.0 | 0/4 | Planned | - |
 | 28. Documentation | v6.0 | 0/0 | Not started | - |
 | 29. Release Automation | v6.0 | 0/0 | Not started | - |
 | 30. Final Validation | v6.0 | 0/0 | Not started | - |
