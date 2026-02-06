@@ -10,9 +10,9 @@ import { join } from 'node:path'
  * - P4E2E_CLIENT: P4 client/workspace name
  *
  * Writes settings to:
- * - Windows: %APPDATA%\com.a.p4now\settings.json
- * - Linux: ~/.config/com.a.p4now/settings.json
- * - macOS: ~/Library/Application Support/com.a.p4now/settings.json
+ * - Windows: %APPDATA%\com.depot.app\settings.json
+ * - Linux: ~/.config/com.depot.app/settings.json
+ * - macOS: ~/Library/Application Support/com.depot.app/settings.json
  *
  * Call this in wdio onPrepare hook BEFORE spawning tauri-driver.
  *
@@ -53,7 +53,7 @@ export async function seedSettings(): Promise<void> {
     ? join(process.env.HOME!, 'Library', 'Application Support')
     : join(process.env.HOME!, '.config')
 
-  const storeDir = join(appDataDir, 'com.a.p4now')
+  const storeDir = join(appDataDir, 'com.depot.app')
   const storePath = join(storeDir, 'settings.json')
 
   // Create directory if it doesn't exist
