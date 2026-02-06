@@ -76,10 +76,11 @@ See .planning/milestones/ for archived roadmap details.
   4. .gitignore updated to prevent future credential commits (Tauri artifacts, certificates, credentials)
   5. .planning/ directory audited and cleared for public showcase (no sensitive internal context)
 
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 26-01: TBD
+- [ ] 26-01-PLAN.md - Automated security scanning with Gitleaks and TruffleHog
+- [ ] 26-02-PLAN.md - Manual code review, .planning audit, and .gitignore update
 
 ### Phase 27: Application Rename
 **Goal**: Application completely renamed from "p4now" to "Depot" with verified build and permanent bundle identifier set
@@ -169,7 +170,7 @@ Phases execute in numeric order: 26 → 27 → 28 → 29 → 30
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 26. Security Audit | v6.0 | 0/0 | Not started | - |
+| 26. Security Audit | v6.0 | 0/2 | Planned | - |
 | 27. Application Rename | v6.0 | 0/0 | Not started | - |
 | 28. Documentation | v6.0 | 0/0 | Not started | - |
 | 29. Release Automation | v6.0 | 0/0 | Not started | - |
@@ -178,4 +179,4 @@ Phases execute in numeric order: 26 → 27 → 28 → 29 → 30
 ---
 
 *Roadmap created: 2026-02-05*
-*Last updated: 2026-02-05 after v6.0 milestone started*
+*Last updated: 2026-02-05 after Phase 26 planning completed*
