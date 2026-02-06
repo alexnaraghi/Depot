@@ -1,5 +1,60 @@
 # Project Milestones: P4Now
 
+## v5.0 Large Depot Scale (Shipped: 2026-02-05)
+
+**Delivered:** Make P4Now work smoothly with 10,000+ file depots by replacing blocking all-or-nothing data flows with streaming, incremental, and cancellable operations.
+
+**Phases completed:** 21-25 (15 plans total)
+
+**Key accomplishments:**
+
+- Non-blocking async infrastructure with tokio::process, eliminating zombie processes and thread pool exhaustion
+- Progressive workspace loading with streaming fstat delivering first 100 files in <500ms with cancellable operations
+- Instant file search via Rust-side FileIndex with nucleo fuzzy matching (<5ms for 100K+ files)
+- Incremental tree updates using Immer structural sharing, preventing full rebuilds when <10% of files change
+- Two-tier auto-refresh: 30s delta refresh (opened files only) + 5min full refresh (comprehensive)
+- Batch shelved file loading replacing N+1 query pattern with single command and per-CL error isolation
+
+**Stats:**
+
+- 218 files created/modified (combined v4.0 + v5.0)
+- ~33,000 lines added, ~20,000 total LOC (TypeScript + Rust)
+- 5 phases, 15 plans
+- ~6 hours development time (2026-02-04 18:28 → 2026-02-05 00:21)
+
+**Git range:** `feat(21-01)` → `feat(25-02)`
+
+**What's next:** Consider v6.0 for unified search UI, workspace-optimized depot browser, and telemetry
+
+---
+
+## v4.0 Road to P4V Killer (Shipped: 2026-02-03)
+
+**Delivered:** Close the most visible daily-use gaps versus P4V with file content viewer, annotations (blame), sync status overlays, submitted changelist file lists, and submit preview dialog.
+
+**Phases completed:** 16-20 (16 plans total)
+
+**Key accomplishments:**
+
+- File content viewer with syntax highlighting via prism-react-renderer and size warnings for large files
+- File annotations (blame) with per-line authorship, age heatmap coloring, interactive tooltips, keyboard navigation, and "blame prior" revision peeling
+- Workspace sync status with have-rev vs head-rev overlays and folder-level aggregation
+- Submitted changelist complete file list display with action indicators and clickable navigation
+- Submit preview dialog showing description and file list before submission with inline edits
+- 12 critical bug fixes: connection dialog auto-open, shelve/unshelve UI updates, depot accordion persistence, file selection toolbar context, client spec parsing, settings scrollability
+
+**Stats:**
+
+- Included in v5.0 combined stats above
+- 5 phases, 16 plans
+- 2 days (2026-02-03)
+
+**Git range:** `feat(16-01)` → `feat(20-05)`
+
+**What's next:** Large depot scalability (v5.0)
+
+---
+
 ## v3.0 Daily Driver (Shipped: 2026-02-01)
 
 **Delivered:** Production-ready Perforce client with three-column layout, depot browser, workspace/stream switching, search filtering, auto-refresh, conflict resolution, and E2E testing infrastructure.
