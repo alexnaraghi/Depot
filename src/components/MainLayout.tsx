@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useQueryClient } from '@tanstack/react-query';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { FileTree } from '@/components/FileTree/FileTree';
 import { ChangelistPanel } from '@/components/ChangelistPanel/ChangelistPanel';
 import { DetailPane } from '@/components/DetailPane/DetailPane';
@@ -53,6 +54,7 @@ export function MainLayout() {
   const hasSeenConnecting = useRef(false);
   const selectedFile = useFileTreeStore(s => s.selectedFile);
   const connectionStatus = useConnectionStore(s => s.status);
+  const workspace = useConnectionStore(s => s.workspace);
   const queryClient = useQueryClient();
 
   // Accordion state with localStorage persistence
@@ -71,6 +73,19 @@ export function MainLayout() {
       setWorkspaceOpen(true);
     }
   }, [connectionStatus]);
+
+  // Update window title based on connection state
+  useEffect(() => {
+    const updateTitle = async () => {
+      const window = getCurrentWindow();
+      if (workspace) {
+        await window.setTitle(`Depot - ${workspace}`);
+      } else {
+        await window.setTitle('Depot');
+      }
+    };
+    updateTitle();
+  }, [workspace]);
 
   // Load saved column widths on mount
   useEffect(() => {
