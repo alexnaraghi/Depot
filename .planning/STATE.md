@@ -6,21 +6,21 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 
 **Core value:** The user is never blocked — operations are always cancellable, errors are non-blocking, and the app remains responsive even during network issues or long-running operations.
 
-**Current focus:** Phase 28: Documentation (v6.0 Public Launch Preparation)
+**Current focus:** Phase 29: Release Automation (v6.0 Public Launch Preparation)
 
 ## Current Position
 
-Phase: 28 of 30 (Documentation)
-Plan: 3 of 3 (Phase complete)
-Status: Phase 28 complete
-Last activity: 2026-02-06 — Completed 28-03-PLAN.md
+Phase: 29 of 30 (Release Automation)
+Plan: 1 of 2 (In progress)
+Status: In progress
+Last activity: 2026-02-06 — Completed 29-01-PLAN.md
 
-Progress: [████████████████████] 100% of v1-v5 complete (89 plans), Phase 26 complete (2 plans), Phase 27 complete (4 plans), Phase 28 complete (3 plans)
+Progress: [████████████████████] 100% of v1-v5 complete (89 plans), Phase 26 complete (2 plans), Phase 27 complete (4 plans), Phase 28 complete (3 plans), Phase 29: 1/2 complete
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 98 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 15 v5.0 + 9 v6.0)
+- Total plans completed: 99 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 15 v5.0 + 10 v6.0)
 - Quick tasks completed: 10
 - Average duration: ~5 min per plan
 - Total development time: ~10 days (2026-01-27 → 2026-02-06)
@@ -34,11 +34,12 @@ Progress: [████████████████████] 100% of
 | v3.0 Daily Driver | 9-15 | 27 | Complete |
 | v4.0 Road to P4V Killer | 16-20 | 16 | Complete |
 | v5.0 Large Depot Scale | 21-25 | 15 | Complete |
-| v6.0 Public Launch Prep | 26-30 | 9 (Phases 26-28 complete) | In progress |
+| v6.0 Public Launch Prep | 26-30 | 10 (Phases 26-28 complete, Phase 29: 1/2) | In progress |
 
 **Recent Trend:**
 - v5.0 completed in ~6 hours (2026-02-04 → 2026-02-05)
 - Documentation phase completed in 2 minutes with comprehensive README
+- Phase 29-01 completed in 2 minutes (release automation workflow)
 - Velocity improving with mature codebase and clear patterns
 
 *Metrics updated: 2026-02-06*
@@ -81,6 +82,9 @@ Recent decisions affecting v6.0:
 - **Honest comparison approach** (Phase 28-01): P4V comparison table acknowledges gaps (branch/integrate, admin tools) alongside strengths (performance, UX)
 - **SmartScreen guidance embedded** (Phase 28-01): Bypass instructions in Quick Start section with neutral safety explanation for unsigned builds
 - **Community files scoped out** (Phase 28-02): CODE_OF_CONDUCT.md, SECURITY.md, and issue templates deferred to post-v0.1 based on community need
+- **Manual workflow trigger** (Phase 29-01): workflow_dispatch only for v0.1 testing; tag-based triggers deferred until workflow validated
+- **Draft-first release pattern** (Phase 29-01): All releases created as drafts for human review before publishing
+- **Pre-release detection** (Phase 29-01): v0.x versions automatically marked as pre-release via version pattern matching
 
 ### Pending Todos
 
@@ -135,6 +139,11 @@ See `/gsd:check-todos` for full list. Most are future enhancements deferred to p
   - 7/9 must-haves verified; 2 gaps due to scope reduction (non-blocking)
   - Phase 28 complete - ready for Phase 29: Release Automation
 
+**Phase 29 (Release Automation):** IN PROGRESS (1/2 plans complete)
+- GitHub Actions workflow created (29-01) - COMPLETE
+- Release process documented in CONTRIBUTING.md (29-01) - COMPLETE
+- Next: Plan 29-02 (pending)
+
 **Phase 30 (Final Validation):**
 - Clean Windows VM needed for installer testing
 - Smoke test must cover all validated features from PROJECT.md requirements
@@ -142,10 +151,10 @@ See `/gsd:check-todos` for full list. Most are future enhancements deferred to p
 ## Session Continuity
 
 Last session: 2026-02-06
-Stopped at: Completed 28-03-PLAN.md (user verification) - Phase 28 complete with README.md, CONTRIBUTING.md, and user approval
+Stopped at: Completed 29-01-PLAN.md (GitHub Actions workflow) - Release automation workflow created with draft releases and pre-release detection
 Resume file: None
 
 ---
 
 *State initialized: 2026-02-05*
-*Last updated: 2026-02-06 after Phase 28 completion*
+*Last updated: 2026-02-06 after Phase 29-01 completion*
