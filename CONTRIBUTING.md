@@ -98,6 +98,27 @@ git checkout -b feature/your-feature-name
    - Address review comments
    - Push additional commits to your branch as needed
 
+## Release Process
+
+Releases are automated via GitHub Actions. To create a new release:
+
+1. Ensure all changes are committed and pushed to `master`
+2. Navigate to **Actions** tab in GitHub
+3. Select **Release** workflow from the left sidebar
+4. Click **Run workflow** button
+5. Select `master` branch and click **Run workflow**
+6. Wait for the build to complete (~10-15 minutes)
+7. Navigate to **Releases** page
+8. Find the draft release and review artifacts
+9. Edit release notes if needed
+10. Click **Publish release** when ready
+
+The workflow automatically:
+- Builds both NSIS (.exe) and MSI installers
+- Creates a draft GitHub Release
+- Marks v0.x versions as pre-release
+- Uploads installers with checksums
+
 ## Questions?
 
 If you have questions or need help:
