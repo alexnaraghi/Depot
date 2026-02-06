@@ -500,7 +500,7 @@ fn test_parse_ztag_describe_shelved() {
 fn test_parse_ztag_describe_shelved_with_metadata_split() {
     // Real p4 output: blank line in description causes record split
     let input = r#"... change 16
-... user anaraghi
+... user testuser
 ... client test-client
 ... time 1770178673
 ... desc New CL
