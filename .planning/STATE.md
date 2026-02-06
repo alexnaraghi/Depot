@@ -5,15 +5,17 @@
 See: .planning/PROJECT.md (updated 2026-02-05)
 
 **Core value:** The user is never blocked — operations are always cancellable, errors are non-blocking, and the app remains responsive even during network issues or long-running operations.
-**Current focus:** Ready for next milestone
+**Current focus:** v6.0 Public Launch Preparation — defining requirements
 
 ## Current Position
 
-Milestone: v5.0 Large Depot Scale — COMPLETE ✅
-Status: Milestone shipped 2026-02-05
-Last activity: 2026-02-05 — v5.0 milestone archived
+Milestone: v6.0 Public Launch Preparation — DEFINING REQUIREMENTS
+Phase: Not started
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-05 — Milestone v6.0 started
 
-Progress: [████████████████████] 89/89 plans complete (v1-v5)
+Previous Progress: [████████████████████] 89/89 plans complete (v1-v5)
 
 ## Performance Metrics
 

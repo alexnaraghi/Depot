@@ -66,7 +66,7 @@ The user is never blocked — operations are always cancellable, errors are non-
 
 ### Active
 
-None - ready for next milestone requirements
+Requirements for v6.0 Public Launch Preparation milestone will be defined next.
 
 ### Out of Scope
 
@@ -135,20 +135,26 @@ Tech stack: Tauri 2.0, React 19, TanStack Query, Zustand, shadcn/ui, Tailwind CS
 | Two-tier refresh (30s/5min) | Delta queries only opened files, full catches all changes | ✓ Good |
 | Batch shelved queries | Single command vs N+1 with per-CL error isolation | ✓ Good |
 
-## Current State
+## Current Milestone: v6.0 Public Launch Preparation
 
-**Latest Release:** v5.0 Large Depot Scale (shipped 2026-02-05)
+**Goal:** Prepare Depot (renamed from P4Now) for public release on GitHub with proper licensing, documentation, security audit, and release automation.
+
+**Target features:**
+- Rename application from "p4now" to "Depot" (binary, repo, code references)
+- Add MIT license and establish as open-source project
+- Create comprehensive README with quick start, P4V comparison, early testing disclaimer
+- Security audit for credentials/secrets and .gitignore review
+- GitHub release automation with binary publishing
+- Smoke test all features and build release binary
+- Keep .planning/ directory as showcase of agentic development process
+
+**Versioning strategy:** Dual versioning - internal v6.0 for milestone tracking (preserves development history), public v0.1 for app/releases (signals early testing phase)
+
+## Previous Release
+
+**v5.0 Large Depot Scale** (shipped 2026-02-05)
 
 All P0 and P1 scalability bottlenecks resolved. App handles 10,000+ file workspaces with progressive loading, instant search, incremental updates, and efficient batch operations.
-
-**Next Milestone Goals:**
-
-Consider v6.0 features:
-- Unified search UI (workspace + depot + changelists in single view)
-- Workspace-optimized depot browser (restrict to mapping by default)
-- Telemetry/logging for production debugging
-- Bookmarks system for frequently accessed depot paths
-- Virtualized code viewer for 100K+ line files
 
 ## Milestones
 
@@ -163,4 +169,4 @@ Consider v6.0 features:
 See `.planning/milestones/` for archived roadmaps and requirements.
 
 ---
-*Last updated: 2026-02-05 after v5.0 milestone completion*
+*Last updated: 2026-02-05 after v6.0 milestone started*
