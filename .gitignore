@@ -10,7 +10,6 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-*.local
 
 # Editor directories and files
 .vscode/*
@@ -32,3 +31,39 @@ test-server
 
 # Local test files
 reports
+
+# Credentials and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+secrets.json
+.secrets
+
+# Tauri build artifacts
+src-tauri/target/
+src-tauri/WixTools/
+src-tauri/*.nsi
+*.exe
+*.msi
+
+# OS files
+Thumbs.db
+desktop.ini
+.Spotlight-V100
+.Trashes
+*.local
+
+# IDE temporary files
+*.swp
+*.swo
+*~
+
+# Test coverage artifacts
+coverage/
+.nyc_output/
+*.lcov
