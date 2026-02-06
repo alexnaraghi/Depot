@@ -1,583 +1,324 @@
-# Features Research: P4V Parity Features (v4.0)
-
-**Domain:** Perforce GUI client - daily development workflow features
-**Researched:** 2026-02-03
-**Context:** Adding P4V parity features to existing P4Now app (v4.0 milestone)
-
-## Executive Summary
-
-The six target features represent P4V's most-used daily workflow tools: blame annotations for authorship tracking, workspace sync status indicators for revision awareness, in-app file content viewing, submit dialog previews for pre-submission review, submitted changelist file lists, and bookmarks for quick navigation. These are table-stakes features for any serious Perforce GUI - their absence makes P4Now feel incomplete compared to P4V. However, P4Now has opportunities to differentiate through non-blocking UX, instant navigation, and better performance than P4V's modal dialogs.
-
-Modern version control tools (GitLens, VS Code, TortoiseGit) demonstrate clear UX patterns: inline blame annotations with hover details, gutter/status bar metadata, color-coded age indicators, and unobtrusive display that doesn't clutter the editor. File trees use overlay icons (green checkmarks, yellow/red warnings) with tooltip details. These patterns should inform P4Now's implementation while maintaining its core value: never block the user.
-
-## Feature Categories
-
-### 1. File Annotations (Blame View)
-
-**Table Stakes:**
-
-- **Per-line revision display** - Show revision number for each line - Complexity: Medium
-  - P4V uses `p4 annotate` command which outputs revision number per line
-  - Can optionally show changelist number instead with `-c` flag
-
-- **Author and date metadata** - Display who modified each line and when - Complexity: Medium
-  - Requires `p4 annotate -u` flag to include username and date
-  - Format: revision/CL number, username, date, line content
-
-- **Navigate to changelist from line** - Click line annotation to view changelist details - Complexity: Low
-  - P4V makes userid a clickable link to the changelist
-  - Integrates with existing changelist detail view
-
-- **Large file handling** - Handle files up to 10MB (p4 annotate default limit) - Complexity: Low
-  - P4 server ignores files over 10MB by default
-  - Must warn user when file exceeds limit
-
-**Differentiators:**
-
-- **Inline display with optional toggle** - Show/hide annotations without switching views - Complexity: Low
-  - GitLens shows inline annotations at end of each line
-  - Toggle on/off per-file or globally
-  - P4V requires separate "Time-lapse View" which is modal
-
-- **Gutter display mode** - Show metadata in gutter like GitLens - Complexity: Medium
-  - Less intrusive than full inline text
-  - Hover for full details (author, date, description)
-  - Color-coded by age (heatmap style)
-
-- **Copy blame data** - Copy author/revision/date for a line or range - Complexity: Low
-  - Right-click context menu option
-  - Useful for documentation, bug reports
-
-- **Filter by author** - Show only lines by specific author - Complexity: Medium
-  - Parse annotate output, highlight matching lines
-  - Useful for reviewing specific developer's work
-
-**Anti-features:**
-
-- **Built-in time-lapse slider** - P4V's animated revision playback - Why NOT: Complex UI, limited value
-  - Time-lapse view is P4V's most complex blame feature
-  - Requires animation, slider controls, revision caching
-  - Low usage relative to implementation cost
-  - Simple blame with revision links provides 90% of value
-
-- **Blame for shelved files** - Annotate unshelved changes - Why NOT: Shelves aren't permanent history
-  - Shelves are temporary, blame is for committed history
-  - Adds complexity to p4 annotate workflow
-  - Minimal user value
-
-### 2. Workspace File Tree with Sync Status
-
-**Table Stakes:**
-
-- **Have-rev vs head-rev indicators** - Show which files are out of date - Complexity: Medium
-  - P4 tracks "have revision" (last synced) vs "head revision" (latest in depot)
-  - Use icon overlays: green checkmark (synced to head), yellow indicator (synced to old revision)
-  - Critical for knowing when to sync before editing
-
-- **Visual distinction for modified files** - Already checked out or locally modified - Complexity: Low
-  - Existing feature already shows modified files in pending changelist
-  - Extend to workspace tree with distinct icons
-  - Red exclamation or pencil icon common pattern (TortoiseGit)
-
-- **Sync action from tree** - Right-click file to "Get Latest Revision" - Complexity: Low
-  - Integrates with existing sync operation
-  - Update icon after sync completes
-  - Show sync progress inline
-
-- **Tooltip details** - Hover shows have rev #, head rev #, file size - Complexity: Low
-  - P4V shows this in tooltip when hovering workspace files
-  - Format: "Have: #5, Head: #8, Size: 2.3 KB"
-  - Also show action (add/edit/delete) if file is open
-
-**Differentiators:**
-
-- **Real-time sync status updates** - Update icons as depot changes - Complexity: Medium
-  - Leverage existing auto-refresh polling
-  - Query only visible files for performance
-  - P4V requires manual refresh to update icons
-
-- **Batch sync indicator** - Show count of out-of-date files in header - Complexity: Low
-  - "15 files need sync" summary
-  - One-click "Sync All Out of Date" action
-  - Reduces cognitive load vs scanning tree
-
-- **Filter tree by sync status** - Show only out-of-date files - Complexity: Low
-  - Reuse existing search/filter infrastructure
-  - "Show Out of Date" toggle in tree header
-  - Helps focus on what needs attention
-
-**Anti-features:**
-
-- **Per-directory sync status rollup** - Aggregate child file status to parent - Why NOT: Expensive, unclear semantics
-  - Requires traversing entire tree structure
-  - Ambiguous meaning: folder "out of date" if ANY child is? ALL children?
-  - Performance cost for 10,000+ file trees
-  - Users check files, not folders
-
-- **Multiple workspace views** - Show multiple client workspaces simultaneously - Why NOT: Out of scope
-  - P4Now explicitly single-workspace (Key Decisions in PROJECT.md)
-  - Multi-workspace adds significant complexity
-  - Workspace switching already supported
-
-### 3. File Content Viewer
-
-**Table Stakes:**
-
-- **View any revision in-app** - Display file content for selected revision - Complexity: Medium
-  - Uses `p4 print` command to fetch file contents
-  - Syntax-highlighted text display (reuse existing libraries)
-  - Shows revision metadata (rev #, author, date, description) in header
-
-- **Navigate from file history** - Click revision in history tab to view content - Complexity: Low
-  - Integrates with existing file history viewer
-  - Opens in new detail pane section or replaces current view
-  - Clear "Viewing revision #5" indicator
-
-- **Compare two revisions** - Select two revisions to diff - Complexity: Low
-  - Existing external diff tool integration
-  - Drag-drop UX from P4V: drag one revision onto another
-  - Launches configured diff tool (P4Merge, VS Code, etc.)
-
-- **Text file support** - Handle common text file types - Complexity: Low
-  - Source code: .cpp, .h, .js, .ts, .py, .cs, etc.
-  - Config: .json, .xml, .yaml, .ini, etc.
-  - Docs: .md, .txt, .log, etc.
-
-**Differentiators:**
-
-- **Open in external editor** - Launch file in VS Code / preferred editor - Complexity: Low
-  - Uses `p4 print -o tempfile` to write revision to temp location
-  - Launches configured external editor with temp file path
-  - Fixes existing tech debt (PROJECT.md line 84: TODO p4_print)
-  - P4V only allows "Open" for workspace files, not depot revisions
-
-- **Instant preview** - Show content without external tool launch - Complexity: Low
-  - No external process spawn delay
-  - Scroll through file immediately
-  - P4V opens external editor by default
-
-- **Copy file content** - Select and copy text from viewer - Complexity: Low
-  - Standard text selection
-  - Right-click "Copy" or Ctrl+C
-  - Useful for grabbing snippets from old revisions
-
-- **Search within file** - Find text in displayed revision - Complexity: Low
-  - Ctrl+F search box
-  - Highlight matches inline
-  - Navigate next/previous match
-
-**Anti-features:**
-
-- **Binary file preview** - Display images, PDFs, etc. in-app - Why NOT: Scope creep, low ROI
-  - Requires image rendering, PDF parsing, etc.
-  - Most binary files (textures, DLLs) have no meaningful preview
-  - External tool is better for occasional binary inspection
-  - Show "Binary file, X bytes" placeholder instead
-
-- **Inline editing** - Edit file content in viewer and save - Why NOT: Not the core workflow
-  - P4 workflow: checkout, edit in IDE, submit
-  - In-app editing requires file type detection, syntax validation, save-to-workspace
-  - Duplicates IDE functionality
-  - Read-only viewer is sufficient
-
-- **Revision slider** - Time-lapse style navigation through revisions - Why NOT: Complexity vs value
-  - Requires caching multiple revisions
-  - Animation and transition logic
-  - History tab with click-to-view is simpler and sufficient
-
-### 4. Submit Dialog Preview
-
-**Table Stakes:**
-
-- **Show changelist description** - Display current CL description before submit - Complexity: Low
-  - Read from pending changelist metadata
-  - Editable text area with formatting preserved
-  - P4V shows this in submit dialog
-
-- **File list with sizes** - Show all files to be submitted - Complexity: Low
-  - Total file count and combined size in KB/MB
-  - Individual file sizes in column
-  - P4V shows this in "Choose Files to Submit" pane
-
-- **Select files to submit** - Checkbox list to choose subset - Complexity: Medium
-  - User can uncheck files to exclude from submit
-  - Only checked files are submitted
-  - Unchecked files remain in changelist
-
-- **Edit description before submit** - Modify CL description in dialog - Complexity: Low
-  - Inline text editing
-  - Auto-save or confirm on submit
-  - Supports multi-line descriptions
-
-**Differentiators:**
-
-- **Non-modal preview** - Show preview in detail pane, not blocking dialog - Complexity: Low
-  - P4Now core value: never block the user
-  - Preview in right detail pane like other views
-  - Can navigate away and return without losing context
-  - P4V uses modal dialog that blocks entire window
-
-- **Description template suggestions** - Auto-suggest description format - Complexity: Medium
-  - Detect common patterns (e.g., "Fix: ", "Feature: ", "Refactor: ")
-  - Team-specific templates from settings
-  - Pre-fill with file list or branch name
-  - P4V has no template support
-
-- **Preview diff summary** - Show files added/edited/deleted counts - Complexity: Low
-  - "+5 added, ~3 edited, -2 deleted" summary
-  - Color-coded indicators (green/yellow/red)
-  - Quick sanity check before submit
-
-- **Shelved file warnings** - Highlight if changelist has shelved files - Complexity: Low
-  - P4V requires separate "delete shelve" action
-  - Show inline: "This changelist has 3 shelved files. Delete shelve on submit?"
-  - Checkbox to delete shelve automatically
-
-**Anti-features:**
-
-- **Job attachment workflow** - Link jobs/issues to changelist - Why NOT: Out of scope
-  - Job tracking is enterprise feature, rarely used (PROJECT.md line 73)
-  - Requires job query/search UI
-  - Most teams use external issue trackers (Jira, GitHub Issues)
-
-- **Review integration** - Submit to code review (Swarm, etc.) - Why NOT: External tool territory
-  - P4V integrates with Swarm for pre-submit reviews
-  - Adds complex workflow: create review, attach files, notify reviewers
-  - Most teams use separate review tools
-  - Out of scope for v4.0
-
-- **Automated description generation** - AI-suggested descriptions - Why NOT: Premature complexity
-  - Requires AI integration, prompt engineering
-  - Quality inconsistent, requires user validation anyway
-  - Manual description is standard practice
-  - Consider for future "AI features" milestone
-
-### 5. Submitted Changelist Full File List
-
-**Table Stakes:**
-
-- **View all files in submitted CL** - List every file submitted in a changelist - Complexity: Medium
-  - Uses `p4 describe <changelist>` command
-  - Shows depot path, action (add/edit/delete/integrate), revision
-  - P4V shows this in "Files" tab of submitted changelist view
-
-- **Navigate to file details** - Click file to view revision history - Complexity: Low
-  - Opens file history tab for selected file
-  - Shows where this CL appears in file's timeline
-  - Integrates with existing history viewer
-
-- **Diff from submitted CL** - Compare submitted file to previous revision - Complexity: Low
-  - Right-click file, "Diff Against Previous"
-  - Uses `p4 describe -d<flag>` to get diff
-  - Launches external diff tool
-
-- **File action indicators** - Show add/edit/delete/integrate badges - Complexity: Low
-  - Color-coded badges: green (add), yellow (edit), red (delete), blue (integrate)
-  - Icon indicators in file list
-  - Matches Perforce standard action types
-
-**Differentiators:**
-
-- **Incremental loading for large CLs** - Load files in batches if 100+ files - Complexity: Medium
-  - P4V has "Maximum number of files displayed per changelist" setting
-  - Shows "There are X files in this changelist" placeholder if over limit
-  - P4Now can progressively load and show partial list immediately
-  - Lazy-load more as user scrolls (like depot browser)
-
-- **Group files by action** - Collapsible sections: Added (5), Edited (12), Deleted (2) - Complexity: Low
-  - Easier to scan large changelists
-  - Fold/unfold sections as needed
-  - P4V shows flat list
-
-- **Filter files by path** - Search/filter files within CL - Complexity: Low
-  - Reuse existing search infrastructure
-  - Filter to specific directories or file types
-  - Helps navigate 100+ file changelists
-
-- **Copy file list** - Export file paths to clipboard - Complexity: Low
-  - Right-click, "Copy File List"
-  - Options: depot paths, local paths, with actions
-  - Useful for release notes, documentation
-
-**Anti-features:**
-
-- **Inline file content preview** - Show file diffs inline in CL view - Why NOT: Performance and clutter
-  - P4 describe `-d` flag includes full diffs, can be massive
-  - Clutters changelist view with hundreds of lines
-  - Slows rendering for large CLs
-  - Users can click file to view diff in external tool
-
-- **Revert submitted changelist** - Undo a submitted CL - Why NOT: Dangerous, uncommon workflow
-  - Requires `p4 obliterate` (admin) or creating inverse changelist
-  - High risk of data loss or merge conflicts
-  - Rarely needed in practice
-  - If needed, use `p4 undo` from command line
-
-### 6. Bookmarks for Navigation
-
-**Table Stakes:**
-
-- **Bookmark files and folders** - Save depot or workspace paths - Complexity: Low
-  - Right-click in depot/workspace tree, "Add Bookmark"
-  - Store depot syntax (//depot/path) or local syntax (C:\workspace\path)
-  - P4V stores location using syntax depending on source pane
-
-- **Bookmark organization** - Group bookmarks into folders - Complexity: Medium
-  - Hierarchical bookmark structure
-  - Create folders, add separators
-  - Drag-drop to reorder
-  - P4V: Tools > Bookmarks > Manage Bookmarks
-
-- **Quick navigation** - Click bookmark to jump to location - Complexity: Low
-  - Expand tree and select bookmarked item
-  - Works in depot or workspace tree
-  - P4V: bookmark navigates and selects item
-
-- **Keyboard shortcuts** - Assign hotkeys to bookmarks - Complexity: Low
-  - Ctrl+Shift+1 through 9 for top bookmarks
-  - P4V allows custom keyboard combinations
-  - Integrates with existing command palette / shortcut system
-
-**Differentiators:**
-
-- **Bookmark dropdown in toolbar** - Always-visible bookmark access - Complexity: Low
-  - P4V shows dropdown near top right corner
-  - Shows bookmark names and shortcuts
-  - No need to dig into menus
-
-- **Bookmark sync across sessions** - Persist in settings store - Complexity: Low
-  - Use existing tauri-plugin-store
-  - Sync with user profile (like P4V settings)
-  - Don't lose bookmarks on reinstall
-
-- **Recent locations history** - Auto-bookmark recently visited paths - Complexity: Medium
-  - Track last 10 navigation targets
-  - "Recent" section in bookmark dropdown
-  - LRU eviction when full
-  - P4V has no automatic history
-
-- **Bookmark import/export** - Share bookmarks with team - Complexity: Low
-  - Export as JSON file
-  - Import from team-shared bookmark file
-  - Merge with existing bookmarks
-  - Useful for onboarding, team conventions
-
-**Anti-features:**
-
-- **Smart bookmarks (saved searches)** - Bookmark a search query - Why NOT: Overcomplicates bookmarks
-  - Bookmarks are for static paths, not dynamic queries
-  - Search results change over time
-  - Saved searches are separate concept (future feature)
-  - Mixing concerns reduces clarity
-
-- **Bookmark annotations** - Add notes/descriptions to bookmarks - Why NOT: Low value, adds UI complexity
-  - Bookmark name should be descriptive enough
-  - Notes require additional UI (tooltip, dialog, etc.)
-  - Rarely referenced once bookmark is familiar
-  - Keep bookmarks simple
-
-- **Bookmark sharing via URL** - Generate shareable bookmark links - Why NOT: No multi-user collaboration features
-  - P4Now is single-user client, not collaboration platform
-  - No server-side bookmark storage
-  - Team sharing via export/import is sufficient
-
-## UX Patterns from Ecosystem
-
-### Blame/Annotation Display
-
-**GitLens (18M+ installs) demonstrates industry-standard patterns:**
-
-- **Inline annotations:** Small text at end of line showing author, time ago, commit message
-- **Gutter blame:** Metadata in left margin, less intrusive than inline
-- **Hover details:** Full commit info on hover (description, hash, date, files changed)
-- **Status bar integration:** Show blame for current line in bottom status bar
-- **Color heatmap:** Scroll bar color-coding by recency (warm = recent, cool = old)
-- **CodeLens:** Authorship metadata above functions/classes
-
-**Confidence:** HIGH - GitLens is de facto standard for blame UX
-
-### Sync Status Indicators
-
-**TortoiseGit patterns (overlay icons on file tree):**
-
-- **Green checkmark:** File synced to head, no modifications
-- **Red exclamation:** File modified locally
-- **Yellow exclamation:** Conflict state
-- **Blue spinning:** Sync in progress
-- **Question mark:** Unknown/untracked file
-
-**VS Code Source Control:**
-
-- **Status bar:** Shows incoming/outgoing commits when branch connected to remote
-- **File tree badges:** Letter indicators (M = modified, U = untracked, D = deleted)
-- **Gutter indicators:** Lines added (green), removed (red), modified (blue)
-
-**Confidence:** HIGH - Standard patterns across Git tools
-
-### File Content Viewing
-
-**GitHub / GitLab web UX:**
-
-- **Syntax highlighting:** Auto-detect language and colorize
-- **Line numbers:** Always visible on left
-- **Blame toggle:** Show/hide blame column with single click
-- **Download / Copy / Edit buttons:** Action toolbar above content
-- **Breadcrumb path:** Show file location at top
-- **Revision selector:** Dropdown to switch revisions without leaving page
-
-**Confidence:** MEDIUM - Web UX differs from desktop, but principles apply
-
-### Submit Dialog Preview
-
-**Standard patterns across VCS GUIs:**
-
-- **Two-pane layout:** File list on left/top, description on right/bottom
-- **Live file count:** "X files selected" updates as checkboxes toggle
-- **Diff preview:** Click file to see diff before submit (separate pane)
-- **Template buttons:** Quick-insert common description patterns
-- **Pre-submit validation:** Check for conflicts, required fields, etc.
-
-**Confidence:** MEDIUM - Varied implementations, no single standard
-
-### Changelist File List
-
-**P4V and Perforce Web (Swarm) patterns:**
-
-- **Tabbed details:** Files / Jobs / Description tabs for changelist
-- **Action badges:** Color-coded add/edit/delete/integrate indicators
-- **Grouping:** Optional group by directory or action type
-- **Context menus:** Right-click for diff, history, get revision
-- **Incremental loading:** "Show more files..." link if over threshold
-
-**Confidence:** HIGH - Direct P4V patterns apply
-
-### Bookmarks
-
-**Browser-style bookmark UX:**
-
-- **Star icon:** Click to bookmark, filled star = already bookmarked
-- **Organize dialog:** Hierarchical tree with folders and items
-- **Keyboard shortcuts:** Number keys for top N bookmarks
-- **Import/export:** Standard JSON or HTML bookmark format
-- **Dropdown menu:** Alphabetical or recent-first ordering
-
-**IDE patterns (VS Code, IntelliJ):**
-
-- **Favorites bar:** Always-visible toolbar with bookmark icons
-- **Breadcrumb integration:** Show breadcrumb path with bookmark indicator
-- **Quick open:** Command palette integration for bookmark search
-
-**Confidence:** HIGH - Browser bookmarks are universally understood
-
-## Dependencies on Existing Features
-
-### File Annotations Dependencies
-
-- **File history viewer** (already built v2.0) - Navigate to changelist from blame line
-- **External diff tool** (already built v2.0) - Compare revisions from annotate view
-- **Detail pane routing** (already built v3.0) - Display blame in detail pane
-- **Command palette** (already built v2.0) - Toggle blame on/off via shortcut
-
-### Workspace Sync Status Dependencies
-
-- **Auto-refresh** (already built v3.0) - Update sync status icons periodically
-- **File tree rendering** (already built v3.0) - Overlay icons on existing tree
-- **Context menus** (already built v2.0) - Right-click "Get Latest Revision"
-- **Sync operation** (already built v1.0) - Execute sync when user clicks icon/menu
-
-### File Content Viewer Dependencies
-
-- **File history viewer** (already built v2.0) - Click revision to view content
-- **External diff tool** (already built v2.0) - Compare revisions from viewer
-- **Detail pane routing** (already built v3.0) - Display content in detail pane
-- **p4 print command** (tech debt line 84) - NEW: Implement p4_print backend
-
-### Submit Dialog Preview Dependencies
-
-- **Submit operation** (already built v1.0) - Execute submit after preview
-- **Changelist management** (already built v2.0) - Edit CL description, select files
-- **Detail pane routing** (already built v3.0) - Show preview in detail pane
-- **Shelve management** (already built v2.0) - Handle shelved file warnings
-
-### Submitted Changelist File List Dependencies
-
-- **Search changelists** (already built v2.0) - Query submitted CLs
-- **File history** (already built v2.0) - Navigate to file from CL
-- **External diff tool** (already built v2.0) - Diff files from CL
-- **p4 describe command** (tech debt line 85) - NEW: Implement p4_describe backend
-- **Lazy loading** (already built v3.0 depot browser) - Pattern for large file lists
-
-### Bookmarks Dependencies
-
-- **Depot tree** (already built v3.0) - Navigate to depot bookmarks
-- **Workspace tree** (already built v3.0) - Navigate to workspace bookmarks
-- **Settings storage** (already built v2.0 tauri-plugin-store) - Persist bookmarks
-- **Keyboard shortcuts** (already built v2.0) - Assign hotkeys to bookmarks
-- **Command palette** (already built v2.0) - Quick-access bookmark search
-
-**Dependency Risk:** LOW - All major dependencies already exist. Only new backend commands needed are p4_print and p4_describe.
-
-## Complexity Assessment
-
-| Feature | Backend Complexity | Frontend Complexity | Overall |
-|---------|-------------------|-------------------|---------|
-| File Annotations | Medium (p4 annotate parsing) | Medium (inline/gutter display) | Medium |
-| Workspace Sync Status | Low (query have/head rev) | Medium (icon overlays, tooltips) | Medium |
-| File Content Viewer | Medium (p4 print, syntax highlight) | Low (text display component) | Medium |
-| Submit Dialog Preview | Low (read CL metadata) | Low (form with file list) | Low |
-| Submitted CL File List | Medium (p4 describe parsing) | Low (file list component) | Medium |
-| Bookmarks | Low (JSON storage) | Medium (org dialog, toolbar UI) | Medium |
-
-**Overall v4.0 Complexity:** Medium - No high-complexity features, but several medium ones require careful UX design.
-
-## MVP Recommendations for v4.0
-
-**Must have (block v4.0 ship):**
-
-1. **File Content Viewer** - Fixes critical tech debt (p4_print), unblocks other features
-2. **Submitted CL File List** - Fixes critical tech debt (p4_describe), unblocks search workflow
-3. **Submit Dialog Preview** - High-value, low-complexity, closes gap vs P4V
-4. **Workspace Sync Status** - High-visibility feature, users expect this
-
-**Should have (ship if time allows):**
-
-5. **File Annotations (basic)** - Implement `p4 annotate -u` with simple inline display
-6. **Bookmarks (basic)** - Simple bookmark list without folders/shortcuts, defer org features
-
-**Defer to post-v4.0:**
-
-- **File Annotations (advanced)** - Gutter mode, heatmaps, filter by author
-- **Bookmarks (advanced)** - Folders, keyboard shortcuts, import/export, recent history
-- **Workspace Sync Status (advanced)** - Batch indicators, filter by status, real-time updates
-
-**Rationale:** File viewer and CL file list are tech debt blockers. Submit preview and sync status are high-value, low-effort. Annotations and bookmarks can ship with basic versions and enhance later.
+# Feature Research: Open-Source Desktop Application Launch
+
+**Domain:** Open-source GitHub repository for desktop application (Tauri-based Windows GUI)
+**Researched:** 2026-02-05
+**Confidence:** HIGH
+
+## Feature Landscape
+
+### Table Stakes (Users Expect These)
+
+Features users assume exist. Missing these = project feels incomplete or unprofessional.
+
+| Feature | Why Expected | Complexity | Notes |
+|---------|--------------|------------|-------|
+| LICENSE file (MIT) | Legal requirement for open-source; users won't contribute without clear licensing | TRIVIAL | Standard MIT license file at repo root |
+| README.md with quick start | Entry point for all users; must explain what it is, who it's for, how to get started | LOW | Include screenshots/GIF, quick install, 3-sentence pitch |
+| Installation instructions | Users need to know how to install and run | LOW | Binary downloads from Releases page; no compilation required for users |
+| Contributing guidelines (CONTRIBUTING.md) | Developers expect clear process for contributions | LOW | How to build, test, submit PR; link from README |
+| Issue templates | Standardizes bug reports and feature requests; reduces back-and-forth | TRIVIAL | .github/ISSUE_TEMPLATE/ with bug report and feature request templates |
+| Pull request template | Ensures PRs contain necessary information | TRIVIAL | .github/pull_request_template.md with checklist |
+| Code of Conduct | Expected by GitHub community; signals welcoming environment | TRIVIAL | Adopt Contributor Covenant standard |
+| .gitignore for Tauri | Prevents accidental commits of build artifacts, OS files, credentials | TRIVIAL | Standard Tauri + Rust + Node.js ignore patterns |
+| GitHub Releases with binaries | Desktop app users expect downloadable executables, not source compilation | MEDIUM | Automated release workflow with tagged versions |
+| Version number in app | Users need to know what version they're running for bug reports | TRIVIAL | Display version in app (from package.json or Cargo.toml) |
+| Basic security audit | No hardcoded credentials, API keys, or secrets in codebase | LOW | Pre-launch audit of all files, ensure .env patterns in .gitignore |
+| Project description/topics | GitHub repository metadata for discoverability | TRIVIAL | Short description, topics (perforce, gui, tauri, windows, desktop-app) |
+| CI status badge | Signals project health and activity | LOW | Add build status badge to README once CI configured |
+
+### Differentiators (Competitive Advantage)
+
+Features that set the project apart. Not required, but provide unique value.
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| .planning/ directory showcase | Demonstrates agentic development methodology; unique transparency into development process | TRIVIAL | Keep existing directory as-is; explain in README as showcase |
+| Clear "early testing" communication | Honest v0.1 versioning prevents over-promise; invites feedback without expectation of perfection | TRIVIAL | README disclaimer, version numbering (0.1.x range) |
+| P4V comparison/migration guide | Addresses specific pain points; helps P4V users evaluate and switch | LOW | Document in README: feature comparison matrix, what's different, why built |
+| Demo GIF/video in README | Shows value in 10 seconds; desktop apps benefit enormously from visual demos | MEDIUM | Record 20-30 second demo of core workflow (sync, edit, submit) |
+| Architecture documentation | Helps contributors understand codebase structure; rare in early-stage projects | MEDIUM | Document Tauri architecture, frontend/backend split, key design decisions |
+| Automated GitHub Actions CI | Demonstrates maturity; automated tests on every PR | HIGH | Rust tests + TypeScript tests + build verification on Windows runner |
+| Pre-built Windows installer | Lower barrier vs .exe; professional distribution | MEDIUM | Use Tauri bundler for .msi or NSIS installer |
+| Changelog/release notes | Transparency about what changed; helps users decide when to upgrade | LOW | Keep CHANGELOG.md or use GitHub Releases notes |
+| GitHub Discussions enabled | Separates Q&A/feedback from bug tracking; builds community | TRIVIAL | Enable Discussions with categories: General, Ideas, Q&A, Show and tell |
+| Contributor recognition | Acknowledge contributors; motivates participation | TRIVIAL | All-contributors bot or manual CONTRIBUTORS.md |
+| Quick issue labels | Helps triage and prioritize; good first issue, bug, enhancement, question | TRIVIAL | Standard label set configured |
+| Project roadmap visibility | Transparency about future plans; manages expectations | LOW | Link to .planning/MILESTONES.md or create public roadmap issue |
+
+### Anti-Features (Commonly Requested, Often Problematic)
+
+Features that seem good but create problems for early-stage projects.
+
+| Feature | Why Requested | Why Problematic | Alternative |
+|---------|---------------|-----------------|-------------|
+| Code signing certificate | Users expect signed binaries; Windows SmartScreen warnings | Costs $99-400/year; requires identity verification; overkill for v0.1 | README disclaimer about unsigned builds; link to Certum open-source cert info for future |
+| Multi-platform support (macOS, Linux) | "Why Windows only?" questions | Tauri supports it, but testing matrix explodes; Perforce primarily Windows shops | Document as future consideration; accept PRs if community contributes |
+| Homebrew/Chocolatey/winget | "Standard" distribution channels | Requires maintenance, package manager submission process, version sync overhead | Start with GitHub Releases; add later if adoption grows |
+| Embedded diff viewer | Avoid external tool dependency | Massive UI complexity; external tools (P4Merge, VS Code) already excellent | Keep external diff design decision; document rationale |
+| Built-in crash reporting/telemetry | Developers want usage data | Privacy concerns, infrastructure costs, GDPR implications for v0.1 | Manual issue reporting; add opt-in telemetry later if needed |
+| Comprehensive test coverage badges | "Professional" appearance | Early stage = code churn; maintaining 80%+ coverage slows velocity | Add test infrastructure (table stakes), but don't obsess over coverage percentage |
+| Extensive API documentation | Thoroughness signal | No public API yet; internal architecture will change | Focus on contributor/architecture docs, not API reference |
+| Auto-update mechanism | Desktop apps "should" auto-update | Complex to implement securely; requires update server; not critical for v0.1 manual downloads | Defer to post-launch; document manual update process |
+| Docker/containerization | "Modern" deployment | Desktop GUI app doesn't benefit; adds complexity without value | Not applicable for Windows desktop GUI |
+| Governance model (BDFL/meritocracy) | Formal structure expectation | Premature for single-maintainer project pre-community | Simple: maintainer approves PRs; document if community grows |
+
+## Feature Dependencies
+
+```
+[LICENSE file]
+    └──enables──> [CONTRIBUTING.md] (legal clarity required for contributions)
+
+[README.md]
+    ├──requires──> [Installation instructions]
+    ├──requires──> [Demo GIF/video] (shows value)
+    └──enhances──> [P4V comparison] (context for target users)
+
+[GitHub Releases]
+    ├──requires──> [Version number in app]
+    ├──requires──> [Changelog/release notes]
+    └──requires──> [Binary build automation]
+
+[CONTRIBUTING.md]
+    └──enhances──> [Architecture documentation] (how to understand codebase)
+
+[Issue templates]
+    └──works-with──> [GitHub Discussions] (separate questions from bugs)
+
+[CI/CD automation]
+    └──enables──> [Pre-built binaries] (automated release process)
+
+[.planning/ directory showcase]
+    └──requires──> [README explanation] (context for why it exists)
+
+[Early testing communication]
+    └──aligns-with──> [v0.1 versioning] (honest about maturity)
+    └──conflicts-with──> [Code signing] (professional polish vs early-stage reality)
+```
+
+### Dependency Notes
+
+- **LICENSE enables CONTRIBUTING.md:** Contributors need legal clarity before submitting code; license must exist first
+- **README requires Installation instructions:** Users can't evaluate without knowing how to run it
+- **GitHub Releases requires Version number in app:** Bug reports need version identification
+- **CONTRIBUTING.md enhances Architecture documentation:** Contributors understand both process (contributing) and structure (architecture)
+- **Early testing communication conflicts with Code signing:** Expensive code signing suggests polished product; conflicts with "early testing" positioning
+
+## MVP Definition: v0.1 Public Launch
+
+### Launch With (v0.1)
+
+Minimum viable open-source repository — what's needed to invite testers and accept contributions.
+
+#### Legal & Licensing (Non-negotiable)
+- [ ] LICENSE file (MIT) — legal requirement
+- [ ] Code of Conduct — community safety standard
+- [ ] Security audit — no secrets in codebase
+
+#### Documentation (Core)
+- [ ] README.md with quick start — entry point for all users
+- [ ] Installation instructions — how to run the app
+- [ ] Demo GIF/video — show value in 10 seconds
+- [ ] P4V comparison — context for target users
+- [ ] Early testing disclaimer — honest about v0.1 status
+- [ ] .planning/ directory explanation — showcase agentic development
+- [ ] CONTRIBUTING.md — how to build and contribute
+
+#### Repository Setup
+- [ ] .gitignore for Tauri — prevent secrets/artifacts
+- [ ] Issue templates (bug report, feature request) — standardize feedback
+- [ ] Pull request template — PR submission checklist
+- [ ] GitHub topics/description — discoverability
+- [ ] Quick issue labels — triage and prioritization
+
+#### Distribution
+- [ ] GitHub Releases with binaries — downloadable .exe or installer
+- [ ] Version number in app — bug report identification
+- [ ] Changelog/release notes — transparency about v0.1 contents
+
+#### Community Infrastructure
+- [ ] GitHub Discussions enabled — Q&A separate from bug tracking
+- [ ] README section for feedback — where to report issues vs ask questions
+
+### Add After Validation (v0.2-0.5)
+
+Features to add once initial testers provide feedback and community begins forming.
+
+- [ ] Automated CI/CD (GitHub Actions) — automated builds and tests on PR (trigger: first external contributor or 10+ issues)
+- [ ] Architecture documentation — contributor onboarding (trigger: first code contribution or architecture questions)
+- [ ] Pre-built Windows installer (.msi) — improved distribution (trigger: user requests for easier installation)
+- [ ] Contributor recognition (all-contributors) — acknowledge community (trigger: 3+ external contributors)
+- [ ] Project roadmap visibility — public planning (trigger: feature request discussions reach 20+ items)
+- [ ] Enhanced README badges (build status, release version) — project health signals (trigger: CI pipeline stable)
+
+### Future Consideration (v1.0+)
+
+Features to defer until product-market fit and community established.
+
+- [ ] Code signing certificate — Windows SmartScreen trust (trigger: 100+ users or enterprise interest; investigate Certum open-source cert)
+- [ ] Multi-platform support (macOS, Linux) — broader adoption (trigger: community PRs or 50+ requests)
+- [ ] Package manager distribution (winget, Chocolatey) — professional distribution (trigger: 500+ users or stable release)
+- [ ] Auto-update mechanism — seamless updates (trigger: v1.0 stable release)
+- [ ] Opt-in telemetry — usage data for prioritization (trigger: mature product with governance model)
+- [ ] Formal governance model — decision-making transparency (trigger: 5+ active maintainers or community conflicts)
+
+## Feature Prioritization Matrix
+
+| Feature | User Value | Implementation Cost | Priority |
+|---------|------------|---------------------|----------|
+| LICENSE file | HIGH | TRIVIAL | P1 |
+| README with quick start | HIGH | LOW | P1 |
+| Installation instructions | HIGH | LOW | P1 |
+| Security audit | HIGH | LOW | P1 |
+| .gitignore | HIGH | TRIVIAL | P1 |
+| Demo GIF/video | HIGH | MEDIUM | P1 |
+| GitHub Releases + binaries | HIGH | MEDIUM | P1 |
+| Early testing disclaimer | HIGH | TRIVIAL | P1 |
+| CONTRIBUTING.md | MEDIUM | LOW | P1 |
+| Issue templates | MEDIUM | TRIVIAL | P1 |
+| PR template | MEDIUM | TRIVIAL | P1 |
+| Code of Conduct | MEDIUM | TRIVIAL | P1 |
+| GitHub Discussions | MEDIUM | TRIVIAL | P1 |
+| P4V comparison | MEDIUM | LOW | P1 |
+| Version in app | MEDIUM | TRIVIAL | P1 |
+| .planning/ explanation | MEDIUM | TRIVIAL | P1 |
+| Changelog/release notes | MEDIUM | LOW | P1 |
+| Quick issue labels | LOW | TRIVIAL | P1 |
+| GitHub topics/description | LOW | TRIVIAL | P1 |
+| Architecture docs | MEDIUM | MEDIUM | P2 |
+| CI/CD automation | MEDIUM | HIGH | P2 |
+| Pre-built installer (.msi) | MEDIUM | MEDIUM | P2 |
+| Contributor recognition | LOW | TRIVIAL | P2 |
+| Roadmap visibility | LOW | LOW | P2 |
+| README badges | LOW | LOW | P2 |
+| Code signing | MEDIUM | HIGH (cost + time) | P3 |
+| Multi-platform support | HIGH | HIGH | P3 |
+| Package managers | MEDIUM | MEDIUM | P3 |
+| Auto-update | MEDIUM | HIGH | P3 |
+| Telemetry | LOW | MEDIUM | P3 |
+| Governance model | LOW | LOW | P3 |
+
+**Priority key:**
+- P1: Must have for v0.1 launch (early testing phase)
+- P2: Should have for v0.2-0.5 (validation phase)
+- P3: Nice to have for v1.0+ (maturity phase)
+
+## Competitor Feature Analysis: Open-Source Desktop Apps
+
+Analyzed successful Tauri and Electron desktop apps on GitHub for patterns.
+
+| Feature | GitHub Desktop | VS Code | Tauri Apps (general) | Depot Approach |
+|---------|--------------|----------|---------------------|----------------|
+| License | MIT | MIT | MIT/Apache-2.0 typical | MIT (matches ecosystem) |
+| README style | Comprehensive with screenshots | Marketing-style with features | Minimal to moderate | Comprehensive with GIF demo + P4V comparison |
+| Release binaries | Yes, auto-built via Actions | Yes, signed, multi-platform | Yes via Tauri bundler | Yes, unsigned .exe initially (cost reason) |
+| Code signing | Yes (Microsoft) | Yes (Microsoft) | Varies; many unsigned early | No for v0.1; document reason |
+| Issue templates | Yes, detailed | Yes, detailed | Common | Yes, bug + feature templates |
+| Discussions | Yes, active | No (uses Issues) | Uncommon | Yes, separate Q&A from bugs |
+| Contributing guide | Extensive | Extensive | Varies widely | Moderate detail; architecture focus |
+| CI/CD | GitHub Actions | Azure Pipelines + Actions | GitHub Actions common | Defer to P2 (complexity vs value at v0.1) |
+| Demo visuals | Screenshots | Marketing site | Often missing | Prioritize demo GIF (table stakes) |
+| Architecture docs | Yes (deep) | Yes (very deep) | Rare | P2 priority (differentiator) |
+| Changelog | GitHub Releases | Detailed CHANGELOG.md | GitHub Releases common | GitHub Releases notes |
+| Auto-update | Yes (Electron) | Yes | Tauri plugin available | Defer to P3 (complexity) |
+| Unique value | Git simplified | Extensibility + ecosystem | Framework-specific | .planning/ showcase + P4V alternative positioning |
+
+**Key insights:**
+- **Code signing:** Major projects have it, but they're backed by orgs with resources; open-source desktop apps without org backing often skip it initially
+- **Discussions vs Issues:** Mixed approach; GitHub Desktop uses Discussions, VS Code doesn't — value depends on community size
+- **CI/CD:** Expected for mature projects but not blocking for v0.1 launch; can add when first external contributor appears
+- **Demo visuals:** Critical differentiator; GitHub Desktop's success partly due to clear visual communication
+- **Architecture docs:** Rare in small projects, common in large; Depot's v5.0 maturity justifies this as differentiator
+
+## Open-Source Launch Best Practices (2026)
+
+Based on research synthesis from OpenSSF, GitHub Guides, CNCF, and successful project patterns.
+
+### Documentation Best Practices
+
+1. **README structure:** What it is (3 sentences), Screenshot/GIF, Quick start (3 steps), Feature list, Installation, Contributing link, License badge
+2. **Demo visuals:** 20-30 second animated GIF showing core workflow; tools: ScreenToGif (Windows), store in /docs/demo/ or separate branch
+3. **Early-stage communication:** Version 0.x signals pre-stable; explicit disclaimer about testing phase; invitation for feedback; roadmap transparency
+4. **P4V comparison:** Direct comparison table (feature parity matrix); migration guide; "why we built this" story
+
+### Community Infrastructure Best Practices
+
+1. **Issue templates:** Use YAML frontmatter for GitHub's form-based templates (.github/ISSUE_TEMPLATE/*.yml)
+2. **Discussions categories:** General (announcements), Ideas (feature requests), Q&A (support), Show and tell (community projects)
+3. **Labels:** good first issue, bug, enhancement, question, wontfix, duplicate, help wanted, documentation
+4. **Contributing guide:** Prerequisites (Node 22, Rust), build steps, test command, PR process, code style (if enforced), where to ask questions
+
+### Security Best Practices (OpenSSF Scorecard)
+
+1. **Secret scanning:** Audit for hardcoded API keys, tokens, passwords; ensure .env* in .gitignore
+2. **Dependency security:** npm audit and cargo audit before release; document known vulnerabilities if any
+3. **Supply chain:** Pin GitHub Actions to commit SHAs (not @v1); use dependabot for updates
+4. **Permissions:** Minimize GitHub Actions permissions (contents: read default)
+
+### Release Best Practices
+
+1. **Semantic versioning:** 0.x.y for pre-stable; 0.1.0 for first public release; 0.2.0 for next feature set
+2. **GitHub Releases:** Tag format v0.1.0; release title "v0.1.0 - Early Testing Release"; body includes changelog, known issues, installation instructions
+3. **Binary distribution:** Attach .exe or .msi to release; include SHA-256 checksum file for verification (security best practice)
+4. **Release automation:** Tauri bundler generates binaries; GitHub Actions can automate upload (but manual OK for v0.1)
+
+### Tauri-Specific Best Practices
+
+1. **Multi-platform by default:** Tauri 2.0 supports Windows/macOS/Linux; document why Windows-only initially (testing resources)
+2. **Bundle formats:** .exe (portable), .msi (installer via WiX), NSIS (.exe installer); .msi most professional for Windows
+3. **Tauri GitHub Action:** tauri-apps/tauri-action can build all platforms; defer until P2 (complexity vs immediate value)
+4. **App version sync:** Tauri reads from package.json version; single source of truth
 
 ## Sources
 
-### P4V Official Documentation
-- [p4 annotate command reference](https://help.perforce.com/helix-core/server-apps/cmdref/current/Content/CmdRef/p4_annotate.html)
-- [Display revision history in P4V](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/files.history.html)
-- [Bookmark files and folders in P4V](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/using.bookmarks.html)
-- [Submit (Check in) files in P4V](https://help.perforce.com/helix-core/server-apps/p4v/current/Content/P4V/files.submit.html)
-- [p4 describe command reference](https://help.perforce.com/helix-core/server-apps/cmdref/current/Content/CmdRef/p4_describe.html)
-- [p4 print command reference](https://help.perforce.com/helix-core/server-apps/cmdref/current/Content/CmdRef/p4_print.html)
-- [Displaying annotations (p4 annotate guide)](https://www.perforce.com/manuals/p4guide/Content/P4Guide/scripting.file-reporting.annotation.html)
+**Open Source Guides & Best Practices:**
+- [Open Source Guides - Starting a Project](https://opensource.guide/starting-a-project/)
+- [CNCF - Outlining OSS Project Structure](https://www.cncf.io/blog/2023/04/03/outlining-the-structure-of-your-open-source-software-project/)
+- [GitHub Repository Structure Best Practices](https://medium.com/code-factory-berlin/github-repository-structure-best-practices-248e6effc405)
+- [FreeCodeCamp - Ultimate Guide to Open Source Project Ownership](https://www.freecodecamp.org/news/ultimate-owners-guide-to-open-source/)
+- [10up Open Source Best Practices](https://10up.github.io/Open-Source-Best-Practices/)
 
-### Git Blame and Annotation UX
-- [Git Blame Explained - DataCamp](https://www.datacamp.com/tutorial/git-blame)
-- [GitLens for VS Code](https://marketplace.visualstudio.com/items?itemName=eamodio.gitlens)
-- [12 GitLens Features that Revolutionized My Coding Workflow](https://techcommunity.microsoft.com/blog/educatordeveloperblog/12-gitlens-features-that-revolutionized-my-coding-workflow-in-vs-code/4421891)
-- [Git Blame in VS Code: Top 4 Extensions](https://www.kosli.com/blog/git-blame-in-vs-code-the-4-best-options/)
+**GitHub Features & Documentation:**
+- [GitHub Docs - Issue and PR Templates](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/about-issue-and-pull-request-templates)
+- [GitHub Docs - Setting Guidelines for Contributors](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/setting-guidelines-for-repository-contributors)
+- [GitHub Docs - Best Practices for Community Conversations](https://docs.github.com/en/discussions/guides/best-practices-for-community-conversations-on-github)
+- [GitHub Resources - What is GitHub Discussions?](https://resources.github.com/devops/process/planning/discussions/)
+- [Springer - GitHub Discussions Early Adoption Study](https://link.springer.com/article/10.1007/s10664-021-10058-6)
 
-### Version Control UX Patterns
-- [TortoiseGit Status Icons](https://tortoisegit.org/docs/tortoisegit/tgit-dug-wcstatus.html)
-- [Source Control in VS Code](https://code.visualstudio.com/docs/sourcecontrol/overview)
-- [Unity Version Control integrations](https://docs.unity3d.com/Manual//Versioncontrolintegration.html)
+**README & Documentation:**
+- [Awesome README - Curated List](https://github.com/matiassingers/awesome-readme)
+- [Make a README](https://www.makeareadme.com/)
+- [DEV Community - Demo Your App with Animated GIF](https://dev.to/kelli/demo-your-app-in-your-github-readme-with-an-animated-gif-2o3c)
 
-### P4V Features and Workflows
-- [P4V Cheat Sheet (file status icons, toolbar)](https://www.cheat-sheets.org/saved-copy/p4v-card.pdf)
-- [Using Bookmarks in Perforce - Real-Time VFX Quick Tip](https://blog.beyond-fx.com/articles/real-time-vfx-quick-tip-using-bookmarks-in-perforce-beyond-fx)
+**Security & Quality:**
+- [OpenSSF Scorecard](https://github.com/ossf/scorecard)
+- [OpenSSF Scorecard - CISA](https://www.cisa.gov/resources-tools/services/openssf-scorecard)
+
+**CI/CD & Automation:**
+- [GitHub Actions](https://github.com/features/actions)
+- [Microsoft - CI/CD for Desktop Apps with GitHub Actions](https://devblogs.microsoft.com/dotnet/continuous-integration-and-deployment-for-desktop-apps-with-github-actions/)
+- [GitHub Resources - Application Testing with Actions](https://resources.github.com/learn/pathways/automation/essentials/application-testing-with-github-actions/)
+
+**Release & Distribution:**
+- [ZeroToHero - Creating GitHub Releases with Binary Artifacts](https://zerotohero.dev/inbox/github-releases/)
+- [Shields.io - Project Badges](https://shields.io/)
+
+**Tauri Ecosystem:**
+- [Tauri 2.0 Documentation](https://v2.tauri.app/)
+- [Tauri 2.0 Stable Release Announcement](https://v2.tauri.app/blog/tauri-20/)
+- [LogRocket - Tauri Adoption Guide](https://blog.logrocket.com/tauri-adoption-guide/)
+
+**Code Signing (Future Reference):**
+- [Certum - Open Source Code Signing](https://certum.store/open-source-code-signing-on-simplysign.html)
+- [Jsign - Code Signing Tool](https://ebourg.github.io/jsign/)
+
+**Versioning:**
+- [Semantic Versioning 2.0.0](https://semver.org/)
+- [Wikipedia - Software Release Life Cycle](https://en.wikipedia.org/wiki/Software_release_life_cycle)
+
+**Governance (Future Reference):**
+- [Open Source Guides - Leadership and Governance](https://opensource.guide/leadership-and-governance/)
+- [Red Hat - Guide to OSS Governance Models](https://www.redhat.com/en/resources/guide-to-open-source-project-governance-models-overview)
 
 ---
-*Researched: 2026-02-03*
-*Confidence: HIGH for P4V features (official docs), MEDIUM for UX patterns (industry examples)*
+*Feature research for: Open-source desktop application launch (Tauri-based Windows GUI)*
+*Researched: 2026-02-05*

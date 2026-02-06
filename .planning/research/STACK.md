@@ -1,564 +1,478 @@
-# Technology Stack: Large Depot Scalability
+# Stack Research
 
-**Project:** P4Now
-**Milestone:** Large Depot Scalability (10K+ files)
-**Researched:** 2026-02-04
+**Domain:** GitHub Release Automation & Repository Preparation
+**Researched:** 2026-02-05
 **Confidence:** HIGH
 
-## Executive Summary
+## Recommended Stack
 
-The existing P4Now stack (Tauri 2.0 + React 19 + TanStack Query + Zustand) is solid and requires **minimal additions** rather than replacements. The scalability milestone needs:
+### GitHub Actions & CI/CD
 
-1. **Backend:** Enable existing tokio features (`process`, `io-util`) for async p4.exe execution
-2. **Backend:** Add nucleo fuzzy matcher for Rust-side file index (6x faster than alternatives)
-3. **Frontend:** Add @tanstack/react-pacer for debouncing search at scale
-4. **Patterns:** Generalize existing Tauri Channel streaming pattern from p4_sync to p4_fstat
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| tauri-apps/tauri-action | v0 | Build & release automation for Tauri apps | Official Tauri action with native support for multi-platform builds, automatic GitHub release creation, and updater.json generation. Handles Windows, macOS, and Linux builds with built-in code signing support. |
+| actions/checkout | v4 | Repository checkout | Standard GitHub Actions checkout with current best practices for authentication and submodule handling. |
+| actions/setup-node | v4 | Node.js environment setup | Latest LTS support with caching for npm dependencies. |
+| dtolnay/rust-toolchain | stable | Rust toolchain installation | Minimal, fast Rust toolchain setup from trusted maintainer. Preferred over actions-rs (unmaintained). |
+| github/codeql-action/upload-sarif | v3 | Security scan result upload | Official GitHub action for uploading SARIF-formatted security scan results to GitHub Security tab. |
 
-**What NOT to add:** Monaco editor, alternate fuzzy matchers, custom debounce implementations, streaming libraries. Existing tools handle all requirements.
+### Security Scanning - Credential Detection
 
----
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| Gitleaks | latest | Secret and credential scanning | Lightweight, fast secret detection built in Go. Preferred for CI/CD due to speed (faster than TruffleHog on large repos). Uses high-entropy detection and 350+ built-in secret patterns. Best for catching hardcoded credentials before they reach GitHub. |
+| trufflesecurity/trufflehog-actions-scan | v3 | Deep secret scanning with verification | Optional secondary scanner with 600+ detectors and automatic API validation. More thorough than Gitleaks but slower. Use for comprehensive pre-release audits, not in CI pipeline. |
 
-## Stack Additions
+**Recommendation:** Use Gitleaks in CI pipeline for every commit. Run TruffleHog manually before major releases for comprehensive audit.
 
-### 1. Rust: tokio Feature Flags
+### Security Scanning - Dependencies
 
-**Current state:** Cargo.toml already has `tokio = { version = "1", features = ["sync"] }`
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| cargo-audit | latest | Rust dependency vulnerability scanning | Official RustSec tooling for checking Cargo.lock against RustSec Advisory Database. Fast, focused, and Rust-native. |
+| cargo-deny | 0.14+ | Comprehensive Rust dependency policy enforcement | Goes beyond advisories - enforces license policy, detects duplicate dependencies, bans specific crates, and validates sources. Essential for open-source projects where license compliance matters. |
+| npm audit | built-in | JavaScript dependency scanning | Built into npm, uses GitHub Advisory Database (superset of npm database). Zero-config scanning via `npm audit --audit-level=moderate`. |
+| aquasecurity/trivy-action | latest | Multi-language dependency & container scanning with SARIF output | Comprehensive scanner supporting JavaScript, Rust, and container images. Outputs SARIF format for GitHub Security integration. Use as unified scanner for both Rust and JavaScript dependencies. |
 
-**Required changes:**
+**Recommendation:** Use cargo-deny for comprehensive Rust checks (advisories + licenses + bans). Use Trivy with SARIF upload for unified security reporting in GitHub Security tab. npm audit runs automatically during install.
+
+### Windows Code Signing
+
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| Azure Trusted Signing | current | Modern Windows code signing service | Microsoft's new code signing service (released 2024). Relatively cheap, cloud-based, integrates with GitHub Actions. Provides immediate SmartScreen reputation (no warnings). Recommended over traditional EV certificates on USB HSMs. |
+| trusted-signing-cli | latest | Azure Trusted Signing CLI tool | Official Microsoft CLI for Azure Trusted Signing. Works cross-platform (can sign from macOS/Linux runners). Requires .NET 6+ and Azure CLI. |
+
+**Configuration:** Set `bundle.windows.signCommand` in tauri.conf.json to use trusted-signing-cli. Store Azure credentials (CLIENT_ID, CLIENT_SECRET, TENANT_ID) in GitHub Secrets.
+
+**Alternative:** If using traditional certificate, configure via `bundle.windows.certificateThumbprint` and `bundle.windows.digestAlgorithm` (typically SHA256). EV certificates provide immediate reputation; OV certificates require building reputation over time.
+
+### Changelog & Release Automation
+
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| git-cliff | latest | Changelog generation from conventional commits | Highly customizable Rust-based changelog generator. Fast, supports conventional and unconventional commits, extensive template customization. Recommended over conventional-changelog (Node-based, slower). |
+| GitHub Auto-generated Release Notes | built-in | Automatic release note generation | Native GitHub feature configured via `.github/release.yml`. Categorizes changes by PR labels. Zero dependencies, maintained by GitHub. Use this for release notes, git-cliff for CHANGELOG.md. |
+
+**Recommendation:** Use GitHub auto-generated release notes for GitHub Releases. Use git-cliff to maintain CHANGELOG.md file in repository. Configure git-cliff via `.git-cliff.toml` to match your commit style.
+
+### Documentation & Repository Presentation
+
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| shields.io | hosted service | Dynamic badges for README | Industry-standard badge service. Supports GitHub Actions workflow status, release version, license, downloads, and 300+ other integrations. Free, fast CDN. |
+| schneegans/dynamic-badges-action | v1.7+ | Custom dynamic badges | For badges that change with every commit (e.g., coverage, performance metrics). Creates JSON on Gist and uses shields.io/endpoint. |
+
+**Badge recommendations:**
+- GitHub Actions workflow status: `https://img.shields.io/github/actions/workflow/status/<user>/<repo>/<workflow>.yml?branch=main`
+- Latest release: `https://img.shields.io/github/v/release/<user>/<repo>`
+- License: `https://img.shields.io/github/license/<user>/<repo>`
+- Downloads: `https://img.shields.io/github/downloads/<user>/<repo>/total`
+
+### Tauri Updater Configuration
+
+| Technology | Version | Purpose | Why Recommended |
+|------------|---------|---------|-----------------|
+| tauri-plugin-updater | 2.10.0+ | Auto-update functionality for Tauri apps | Official Tauri plugin for in-app updates. Version 2.10+ supports new latest.json format with per-installer signatures. |
+| tauri-action updater integration | included | Automatic latest.json generation | tauri-action with `includeUpdaterJson: true` generates latest.json and .sig files automatically. No manual signature management needed. |
+
+**Security:** Updater signatures cannot be disabled (by design). Private key stored in GitHub Secrets (`TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`). Public key in tauri.conf.json. Signatures change with each build - tauri-action handles this automatically.
+
+### Refactoring & Renaming Tools
+
+| Tool | Purpose | Notes |
+|------|---------|-------|
+| IDE Rename Refactoring (VS Code F2) | Symbol-aware renaming | Use VS Code's built-in "Rename Symbol" (F2) for TypeScript/JavaScript. Renames across all files safely. |
+| rust-analyzer Rename | Rust symbol renaming | Built into rust-analyzer (LSP). Use in VS Code or CLI via rust-analyzer rename-symbol. |
+| find + sed (bash) | File content and path renaming | For bulk renaming in configs, docs, and file paths. Pattern: `find . -type f -name "*.json" -exec sed -i 's/p4now/depot/g' {} +` |
+| git mv | File and directory renaming | Preserves Git history. Use `git mv old-path new-path` for all file moves. |
+
+**Renaming strategy:**
+1. Use IDE refactoring for code symbols (functions, types, variables)
+2. Use git mv for file/directory structure changes
+3. Use find + sed for configs, documentation, and package.json
+4. Update tauri.conf.json identifier, productName, and bundle.identifier (affects app installation path)
+
+## Installation
+
+### GitHub Actions (no local install)
+All CI/CD tools run in GitHub Actions. No local installation required.
+
+### Local Development Tools
+
+```bash
+# Rust security tooling
+cargo install cargo-audit
+cargo install cargo-deny
+
+# Changelog generation
+cargo install git-cliff
+
+# Initialize cargo-deny configuration
+cargo deny init
+```
+
+### Windows Code Signing (for local testing)
+```bash
+# Install .NET 6+ (required for trusted-signing-cli)
+winget install Microsoft.DotNet.SDK.8
+
+# Install Azure CLI
+winget install Microsoft.AzureCLI
+
+# Install trusted-signing-cli
+dotnet tool install --global Microsoft.Trusted.Signing.Cli
+```
+
+## Alternatives Considered
+
+| Recommended | Alternative | When to Use Alternative |
+|-------------|-------------|-------------------------|
+| Gitleaks | TruffleHog | Use TruffleHog for comprehensive pre-release audits (scans Docker images, S3 buckets, cloud storage). TruffleHog has 600+ detectors vs Gitleaks 350+. Trade-off: slower, more resource-intensive. |
+| cargo-deny | cargo-audit only | Use just cargo-audit if you don't need license enforcement or duplicate detection. cargo-deny is superset of cargo-audit functionality. |
+| Trivy | Snyk | Use Snyk if you need commercial support, better false-positive filtering, or integration with Snyk's vulnerability database (broader coverage than OSV/NVD). Trade-off: requires account, not fully open-source. |
+| git-cliff | conventional-changelog | Use conventional-changelog if your team is heavily Node.js-focused and prefers JavaScript tooling. Trade-off: slower, less flexible templates. |
+| Azure Trusted Signing | Traditional EV Certificate on HSM | Use traditional certificate if you already have one or cannot use cloud services. Trade-off: more expensive ($300-500/year), requires USB HSM device, less convenient for CI/CD. |
+| GitHub Auto Release Notes | Release Drafter action | Use Release Drafter if you want staged draft releases or more control over release note formatting. Trade-off: additional configuration, not native GitHub feature. |
+
+## What NOT to Use
+
+| Avoid | Why | Use Instead |
+|-------|-----|-------------|
+| actions-rs/* actions | Unmaintained since 2021 | dtolnay/rust-toolchain for toolchain setup, cargo commands directly for build/test |
+| OV Code Signing Certificates (post-June 2023) | No longer available for individual purchase, immediately trigger SmartScreen warnings | Azure Trusted Signing (EV equivalent, cloud-based, cheaper) |
+| ggshield (GitGuardian CLI) | Commercial tool requiring account, less suitable for open-source projects | Gitleaks (fully open-source, no account required) |
+| semantic-release | Opinionated release automation that controls versioning - not suitable for projects with manual version control | git-cliff + GitHub Releases + manual version bumps |
+| CodeQL for dependency scanning | CodeQL is for static code analysis, not dependency scanning | Trivy or cargo-audit + npm audit for dependencies |
+
+## Configuration Examples
+
+### GitHub Actions Workflow - Release
+
+Minimal workflow for Tauri release automation:
+
+```yaml
+name: Release
+on:
+  push:
+    branches: [release]
+
+jobs:
+  release:
+    permissions:
+      contents: write  # Required for creating releases
+    strategy:
+      matrix:
+        platform: [windows-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and Release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        with:
+          includeUpdaterJson: true
+```
+
+### GitHub Actions Workflow - Security Scanning
+
+Comprehensive security scanning with SARIF upload:
+
+```yaml
+name: Security Scan
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  scan:
+    permissions:
+      security-events: write  # Required for SARIF upload
+      contents: read
+      actions: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          vuln-type: 'library'
+          severity: 'CRITICAL,HIGH'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Run cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@v1
+```
+
+### cargo-deny Configuration
+
+Example `deny.toml` for open-source project with MIT license:
+
 ```toml
-tokio = { version = "1.49", features = ["sync", "process", "io-util"] }
+[advisories]
+version = 2
+ignore = []
+
+[licenses]
+version = 2
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-3-Clause",
+    "ISC",
+]
+confidence-threshold = 0.8
+
+[bans]
+multiple-versions = "warn"
+wildcards = "allow"
+highlight = "all"
+
+[sources]
+unknown-registry = "warn"
+unknown-git = "warn"
+allow-git = []
 ```
 
-**Why these features:**
-- `process`: Enables `tokio::process::Command` for async process spawning
-- `io-util`: Enables `AsyncBufReadExt::lines()` for async line-by-line stdout parsing
+### git-cliff Configuration
 
-**Rationale:**
-- **Performance:** `tokio::process::Command` yields the thread while waiting for child processes, preventing executor starvation. Current `std::process::Command::output()` blocks a Tokio worker thread for 5-15 seconds during `p4 fstat` on 10K files, exhausting the thread pool (typically 4-8 threads).
-- **Integration:** Already using tokio 1.x runtime (via Tauri 2.0). No new dependencies.
-- **Migration path:** API is nearly identical to std::process::Command. Change `use std::process::Command` to `use tokio::process::Command` and add `.await` to `.output()` calls.
+Example `.git-cliff.toml` for conventional commits:
 
-**Tradeoffs:**
-- Small binary size increase (~50KB for process + io-util features)
-- Must use async/.await syntax (already required in Tauri commands)
-- Worth it: Prevents UI freezes during concurrent p4 operations
-
-**Version:** 1.49.0 (latest stable as of 2026-02-04)
-
-**Source:** [tokio::process documentation](https://docs.rs/tokio/latest/tokio/process/struct.Command.html)
-
----
-
-### 2. Rust: nucleo (Fuzzy Matching)
-
-**Add to Cargo.toml:**
 ```toml
-nucleo = "0.5"
+[changelog]
+header = """
+# Changelog\n
+All notable changes to this project will be documented in this file.\n
+"""
+body = """
+{% for group, commits in commits | group_by(attribute="group") %}
+    ### {{ group | upper_first }}
+    {% for commit in commits %}
+        - {{ commit.message | upper_first }}\
+    {% endfor %}
+{% endfor %}\n
+"""
+
+[git]
+conventional_commits = true
+filter_unconventional = false
+commit_parsers = [
+    { message = "^feat", group = "Features"},
+    { message = "^fix", group = "Bug Fixes"},
+    { message = "^doc", group = "Documentation"},
+    { message = "^perf", group = "Performance"},
+    { message = "^refactor", group = "Refactoring"},
+    { message = "^test", group = "Testing"},
+    { message = "^chore", group = "Miscellaneous"},
+]
 ```
 
-**Purpose:** Rust-side fuzzy string matching for in-memory workspace file index (Tier 2 search in scalability report).
+### Tauri Updater Configuration
 
-**Why nucleo:**
+In `tauri.conf.json`, configure updater:
 
-| Criterion | nucleo | fuzzy-matcher | sublime_fuzzy |
-|-----------|--------|---------------|---------------|
-| **Performance** | O(mn) but 6x faster than fuzzy-matcher in practice | O(mn), reference impl | O(mn), slower on large datasets |
-| **Unicode handling** | Correct grapheme-aware matching | ASCII-biased, poor for non-ASCII | Code point based |
-| **Maturity** | Used in helix-editor, battle-tested | Stable but slower | Stable |
-| **API** | High-level matcher + scoring | Low-level, manual scoring | Simple API |
-| **100K files** | <5ms (Helix tested) | ~30ms (estimated) | ~20ms (estimated) |
-
-**Performance characteristics:**
-- Handles 100K file paths in <5ms (based on Helix editor usage with similar dataset sizes)
-- Grapheme-aware: Correctly matches Unicode filenames (important for international teams)
-- Algorithm selectivity: Low-selectivity patterns (short queries like "f") remain fast via optimizations
-
-**API pattern:**
-```rust
-use nucleo::{Matcher, Config};
-
-pub struct FileIndex {
-    paths: Vec<String>,
-    matcher: Matcher,
-}
-
-impl FileIndex {
-    pub fn search(&self, query: &str, max_results: usize) -> Vec<(String, u32)> {
-        let mut results: Vec<_> = self.paths.iter()
-            .filter_map(|path| {
-                let score = self.matcher.fuzzy_match(path, query)?;
-                Some((path.clone(), score))
-            })
-            .collect();
-
-        results.sort_by(|a, b| b.1.cmp(&a.1)); // Sort by score descending
-        results.truncate(max_results);
-        results
-    }
-}
-```
-
-**Tradeoffs:**
-- Binary size: ~100KB added
-- Learning curve: More complex than substring matching
-- Worth it: 6x performance gain enables <5ms search on 100K files
-
-**Version:** 0.5.0 (latest stable)
-
-**Alternatives considered:**
-- **fuzzy-matcher (0.3.7):** Simpler API but 6x slower. Not viable for 100K files.
-- **sublime_fuzzy (0.7.0):** Good for small datasets but slower Unicode handling.
-- **Client-side only (microfuzz):** Already used in frontend. Rust-side index needed for instant workspace search without frontend round-trip.
-
-**Sources:**
-- [nucleo GitHub](https://github.com/helix-editor/nucleo)
-- [Performance comparison discussion](https://users.rust-lang.org/t/fast-fuzzy-string-matching/103151)
-
----
-
-### 3. Frontend: @tanstack/react-pacer
-
-**Add to package.json:**
-```json
-"@tanstack/react-pacer": "^1.0"
-```
-
-**Purpose:** Debounce search input to prevent excessive search operations during rapid typing at scale.
-
-**Why Pacer:**
-- **Official TanStack solution:** Designed to work with TanStack Query
-- **Type-safe:** Full TypeScript support with reactive hooks
-- **Performance:** Optimized state subscriptions (no re-render unless you opt-in)
-- **Framework-agnostic core:** Can use same patterns across components
-
-**API pattern:**
-```typescript
-import { useDebouncedValue } from '@tanstack/react-pacer';
-
-function FileTreeFilter() {
-  const [filterTerm, setFilterTerm] = useState('');
-  const [debouncedTerm, debouncer] = useDebouncedValue(filterTerm, {
-    wait: 150  // 150ms debounce for search
-  });
-
-  // Only runs search when debouncedTerm changes (150ms after last keystroke)
-  const fuzzyIndex = useMemo(() => {
-    // Build index once when files change
-    return createFuzzySearch(files, { getText: (item) => [item.name] });
-  }, [files]);
-
-  const matchResults = useMemo(() => {
-    if (!debouncedTerm) return null;
-    return fuzzyIndex(debouncedTerm);
-  }, [fuzzyIndex, debouncedTerm]);
-}
-```
-
-**Performance impact:**
-- **Without debounce:** Typing "foobar" triggers 6 searches (f, fo, foo, foob, fooba, foobar)
-- **With 150ms debounce:** Only 1 search (foobar), after typing pauses
-- **At 10K files:** Saves 5 × 50ms = 250ms of wasted computation
-- **At 50K files:** Saves 5 × 200ms = 1000ms of computation
-
-**Tradeoffs:**
-- Bundle size: ~10KB
-- 150ms delay before search executes (imperceptible with instant UI feedback)
-- Worth it: Prevents input lag by eliminating redundant searches
-
-**Alternatives considered:**
-- **lodash.debounce:** Works but not React-optimized, no hook integration
-- **Custom useDebounce hook:** Reinventing the wheel, prone to bugs
-- **useDeferredValue (React 19):** Already in use but still runs on every keystroke. Debounce adds second layer of optimization.
-
-**Version:** 1.x (latest stable, released January 2026)
-
-**Sources:**
-- [TanStack Pacer documentation](https://tanstack.com/pacer/latest/docs/installation)
-- [Pacer announcement article](https://shaxadd.medium.com/tanstack-pacer-solving-debounce-throttle-and-batching-the-right-way-94d699befc8a)
-
----
-
-## Pattern Upgrades (No New Dependencies)
-
-### 4. Tauri Channel Streaming (Generalize Existing Pattern)
-
-**Current state:** P4Now already uses Tauri Channels for `p4_sync` streaming (src-tauri/src/commands/p4/p4handlers.rs:551).
-
-**Required changes:** Apply the same pattern to `p4_fstat` for incremental data delivery.
-
-**Existing pattern (from p4_sync):**
-```rust
-use tauri::ipc::Channel;
-
-#[tauri::command]
-pub async fn p4_sync(
-    paths: Vec<String>,
-    on_progress: Channel<SyncProgress>, // ← Channel for streaming
-    state: State<'_, ProcessManager>,
-) -> Result<String, String> {
-    let mut cmd = Command::new("p4");
-    cmd.arg("sync").args(&paths);
-    cmd.stdout(Stdio::piped());
-
-    let mut child = cmd.spawn()?;
-    let stdout = child.stdout.take();
-
-    if let Some(stdout) = stdout {
-        std::thread::spawn(move || {
-            let reader = BufReader::new(stdout);
-            for line in reader.lines().map_while(Result::ok) {
-                if let Some(progress) = parse_sync_line(&line) {
-                    let _ = on_progress.send(progress); // ← Send incremental data
-                }
-            }
-        });
-    }
-
-    Ok(process_id)
-}
-```
-
-**Apply to p4_fstat:**
-```rust
-#[tauri::command]
-pub async fn p4_fstat_streaming(
-    depot_path: String,
-    on_batch: Channel<Vec<P4FileInfo>>, // ← Batch of files instead of single items
-    state: State<'_, ProcessManager>,
-) -> Result<u32, String> {
-    let mut cmd = tokio::process::Command::new("p4"); // ← Use tokio::process
-    cmd.args(["-ztag", "fstat", &depot_path]);
-    cmd.stdout(Stdio::piped());
-
-    let mut child = cmd.spawn()?;
-    let stdout = child.stdout.take().unwrap();
-
-    // Use tokio::io::BufReader with async lines()
-    use tokio::io::{AsyncBufReadExt, BufReader};
-    let mut lines = BufReader::new(stdout).lines();
-
-    let mut batch = Vec::new();
-    let mut total = 0u32;
-
-    while let Some(line) = lines.next_line().await? {
-        // Parse ztag records, accumulate into batch
-        if let Some(file) = parse_fstat_line(&line) {
-            batch.push(file);
-            total += 1;
-
-            // Send batch every 100 files
-            if batch.len() >= 100 {
-                let _ = on_batch.send(std::mem::take(&mut batch));
-            }
-        }
-    }
-
-    // Send final batch
-    if !batch.is_empty() {
-        let _ = on_batch.send(batch);
-    }
-
-    Ok(total)
-}
-```
-
-**Frontend consumption (TanStack Query with streaming):**
-```typescript
-import { Channel } from '@tauri-apps/api/core';
-
-function useFileTreeStreaming(depotPath: string) {
-  const [files, setFiles] = useState<P4FileInfo[]>([]);
-  const [isStreaming, setIsStreaming] = useState(false);
-
-  const startStreaming = async () => {
-    setIsStreaming(true);
-    setFiles([]); // Clear previous data
-
-    const onBatch = new Channel<P4FileInfo[]>();
-    onBatch.onmessage = (batch) => {
-      // Incremental merge: append to existing files
-      setFiles(prev => [...prev, ...batch]);
-    };
-
-    try {
-      const total = await invoke('p4_fstat_streaming', {
-        depotPath,
-        onBatch
-      });
-      console.log(`Streamed ${total} files`);
-    } finally {
-      setIsStreaming(false);
-    }
-  };
-
-  return { files, isStreaming, startStreaming };
-}
-```
-
-**Performance characteristics:**
-- **10K files:** Receive first 100 files in ~500ms, progressive rendering starts immediately
-- **Without streaming:** 5-15 second blocking wait before ANY data appears
-- **Memory:** Constant ~1MB for 100-file batches vs 10MB for full buffering
-
-**Batch size tuning:**
-- **100 files:** Good balance between IPC overhead and UI responsiveness
-- **Too small (10 files):** Excessive IPC calls, high overhead
-- **Too large (1000 files):** Delayed initial render, feels blocking
-
-**Tauri Channel API details:**
-- **Type safety:** Generic `Channel<T>` where `T: serde::Serialize`
-- **Error handling:** `send()` returns `Result`, errors if frontend disconnected
-- **Async-first:** Works naturally with tokio async commands
-- **No backpressure:** Fire-and-forget, frontend must handle bursts
-
-**Sources:**
-- [Tauri Channel documentation](https://v2.tauri.app/develop/calling-rust/#streaming-responses)
-- Existing implementation: C:\Projects\Fun\p4now\src-tauri\src\commands\p4\p4handlers.rs:545-623
-
----
-
-### 5. TanStack Query: Incremental Data Merge
-
-**Current state:** TanStack Query 5.90.20 already in package.json.
-
-**Required pattern:** Use `setQueryData` with immutable updater function for streaming data merge.
-
-**API pattern:**
-```typescript
-import { useQueryClient } from '@tanstack/react-query';
-
-function useStreamingFstat(depotPath: string) {
-  const queryClient = useQueryClient();
-  const queryKey = ['files', depotPath];
-
-  const startStream = async () => {
-    // Initialize with empty array
-    queryClient.setQueryData(queryKey, []);
-
-    const onBatch = new Channel<P4FileInfo[]>();
-    onBatch.onmessage = (batch) => {
-      // Immutable append: CRITICAL for proper re-rendering
-      queryClient.setQueryData<P4FileInfo[]>(queryKey, (oldData) => {
-        if (!oldData) return batch;
-        return [...oldData, ...batch]; // ← Spread operator for immutability
-      });
-    };
-
-    await invoke('p4_fstat_streaming', { depotPath, onBatch });
-  };
-
-  // Use the query data as normal
-  const { data: files = [] } = useQuery({
-    queryKey,
-    queryFn: () => [], // Not used for streaming
-    enabled: false, // Manual control via startStream
-    staleTime: Infinity, // Don't auto-refetch streamed data
-  });
-
-  return { files, startStream };
-}
-```
-
-**CRITICAL: Immutability requirement:**
-```typescript
-// ❌ WRONG: Mutates oldData directly
-queryClient.setQueryData(queryKey, (oldData) => {
-  oldData.push(...batch); // Mutates, breaks React rendering
-  return oldData;
-});
-
-// ✅ CORRECT: Returns new array
-queryClient.setQueryData(queryKey, (oldData) => {
-  return [...oldData, ...batch]; // New reference, triggers re-render
-});
-```
-
-**Performance characteristics:**
-- **Array spread cost:** ~1ms for 10K items + 100 new items
-- **Re-render:** Only components using the query re-render (TanStack Query optimization)
-- **Memory:** Each batch creates new array, but old arrays are GC'd immediately
-
-**Alternative patterns considered:**
-- **useInfiniteQuery:** Designed for pagination, not real-time streaming
-- **Custom state management:** Zustand/Redux would work but TanStack Query provides caching + devtools
-
-**Updater function signature:**
-```typescript
-type QueryUpdaterFunction<TData> =
-  (oldData: TData | undefined) => TData | undefined;
-
-// Can bail out by returning undefined
-queryClient.setQueryData(queryKey, (oldData) => {
-  if (someCondition) return undefined; // Don't update
-  return [...oldData, ...batch];
-});
-```
-
-**Sources:**
-- [TanStack Query setQueryData documentation](https://tanstack.com/query/v5/docs/reference/QueryClient)
-- [Optimistic Updates guide (shows updater pattern)](https://tanstack.com/query/v5/docs/framework/react/guides/optimistic-updates)
-- [Immutability requirement discussion](https://github.com/TanStack/query/discussions/4716)
-
----
-
-### 6. Rust: Async Line-by-Line Parsing
-
-**Required imports:**
-```rust
-use tokio::io::{AsyncBufReadExt, BufReader};
-use tokio::process::Command;
-```
-
-**Pattern:**
-```rust
-// Old pattern (blocking, buffers entire output)
-let output = cmd.output()?; // ← Blocks thread for entire command duration
-let stdout = String::from_utf8(output.stdout)?;
-for line in stdout.lines() {
-    parse_line(line);
-}
-
-// New pattern (async, line-by-line streaming)
-let mut child = cmd.spawn()?;
-let stdout = child.stdout.take().unwrap();
-let mut lines = BufReader::new(stdout).lines();
-
-while let Some(line) = lines.next_line().await? {
-    parse_line(&line);
-    // Can send to Channel immediately, no buffering
-}
-```
-
-**Why this matters:**
-- **Memory:** Constant ~8KB buffer (BufReader default) vs 10MB+ buffering entire stdout
-- **Latency:** First line available immediately vs waiting for entire command
-- **Cancellation:** `lines.next_line().await` is cancellation-safe (tokio guarantee)
-
-**Cancellation safety:**
-If the future is dropped mid-execution, tokio guarantees no partial line reads. Next call to `next_line()` will return the complete next line.
-
-**Error handling:**
-```rust
-while let Some(line) = lines.next_line().await.map_err(|e| format!("IO error: {}", e))? {
-    // Process line
-}
-```
-
-**Sources:**
-- [tokio::io::BufReader documentation](https://docs.rs/tokio/latest/tokio/io/struct.BufReader.html)
-- [AsyncBufReadExt::lines()](https://docs.rs/tokio/latest/tokio/io/trait.AsyncBufReadExt.html)
-
----
-
-## What NOT to Add
-
-### Monaco Editor
-**Why not:** Current `prism-react-renderer` + `@tanstack/react-virtual` can virtualize code rendering. Monaco is 5MB bundle size, overkill for file viewing (not editing).
-
-**Alternative:** Virtualize existing PrismJS rendering (Issue #9 in scalability report). 10KB solution vs 5MB.
-
-### Custom Streaming Libraries
-**Why not:** Tauri Channel provides all needed streaming primitives. No need for RxJS, xstream, or custom observables.
-
-### Multiple Fuzzy Matchers
-**Why not:** nucleo for Rust-side, microfuzz for client-side. Two different contexts, both optimal for their use case. No need for consistency.
-
-### Lodash or Utility Libraries
-**Why not:** @tanstack/react-pacer handles debounce/throttle. Native array methods handle data manipulation. Lodash adds 70KB for features we don't need.
-
----
-
-## Integration Summary
-
-### Cargo.toml Changes
-```toml
-[dependencies]
-tauri = { version = "2", features = [] }
-tauri-plugin-opener = "2"
-tauri-plugin-shell = "2"
-tauri-plugin-store = "2"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-uuid = { version = "1", features = ["v4"] }
-tokio = { version = "1.49", features = ["sync", "process", "io-util"] }  # ← CHANGED
-tempfile = "3"
-tauri-plugin-dialog = "2"
-regex = "1"
-nucleo = "0.5"  # ← ADDED
-```
-
-### package.json Changes
 ```json
 {
-  "dependencies": {
-    "@tanstack/react-query": "^5.90.20",
-    "@tanstack/react-pacer": "^1.0",  // ← ADDED
-    "@nozbe/microfuzz": "^1.0.0",
-    // ... rest unchanged
+  "plugins": {
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://github.com/<owner>/<repo>/releases/latest/download/latest.json"
+      ],
+      "pubkey": "YOUR_PUBLIC_KEY_HERE"
+    }
   }
 }
 ```
 
-### Code Migration Checklist
+Generate key pair:
+```bash
+npm run tauri signer generate -- -w ~/.tauri/signing-key
+```
 
-- [ ] Update Cargo.toml with tokio features + nucleo
-- [ ] Update package.json with @tanstack/react-pacer
-- [ ] Replace `std::process::Command` with `tokio::process::Command` in p4.rs
-- [ ] Convert `p4_fstat` to streaming with Tauri Channel
-- [ ] Build Rust FileIndex module with nucleo
-- [ ] Add `search_workspace_files` Tauri command
-- [ ] Update frontend to use streaming pattern with setQueryData
-- [ ] Add debounce to filter inputs with useDebouncedValue
-- [ ] Test with 10K file depot
+Store private key in GitHub Secrets:
+- `TAURI_SIGNING_PRIVATE_KEY`: Content of private key file
+- `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`: Password for private key
 
----
+## Version Compatibility
 
-## Performance Targets (Post-Implementation)
+| Technology | Compatible With | Notes |
+|-----------|-----------------|-------|
+| Tauri 2.0 | Rust 1.70+ | Minimum Rust version for Tauri 2.0 |
+| tauri-plugin-updater 2.10+ | Tauri 2.0 | Required for new latest.json format with per-installer signatures |
+| tauri-action@v0 | Tauri 2.0 | V0 supports Tauri 2.x; older versions for Tauri 1.x |
+| cargo-deny 0.14+ | Rust 1.70+ | Latest version with SPDX 3.11 license identifiers |
+| trusted-signing-cli | .NET 6+ | Requires .NET SDK 6.0 or higher |
+| npm audit | npm 6+ | Built-in since npm 6, uses GitHub Advisory Database since npm 8 |
 
-| Operation | Current (std::process) | Target (tokio + streaming) |
-|-----------|----------------------|---------------------------|
-| Initial fstat (10K files) | 5-15s blocking | <500ms to first data, 2-3s total |
-| Filter keystroke (10K files) | 50-200ms per keystroke | <10ms (debounced + persistent index) |
-| Workspace search (100K files) | N/A (not implemented) | <5ms (nucleo in-memory index) |
-| Concurrent p4 commands | Queue up, starve executor | Run concurrently, no blocking |
+## Stack Patterns by Variant
 
----
+**If planning public beta/early access:**
+- Enable Tauri updater from day one
+- Configure tauri-action with `includeUpdaterJson: true`
+- Store signing keys in GitHub Secrets
+- Users will receive automatic updates without re-downloading
 
-## Confidence Assessment
+**If targeting enterprise/IT-managed deployments:**
+- Disable auto-updater (enterprise may block auto-updates)
+- Focus on MSI installer for Windows (supports Group Policy deployment)
+- Consider code signing certificate from recognized CA (not Azure Trusted Signing)
+- Provide manual update instructions and release notes
 
-| Component | Confidence | Evidence |
-|-----------|-----------|----------|
-| tokio features | **HIGH** | Official tokio docs, already using tokio 1.x via Tauri |
-| nucleo | **HIGH** | Battle-tested in helix-editor, clear performance benchmarks |
-| @tanstack/react-pacer | **MEDIUM** | New library (Jan 2026), but official TanStack project |
-| Tauri Channel pattern | **HIGH** | Already implemented and working in p4_sync |
-| TanStack Query streaming | **HIGH** | Documented pattern, widely used for optimistic updates |
+**If open-source with community contributions:**
+- Implement cargo-deny with strict license allowlist (avoid GPL contamination for MIT project)
+- Run security scans on every PR (Gitleaks + Trivy)
+- Enable GitHub Security tab with SARIF uploads
+- Use git-cliff with conventional commits for community-readable changelog
 
-**Medium confidence item (react-pacer):**
-- **Mitigation:** Simple API, small surface area. Easy to replace with lodash.debounce if issues arise.
-- **Validation:** Test with large file sets during Phase A implementation.
+**If closed-source or early development:**
+- Security scanning still essential (prevent credential leaks)
+- Code signing optional for internal testing (use self-signed)
+- Auto-updates valuable for rapid iteration with testers
+- Release automation reduces friction for frequent releases
 
----
+## Tauri 2.0 Specific Considerations
+
+**Bundle Targets:** Tauri 2.0 Windows defaults to NSIS and MSI installers. Configure via `bundle.targets` in tauri.conf.json:
+- NSIS: Lightweight installer, supports auto-updater, recommended for consumer apps
+- MSI: Enterprise-friendly, Group Policy deployment, recommended for IT-managed environments
+
+**Identifier Changes:** Changing `identifier` in tauri.conf.json affects:
+- Installation path: `%LOCALAPPDATA%\{identifier}`
+- Registry keys: `HKCU\Software\{identifier}`
+- Update mechanism: Different identifier = different app to Windows
+- **Implication:** Changing identifier from `com.a.p4now` to `com.depot.app` means users must uninstall old version
+
+**Icon Requirements:** Tauri 2.0 requires icons in multiple formats:
+- `icon.ico` (Windows): 32x32, 128x128, 256x256 embedded sizes
+- `icon.icns` (macOS): Multiple resolutions
+- PNG icons: 32x32, 128x128, 128x128@2x
+
+## Security Best Practices for Open-Source Release
+
+1. **Credential Audit Before First Public Release:**
+   - Run TruffleHog with `--since-commit <first-commit>` to scan entire history
+   - Check for hardcoded IPs, internal paths, or machine names
+   - Review `.git/config` for any internal URLs
+
+2. **GitHub Secrets Configuration:**
+   - Store all signing keys and Azure credentials in GitHub Secrets (never in code)
+   - Use environment-specific secrets (production vs staging)
+   - Enable "Required reviewers" for production environment
+
+3. **Branch Protection:**
+   - Require status checks to pass before merging to main/master
+   - Require Gitleaks and Trivy scans to pass
+   - Enable "Require signed commits" for added security
+
+4. **Dependabot Configuration:**
+   - Enable Dependabot for both npm and Cargo dependencies
+   - Configure `.github/dependabot.yml` for automatic PR creation
+   - Set update frequency to weekly for security updates
+
+5. **Security Tab:**
+   - Enable vulnerability alerts for repositories
+   - Enable Dependabot security updates
+   - Use SARIF uploads to centralize security findings
+
+## Renaming Checklist (p4now → Depot)
+
+**Required changes for complete rename:**
+
+1. **Package identifiers:**
+   - `package.json`: name field → "depot"
+   - `src-tauri/Cargo.toml`: name field → "depot"
+   - `src-tauri/Cargo.toml`: lib.name → "depot_lib"
+   - `tauri.conf.json`: productName → "Depot"
+   - `tauri.conf.json`: identifier → "com.depot.app" (WARNING: Breaking change for existing users)
+
+2. **Window titles:**
+   - `tauri.conf.json`: app.windows[].title → "Depot"
+
+3. **Documentation:**
+   - README.md: All references p4now → Depot
+   - LICENSE: Update copyright holder if needed
+   - CHANGELOG.md: Note rename in latest version entry
+
+4. **Source code:**
+   - Use IDE rename refactoring for any code symbols named "p4now" or "P4Now"
+   - Search for string literals: `grep -r "p4now" src/ src-tauri/src/`
+
+5. **Assets:**
+   - Repository name: Rename on GitHub (Settings → Rename repository)
+   - Icon files: Update if they contain "p4now" text
+   - Screenshots: Retake if they show "p4now" in window title
+
+6. **Git history:**
+   - All handled by `git mv` and IDE refactoring (preserves history)
+   - No need for history rewriting (Git tracks file renames)
 
 ## Sources
 
-### Official Documentation
-- [Tauri v2 Streaming Responses](https://v2.tauri.app/develop/calling-rust/#streaming-responses)
-- [tokio::process::Command](https://docs.rs/tokio/latest/tokio/process/struct.Command.html)
-- [tokio::io::BufReader](https://docs.rs/tokio/latest/tokio/io/struct.BufReader.html)
-- [TanStack Query v5 QueryClient](https://tanstack.com/query/v5/docs/reference/QueryClient)
-- [TanStack Query Optimistic Updates](https://tanstack.com/query/v5/docs/framework/react/guides/optimistic-updates)
-- [TanStack Pacer Documentation](https://tanstack.com/pacer/latest/docs/installation)
+### Official Documentation (HIGH confidence)
+- [Tauri 2.0 GitHub Actions Pipeline](https://v2.tauri.app/distribute/pipelines/github/) — Workflow configuration, token permissions
+- [Tauri Windows Code Signing](https://v2.tauri.app/distribute/sign/windows/) — Azure Trusted Signing, certificate types
+- [Tauri Updater Plugin](https://v2.tauri.app/plugin/updater/) — Configuration, signature requirements
+- [GitHub Docs: Uploading SARIF Files](https://docs.github.com/en/code-security/code-scanning/integrating-with-code-scanning/uploading-a-sarif-file-to-github) — SARIF format, upload requirements
+- [GitHub Docs: Auto-generated Release Notes](https://docs.github.com/en/repositories/releasing-projects-on-github/automatically-generated-release-notes) — Native release notes feature
+- [Shields.io GitHub Actions Badges](https://shields.io/badges/git-hub-actions-workflow-status) — Badge URL formats
+- [RustSec Advisory Database](https://rustsec.org/) — cargo-audit data source
+- [cargo-deny Documentation](https://embarkstudios.github.io/cargo-deny/) — Configuration, license checks
+- [git-cliff Documentation](https://git-cliff.org/) — Configuration, conventional commits
 
-### Library Repositories
-- [nucleo on GitHub](https://github.com/helix-editor/nucleo)
-- [TanStack Pacer on GitHub](https://github.com/TanStack/pacer)
+### Security Tool Comparisons (MEDIUM confidence)
+- [TruffleHog vs Gitleaks Comparison - Jit](https://www.jit.io/resources/appsec-tools/trufflehog-vs-gitleaks-a-detailed-comparison-of-secret-scanning-tools) — Performance, features comparison
+- [Secret Scanner Comparison - Medium](https://medium.com/@navinwork21/secret-scanner-comparison-finding-your-best-tool-ed899541b9b6) — Tool capabilities
+- [Top 8 Git Secrets Scanners 2026 - Jit](https://www.jit.io/resources/appsec-tools/git-secrets-scanners-key-features-and-top-tools-) — Current tool landscape
 
-### Community Resources
-- [Rust Fuzzy Matching Discussion](https://users.rust-lang.org/t/fast-fuzzy-string-matching/103151)
-- [TanStack Query Streaming Discussion](https://github.com/TanStack/query/discussions/9065)
-- [TanStack Pacer Announcement](https://shaxadd.medium.com/tanstack-pacer-solving-debounce-throttle-and-batching-the-right-way-94d699befc8a)
+### Recent Best Practices (MEDIUM confidence - 2026)
+- [How to Run Security Scanning with GitHub Actions - OneUpTime (2026-01-25)](https://oneuptime.com/blog/post/2026-01-25-security-scanning-github-actions/view) — Trivy + SARIF workflow examples
+- [How to Automate Releases with GitHub Actions - OneUpTime (2026-01-25)](https://oneuptime.com/blog/post/2026-01-25-automate-releases-github-actions/view) — Changelog automation patterns
+- [Sherlock Rust Security & Auditing Guide 2026](https://sherlock.xyz/post/rust-security-auditing-guide-2026) — cargo-auditable recommendations
+- [Beyond Cargo Audit - Anchore (2025-12)](https://anchore.com/blog/beyond-cargo-audit-securing-your-rust-crates-in-container-images/) — cargo-auditable for deployed artifacts
 
-### Existing Codebase
-- P4Now p4_sync implementation: C:\Projects\Fun\p4now\src-tauri\src\commands\p4\p4handlers.rs:545-623
-- P4Now FileTree filter: C:\Projects\Fun\p4now\src\components\FileTree\FileTree.tsx:91-172
+### GitHub Action Repositories (HIGH confidence)
+- [tauri-apps/tauri-action](https://github.com/tauri-apps/tauri-action) — Official Tauri release action
+- [gitleaks/gitleaks-action](https://github.com/gitleaks/gitleaks-action) — Gitleaks integration
+- [EmbarkStudios/cargo-deny-action](https://github.com/EmbarkStudios/cargo-deny-action) — cargo-deny integration
+- [aquasecurity/trivy-action](https://github.com/aquasecurity/trivy-action) — Trivy scanner action
+
+---
+*Stack research for: GitHub Release Automation for Tauri 2.0 Desktop Application*
+*Researched: 2026-02-05*
+*Focus: Tools and workflows for preparing Depot (formerly P4Now) for public open-source release*
