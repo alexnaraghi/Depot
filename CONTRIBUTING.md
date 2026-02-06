@@ -2,7 +2,7 @@
 
 Thank you for your interest in contributing to Depot! This document provides guidelines for setting up your development environment and contributing to the project.
 
-Please note that this project adheres to a [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code.
+Please note that this project adheres to a [Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/code_of_conduct.md). By participating, you are expected to uphold this code.
 
 ## Prerequisites
 

@@ -8,6 +8,22 @@ use crate::state::ProcessManager;
 use super::parsing::*;
 use super::types::*;
 
+// Windows-specific import for hiding console windows
+#[cfg(target_os = "windows")]
+#[allow(unused_imports)] // Trait is used via creation_flags() method
+use std::os::windows::process::CommandExt;
+
+/// Helper function to create a Command with Windows console window hidden
+fn create_p4_command() -> Command {
+    let mut cmd = Command::new("p4");
+
+    // On Windows, hide the console window (CREATE_NO_WINDOW flag)
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(0x08000000);
+
+    cmd
+}
+
 /// Maximum file size for in-app content viewing (10MB)
 const MAX_CONTENT_SIZE: u64 = 10 * 1024 * 1024;
 
@@ -18,7 +34,7 @@ pub async fn p4_info(
     user: Option<String>,
     client: Option<String>,
 ) -> Result<P4ClientInfo, String> {
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args(["-ztag", "info"]);
 
@@ -49,7 +65,7 @@ pub async fn p4_fstat(
     client: Option<String>,
 ) -> Result<Vec<P4FileInfo>, String> {
     // Build command: p4 -ztag fstat <paths>
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.arg("-ztag");
@@ -91,7 +107,7 @@ pub async fn p4_fstat_stream(
 ) -> Result<String, String> {
     use std::collections::HashMap;
 
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.arg("-ztag");
@@ -228,7 +244,7 @@ pub async fn p4_opened(
     // Uses fstat instead of opened to get the "path" field (local filesystem path).
     // p4 opened only returns "clientFile" which is the client-spec path (//client/...),
     // not usable for local file operations like Open or Reveal in Explorer.
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args(["-ztag", "fstat", "-Ro", "//..."]);
 
@@ -273,7 +289,7 @@ pub async fn p4_changes(
     client: Option<String>,
 ) -> Result<Vec<P4Changelist>, String> {
     // Build command: p4 -ztag changes -s <status> -u <user> -c <client>
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.arg("-ztag");
@@ -326,7 +342,7 @@ pub async fn p4_edit(
     }
 
     // Build command: p4 edit -c <changelist> <paths>
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.arg("edit");
@@ -396,7 +412,7 @@ pub async fn p4_revert(
     }
 
     // Execute: p4 revert <paths>
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.arg("revert");
@@ -458,7 +474,7 @@ pub async fn p4_submit(
     let output = if changelist == 0 {
         // Default changelist: must use -d flag with description
         let desc = description.unwrap_or_else(|| "Submitted from Depot".to_string());
-        let mut cmd = Command::new("p4");
+        let mut cmd = create_p4_command();
         apply_connection_args(&mut cmd, &server, &user, &client);
         cmd.args(["submit", "-d", &desc]);
         cmd.output()
@@ -475,7 +491,7 @@ pub async fn p4_submit(
                 client.clone(),
             ).await?;
         }
-        let mut cmd = Command::new("p4");
+        let mut cmd = create_p4_command();
         apply_connection_args(&mut cmd, &server, &user, &client);
         cmd.args(["submit", "-c", &changelist.to_string()]);
         cmd.output()
@@ -523,7 +539,7 @@ pub async fn p4_create_change(
     client: Option<String>,
 ) -> Result<i32, String> {
     // Get template: p4 change -o
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args(["change", "-o"]);
 
@@ -572,7 +588,7 @@ pub async fn p4_create_change(
     }
 
     // Submit form: p4 change -i
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args(["change", "-i"]);
     cmd.stdin(Stdio::piped());
@@ -624,7 +640,7 @@ pub async fn p4_delete_change(
     client: Option<String>,
 ) -> Result<(), String> {
     // Execute: p4 change -d <changelist>
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args(["change", "-d", &changelist.to_string()]);
 
@@ -655,7 +671,7 @@ pub async fn p4_reopen(
     }
 
     // Execute: p4 reopen -c <changelist> <paths>
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
     let cl_str = if changelist == 0 {
         "default".to_string()
@@ -720,7 +736,7 @@ pub async fn p4_sync(
     _app: AppHandle,
 ) -> Result<String, String> {
     // Build command: p4 sync <paths>
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.arg("sync");
@@ -792,7 +808,7 @@ pub async fn p4_sync(
 /// List available workspaces for a given server and user
 #[tauri::command]
 pub async fn p4_list_workspaces(server: String, user: String) -> Result<Vec<P4Workspace>, String> {
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     // Override all P4 env vars to ensure complete isolation from DVCS/local config
     cmd.env("P4CONFIG", "");
     cmd.env("P4ROOT", "");
@@ -820,7 +836,7 @@ pub async fn p4_test_connection(
     user: String,
     client: String,
 ) -> Result<P4ClientInfo, String> {
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     // Override all P4 env vars to ensure complete isolation from DVCS/local config
     cmd.env("P4CONFIG", "");
     cmd.env("P4ROOT", "");
@@ -851,7 +867,7 @@ pub async fn p4_filelog(
     user: Option<String>,
     client: Option<String>,
 ) -> Result<Vec<P4Revision>, String> {
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.arg("-ztag");
@@ -904,7 +920,7 @@ pub async fn p4_print_to_file(
     let temp_path = temp_file.path().to_string_lossy().to_string();
 
     // Print file to temp location
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.args(["print", "-q", "-o", &temp_path]);
@@ -998,7 +1014,7 @@ pub async fn p4_print_content(
     let temp_path = temp_file.path().to_string_lossy().to_string();
 
     // Print file to temp location
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.args(["print", "-q", "-o", &temp_path]);
@@ -1079,7 +1095,7 @@ pub async fn p4_annotate(
     }
 
     // Execute p4 annotate -u -c
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args(["annotate", "-u", "-c"]);
     cmd.arg(format!("{}#{}", depot_path, revision));
@@ -1156,7 +1172,7 @@ pub async fn p4_changes_submitted(
     user: Option<String>,
     client: Option<String>,
 ) -> Result<Vec<P4Changelist>, String> {
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.arg("-ztag");
@@ -1190,7 +1206,7 @@ pub async fn p4_shelve(
     user: Option<String>,
     client: Option<String>,
 ) -> Result<String, String> {
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.arg("shelve");
@@ -1224,7 +1240,7 @@ pub async fn p4_describe_shelved(
     user: Option<String>,
     client: Option<String>,
 ) -> Result<Vec<P4ShelvedFile>, String> {
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.arg("-ztag");
@@ -1275,7 +1291,7 @@ pub async fn p4_describe_shelved_batch(
     }
 
     let total = changelist_ids.len() as u32;
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.arg("-ztag");
@@ -1389,7 +1405,7 @@ pub async fn p4_describe(
     user: Option<String>,
     client: Option<String>,
 ) -> Result<P4ChangelistDescription, String> {
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
     // -ztag for structured output, -s to suppress diffs (critical for large CLs)
     cmd.args(["-ztag", "describe", "-s", &changelist_id.to_string()]);
@@ -1418,7 +1434,7 @@ pub async fn p4_unshelve(
     user: Option<String>,
     client: Option<String>,
 ) -> Result<String, String> {
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.arg("unshelve");
@@ -1464,7 +1480,7 @@ pub async fn p4_delete_shelf(
     user: Option<String>,
     client: Option<String>,
 ) -> Result<String, String> {
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.arg("shelve");
@@ -1498,7 +1514,7 @@ pub async fn p4_reconcile_preview(
     user: Option<String>,
     client: Option<String>,
 ) -> Result<Vec<ReconcilePreview>, String> {
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
 
     cmd.arg("reconcile");
@@ -1577,7 +1593,7 @@ pub async fn p4_reconcile_apply(
         .map_err(|e| format!("Failed to flush temp file: {}", e))?;
     drop(file); // Close file before p4 reads it
 
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
 
     // Use -x flag to read file list from temp file
@@ -1628,7 +1644,7 @@ pub async fn p4_resolve_preview(
     user: Option<String>,
     client: Option<String>,
 ) -> Result<Vec<String>, String> {
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args(["resolve", "-n"]);
 
@@ -1662,7 +1678,7 @@ pub async fn p4_files(
     user: Option<String>,
     client: Option<String>,
 ) -> Result<Vec<P4FileResult>, String> {
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.arg("files");
     cmd.arg(&pattern);
@@ -1742,7 +1758,7 @@ pub async fn p4_list_streams(
     user: Option<String>,
     client: Option<String>,
 ) -> Result<Vec<P4Stream>, String> {
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args(["-ztag", "streams"]);
 
@@ -1767,7 +1783,7 @@ pub async fn p4_get_client_spec(
     server: Option<String>,
     user: Option<String>,
 ) -> Result<P4ClientSpec, String> {
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &None);
     cmd.args(["-ztag", "client", "-o", &workspace]);
 
@@ -1794,7 +1810,7 @@ pub async fn p4_update_client_stream(
     user: Option<String>,
 ) -> Result<String, String> {
     // 1. Get current client spec (without -ztag - need raw form format)
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &Some(workspace.clone()));
     cmd.args(["client", "-o", &workspace]);
 
@@ -1822,7 +1838,7 @@ pub async fn p4_update_client_stream(
     }
 
     // 3. Submit modified form via p4 client -i
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &Some(workspace));
     cmd.args(["client", "-i"]);
     cmd.stdin(Stdio::piped());
@@ -1862,7 +1878,7 @@ pub async fn p4_depots(
     server: Option<String>,
     user: Option<String>,
 ) -> Result<Vec<P4Depot>, String> {
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &None);
     cmd.args(["-ztag", "depots"]);
 
@@ -1889,7 +1905,7 @@ pub async fn p4_dirs(
     user: Option<String>,
     client: Option<String>,
 ) -> Result<Vec<String>, String> {
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.arg("-ztag");
 
@@ -1928,7 +1944,7 @@ pub async fn p4_fstat_unresolved(
     user: Option<String>,
     client: Option<String>,
 ) -> Result<Vec<P4UnresolvedFile>, String> {
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args(["-ztag", "fstat", "-Ru", "-Or", "//..."]);
 
@@ -1971,7 +1987,7 @@ pub async fn p4_resolve_accept(
         _ => return Err(format!("Invalid mode: {}. Must be 'theirs', 'yours', or 'merge'", mode)),
     };
 
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args(["resolve", flag, &file_path]);
 
@@ -2006,7 +2022,7 @@ pub async fn launch_merge_tool(
         })?;
 
     // Step 2: Get base and theirs file info via p4 fstat
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args(["-ztag", "fstat", &depot_path]);
 
@@ -2061,7 +2077,7 @@ pub async fn launch_merge_tool(
     let theirs_temp_path = temp_dir.join(format!("p4merge_theirs_{}_{}", timestamp, theirs_file.replace('/', "_").replace('\\', "_") + &extension));
 
     // Print base file to temp
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args([
         "print",
@@ -2082,7 +2098,7 @@ pub async fn launch_merge_tool(
     }
 
     // Print theirs file to temp
-    let mut cmd = Command::new("p4");
+    let mut cmd = create_p4_command();
     apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args([
         "print",

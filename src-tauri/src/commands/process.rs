@@ -6,6 +6,11 @@ use tauri::State;
 
 use crate::state::ProcessManager;
 
+// Windows-specific import for hiding console windows
+#[cfg(target_os = "windows")]
+#[allow(unused_imports)] // Trait is used via creation_flags() method
+use std::os::windows::process::CommandExt;
+
 /// Payload sent to frontend for each stdout/stderr line.
 #[derive(Clone, serde::Serialize)]
 pub struct OutputLine {
@@ -22,11 +27,16 @@ pub async fn spawn_p4_command(
     state: State<'_, ProcessManager>,
 ) -> Result<String, String> {
     // Spawn p4.exe with piped stdout/stderr
-    let mut child = Command::new("p4")
-        .args(&args)
+    let mut cmd = Command::new("p4");
+    cmd.args(&args)
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
+        .stderr(Stdio::piped());
+
+    // On Windows, hide the console window (CREATE_NO_WINDOW flag)
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(0x08000000);
+
+    let mut child = cmd.spawn()
         .map_err(|e| format!("Failed to spawn p4: {}", e))?;
 
     // Take stdout/stderr before moving child
@@ -71,9 +81,14 @@ pub async fn spawn_p4_command(
 /// Returns stdout on success, error message on failure.
 #[tauri::command]
 pub async fn p4_command(args: Vec<String>) -> Result<String, String> {
-    let output = Command::new("p4")
-        .args(&args)
-        .output()
+    let mut cmd = Command::new("p4");
+    cmd.args(&args);
+
+    // On Windows, hide the console window (CREATE_NO_WINDOW flag)
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(0x08000000);
+
+    let output = cmd.output()
         .await
         .map_err(|e| format!("Failed to execute p4: {}", e))?;
 
