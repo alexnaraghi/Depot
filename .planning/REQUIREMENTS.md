@@ -10,10 +10,10 @@ Requirements for public GitHub launch. Each maps to roadmap phases.
 
 ### Security & Audit
 
-- [ ] **SEC-01**: Scan entire Git history for credentials/secrets with Gitleaks or TruffleHog
-- [ ] **SEC-02**: Audit .planning/ directory for sensitive information before keeping public
-- [ ] **SEC-03**: Review all source code for hardcoded credentials, API keys, or internal server names
-- [ ] **SEC-04**: Review and update .gitignore to prevent credential/settings commits
+- [x] **SEC-01**: Scan entire Git history for credentials/secrets with Gitleaks or TruffleHog
+- [x] **SEC-02**: Audit .planning/ directory for sensitive information before keeping public
+- [x] **SEC-03**: Review all source code for hardcoded credentials, API keys, or internal server names
+- [x] **SEC-04**: Review and update .gitignore to prevent credential/settings commits
 
 ### Repository Preparation
 
@@ -90,10 +90,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SEC-01 | Phase 26 | Pending |
-| SEC-02 | Phase 26 | Pending |
-| SEC-03 | Phase 26 | Pending |
-| SEC-04 | Phase 26 | Pending |
+| SEC-01 | Phase 26 | Complete |
+| SEC-02 | Phase 26 | Complete |
+| SEC-03 | Phase 26 | Complete |
+| SEC-04 | Phase 26 | Complete |
 | REPO-01 | Phase 27 | Pending |
 | REPO-02 | Phase 27 | Pending |
 | REPO-03 | Phase 27 | Pending |
