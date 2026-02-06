@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
+import { getVersion } from '@tauri-apps/api/app';
 import { loadSettings, saveSettings } from '@/lib/settings';
 import {
   Dialog,
@@ -44,6 +45,7 @@ interface SettingsDialogProps {
 }
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
+  const [version, setVersion] = useState<string>('');
   const form = useForm<Preferences>({
     defaultValues: {
       diffToolPath: '',
@@ -74,6 +76,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         }
       };
       load();
+      getVersion().then(setVersion);
     }
   }, [open, form]);
 
@@ -286,6 +289,11 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 Save
               </Button>
             </DialogFooter>
+            {version && (
+              <div className="text-xs text-muted-foreground text-center pt-2">
+                v{version} (Alpha)
+              </div>
+            )}
           </form>
         </Form>
       </DialogContent>
