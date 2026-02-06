@@ -457,7 +457,7 @@ pub async fn p4_submit(
 ) -> Result<i32, String> {
     let output = if changelist == 0 {
         // Default changelist: must use -d flag with description
-        let desc = description.unwrap_or_else(|| "Submitted from P4Now".to_string());
+        let desc = description.unwrap_or_else(|| "Submitted from Depot".to_string());
         let mut cmd = Command::new("p4");
         apply_connection_args(&mut cmd, &server, &user, &client);
         cmd.args(["submit", "-d", &desc]);
