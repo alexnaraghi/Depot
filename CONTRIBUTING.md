@@ -18,7 +18,7 @@ Before you begin, ensure you have the following installed:
 1. Fork and clone the repository:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/depot.git
+git clone https://github.com/alexnaraghi/depot.git
 cd depot
 ```
 
@@ -102,7 +102,7 @@ git checkout -b feature/your-feature-name
 
 If you have questions or need help:
 
-- Open a [GitHub Discussion](https://github.com/YOUR_USERNAME/depot/discussions)
-- File an [Issue](https://github.com/YOUR_USERNAME/depot/issues) if you find a bug
+- Open a [GitHub Discussion](https://github.com/alexnaraghi/depot/discussions)
+- File an [Issue](https://github.com/alexnaraghi/depot/issues) if you find a bug
 
 We appreciate your contributions!
