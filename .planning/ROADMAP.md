@@ -145,10 +145,11 @@ Plans:
   4. Release includes uploadable installers (depot_0.1.0_x64-setup.exe, depot_0.1.0_x64.msi, checksums)
   5. Workflow marks v0.x releases as pre-release automatically
 
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 29-01: TBD
+- [ ] 29-01-PLAN.md - Create release workflow with tauri-action and update CONTRIBUTING.md
+- [ ] 29-02-PLAN.md - Verify workflow via manual trigger and confirm release creation
 
 ### Phase 30: Final Validation
 **Goal**: Release binaries validated on clean Windows installation and all features smoke tested before public launch
@@ -179,10 +180,10 @@ Phases execute in numeric order: 26 → 27 → 28 → 29 → 30
 | 26. Security Audit | v6.0 | 2/2 | Complete | 2026-02-05 |
 | 27. Application Rename | v6.0 | 4/4 | Complete | 2026-02-06 |
 | 28. Documentation | v6.0 | 3/3 | Complete | 2026-02-06 |
-| 29. Release Automation | v6.0 | 0/0 | Not started | - |
+| 29. Release Automation | v6.0 | 0/2 | Planned | - |
 | 30. Final Validation | v6.0 | 0/0 | Not started | - |
 
 ---
 
 *Roadmap created: 2026-02-05*
-*Last updated: 2026-02-06 after Phase 28 execution completed*
+*Last updated: 2026-02-06 after Phase 29 planning completed*
