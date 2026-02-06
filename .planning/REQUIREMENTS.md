@@ -39,10 +39,10 @@ Requirements for public GitHub launch. Each maps to roadmap phases.
 
 ### Release & Distribution
 
-- [ ] **DIST-01**: Create GitHub Actions workflow for release builds using tauri-action
-- [ ] **DIST-02**: Configure workflow to build both NSIS and MSI installers
+- [x] **DIST-01**: Create GitHub Actions workflow for release builds using tauri-action
+- [x] **DIST-02**: Configure workflow to build both NSIS and MSI installers
 - [ ] **DIST-03**: Add version display in app UI (About dialog or settings) that reads from tauri.conf.json automatically
-- [ ] **DIST-04**: Test manual workflow trigger and verify GitHub Release creation
+- [x] **DIST-04**: Test manual workflow trigger and verify GitHub Release creation
 - [ ] **DIST-05**: Validate release binaries work on clean Windows installation
 
 ## Future Requirements
@@ -110,10 +110,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DOCS-06 | Phase 28 | Complete |
 | DOCS-07 | Phase 28 | Complete |
 | DOCS-08 | Phase 28 | Complete |
-| DIST-01 | Phase 29 | Pending |
-| DIST-02 | Phase 29 | Pending |
+| DIST-01 | Phase 29 | Complete |
+| DIST-02 | Phase 29 | Complete |
 | DIST-03 | Phase 30 | Pending |
-| DIST-04 | Phase 29 | Pending |
+| DIST-04 | Phase 29 | Complete |
 | DIST-05 | Phase 30 | Pending |
 
 **Coverage:**
