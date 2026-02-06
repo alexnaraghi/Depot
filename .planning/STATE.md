@@ -11,16 +11,16 @@ See: .planning/PROJECT.md (updated 2026-02-05)
 ## Current Position
 
 Phase: 29 of 30 (Release Automation)
-Plan: 1 of 2 (In progress)
-Status: In progress
-Last activity: 2026-02-06 — Completed 29-01-PLAN.md
+Plan: 2 of 2 (Phase complete)
+Status: Phase complete
+Last activity: 2026-02-06 — Completed 29-02-PLAN.md
 
-Progress: [████████████████████] 100% of v1-v5 complete (89 plans), Phase 26 complete (2 plans), Phase 27 complete (4 plans), Phase 28 complete (3 plans), Phase 29: 1/2 complete
+Progress: [████████████████████] 100% of v1-v5 complete (89 plans), Phase 26 complete (2 plans), Phase 27 complete (4 plans), Phase 28 complete (3 plans), Phase 29 complete (2 plans)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 99 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 15 v5.0 + 10 v6.0)
+- Total plans completed: 100 (14 v1.0 + 17 v2.0 + 27 v3.0 + 16 v4.0 + 15 v5.0 + 11 v6.0)
 - Quick tasks completed: 10
 - Average duration: ~5 min per plan
 - Total development time: ~10 days (2026-01-27 → 2026-02-06)
@@ -34,12 +34,13 @@ Progress: [████████████████████] 100% of
 | v3.0 Daily Driver | 9-15 | 27 | Complete |
 | v4.0 Road to P4V Killer | 16-20 | 16 | Complete |
 | v5.0 Large Depot Scale | 21-25 | 15 | Complete |
-| v6.0 Public Launch Prep | 26-30 | 10 (Phases 26-28 complete, Phase 29: 1/2) | In progress |
+| v6.0 Public Launch Prep | 26-30 | 11 (Phases 26-29 complete, Phase 30 pending) | In progress |
 
 **Recent Trend:**
 - v5.0 completed in ~6 hours (2026-02-04 → 2026-02-05)
 - Documentation phase completed in 2 minutes with comprehensive README
-- Phase 29-01 completed in 2 minutes (release automation workflow)
+- Phase 29 completed in 17 minutes total (2 minutes workflow creation + 15 minutes verification)
+- Release workflow validated with functional installers
 - Velocity improving with mature codebase and clear patterns
 
 *Metrics updated: 2026-02-06*
@@ -54,7 +55,7 @@ See: .planning/ROADMAP.md
 - Phase 26: Security Audit ✓ COMPLETE
 - Phase 27: Application Rename ✓ COMPLETE
 - Phase 28: Documentation ✓ COMPLETE
-- Phase 29: Release Automation
+- Phase 29: Release Automation ✓ COMPLETE
 - Phase 30: Final Validation
 
 **Critical dependencies:**
@@ -85,6 +86,7 @@ Recent decisions affecting v6.0:
 - **Manual workflow trigger** (Phase 29-01): workflow_dispatch only for v0.1 testing; tag-based triggers deferred until workflow validated
 - **Draft-first release pattern** (Phase 29-01): All releases created as drafts for human review before publishing
 - **Pre-release detection** (Phase 29-01): v0.x versions automatically marked as pre-release via version pattern matching
+- **Release workflow validated** (Phase 29-02): Manual trigger, build, and installer creation confirmed working; both NSIS and MSI installers tested functional
 
 ### Pending Todos
 
@@ -139,10 +141,19 @@ See `/gsd:check-todos` for full list. Most are future enhancements deferred to p
   - 7/9 must-haves verified; 2 gaps due to scope reduction (non-blocking)
   - Phase 28 complete - ready for Phase 29: Release Automation
 
-**Phase 29 (Release Automation):** IN PROGRESS (1/2 plans complete)
-- GitHub Actions workflow created (29-01) - COMPLETE
-- Release process documented in CONTRIBUTING.md (29-01) - COMPLETE
-- Next: Plan 29-02 (pending)
+**Phase 29 (Release Automation):** ✓ COMPLETE (2/2 plans)
+- ~~GitHub Actions workflow created (29-01)~~
+- ~~Release process documented in CONTRIBUTING.md (29-01)~~
+- ~~Release workflow verified with manual trigger (29-02)~~
+- ~~Both NSIS and MSI installers tested and confirmed functional (29-02)~~
+- **Resolution:**
+  - GitHub Actions workflow created with manual trigger and pre-release detection (29-01)
+  - Workflow successfully triggered from GitHub UI (29-02)
+  - Build completed in ~10-15 minutes with zero errors (29-02)
+  - Draft release created with depot_0.1.0_x64-setup.exe and depot_0.1.0_x64_en-US.msi (29-02)
+  - Both installers manually tested and confirmed functional on Windows (29-02)
+  - Pre-release detection working correctly for v0.x versions (29-02)
+  - Release automation ready for v0.1.0 public launch
 
 **Phase 30 (Final Validation):**
 - Clean Windows VM needed for installer testing
@@ -151,10 +162,10 @@ See `/gsd:check-todos` for full list. Most are future enhancements deferred to p
 ## Session Continuity
 
 Last session: 2026-02-06
-Stopped at: Completed 29-01-PLAN.md (GitHub Actions workflow) - Release automation workflow created with draft releases and pre-release detection
+Stopped at: Completed 29-02-PLAN.md (Release Workflow Verification) - Manual trigger validated with functional NSIS and MSI installers
 Resume file: None
 
 ---
 
 *State initialized: 2026-02-05*
-*Last updated: 2026-02-06 after Phase 29-01 completion*
+*Last updated: 2026-02-06 after Phase 29 completion*
