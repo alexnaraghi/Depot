@@ -1,8 +1,8 @@
-# P4Now
+# Depot
 
 ## What This Is
 
-A modern Windows Perforce GUI that replaces P4V for daily development work. Features a three-column layout (file tree, detail pane, changelists), depot browser, workspace/stream switching, in-place search filtering, auto-refresh, conflict resolution with external merge tools, settings management, file history, external diff, multiple changelists with drag-and-drop, shelving, reconcile, context menus, keyboard shortcuts, command palette, and a polished blue-tinted dark theme. Designed to never trap the user in modal dialogs or blocking states.
+Depot is a modern Windows Perforce GUI that replaces P4V for daily development work. Features a three-column layout (file tree, detail pane, changelists), depot browser, workspace/stream switching, in-place search filtering, auto-refresh, conflict resolution with external merge tools, settings management, file history, external diff, multiple changelists with drag-and-drop, shelving, reconcile, context menus, keyboard shortcuts, command palette, and a polished blue-tinted dark theme. Designed to never trap the user in modal dialogs or blocking states.
 
 ## Core Value
 
@@ -63,10 +63,16 @@ The user is never blocked — operations are always cancellable, errors are non-
 - ✓ Two-tier auto-refresh (30s delta, 5min full) for large depot efficiency — v5.0
 - ✓ Batch shelved file queries (single command vs N+1 pattern) — v5.0
 - ✓ Debounced filter input (150ms) for responsive search — v5.0
+- ✓ Repository secured with zero credentials in Git history (Gitleaks + TruffleHog) — v6.0
+- ✓ Application rebranded to "Depot" with MIT license — v6.0
+- ✓ Permanent bundle identifier set (com.depot.app) — v6.0
+- ✓ Public documentation (README, CONTRIBUTING) with P4V comparison — v6.0
+- ✓ GitHub Actions release automation with NSIS and MSI installers — v6.0
+- ✓ Release workflow validated with functional installers — v6.0
 
 ### Active
 
-Requirements for v6.0 Public Launch Preparation milestone will be defined next.
+No active requirements - v6.0 complete. Next milestone requirements will be defined with `/gsd:new-milestone`.
 
 ### Out of Scope
 
@@ -81,18 +87,21 @@ Requirements for v6.0 Public Launch Preparation milestone will be defined next.
 
 ## Context
 
-**Current state:** Shipped v5.0 with ~20,000 LOC (TypeScript + Rust).
+**Current state:** Shipped v6.0 Public Launch Preparation with ~20,000 LOC (TypeScript + Rust).
 Tech stack: Tauri 2.0, React 19, TanStack Query, Zustand, shadcn/ui, Tailwind CSS, react-arborist, Immer, nucleo-matcher, WebdriverIO.
+Released as open-source MIT licensed project "Depot" with public v0.1.0 alpha.
 
-**User feedback themes:**
-- Large depot performance now smooth with 10,000+ files
-- Progressive loading and cancellation provide responsive experience
-- Instant search improves discoverability
+**Public release status:**
+- Repository security audited and cleared (zero credentials in 522 commits)
+- GitHub Actions release workflow producing NSIS and MSI installers
+- Documentation complete with README, CONTRIBUTING, P4V comparison
+- Ready for public v0.1.0 alpha release to GitHub
 
 **Known issues / tech debt:**
 - E2E tests need execution against real P4 server (human_needed)
-- 20 pending todos (see .planning/todos/pending/)
+- 13 pending todos (see .planning/todos/pending/)
 - Full sync status re-aggregation after incremental updates (future optimization: partial branch)
+- Clean Windows VM installer testing deferred to post-v6.0
 
 ## Constraints
 
@@ -134,27 +143,19 @@ Tech stack: Tauri 2.0, React 19, TanStack Query, Zustand, shadcn/ui, Tailwind CS
 | Immer structural sharing | Unchanged subtrees preserve identity, React skips re-render | ✓ Good |
 | Two-tier refresh (30s/5min) | Delta queries only opened files, full catches all changes | ✓ Good |
 | Batch shelved queries | Single command vs N+1 with per-CL error isolation | ✓ Good |
-
-## Current Milestone: v6.0 Public Launch Preparation
-
-**Goal:** Prepare Depot (renamed from P4Now) for public release on GitHub with proper licensing, documentation, security audit, and release automation.
-
-**Target features:**
-- Rename application from "p4now" to "Depot" (binary, repo, code references)
-- Add MIT license and establish as open-source project
-- Create comprehensive README with quick start, P4V comparison, early testing disclaimer
-- Security audit for credentials/secrets and .gitignore review
-- GitHub release automation with binary publishing
-- Smoke test all features and build release binary
-- Keep .planning/ directory as showcase of agentic development process
-
-**Versioning strategy:** Dual versioning - internal v6.0 for milestone tracking (preserves development history), public v0.1 for app/releases (signals early testing phase)
+| Dual-tool security scanning | Both Gitleaks and TruffleHog for comprehensive coverage | ✓ Good |
+| Permanent bundle identifier | com.depot.app set before public release (cannot change after) | ✓ Good |
+| MIT license | Permissive license for open-source community adoption | ✓ Good |
+| Unsigned binaries for v0.1 | Cost ($100-500/year) not justified for early testing | ✓ Good |
+| .planning/ directory public | Showcase transparent agentic development methodology | ✓ Good |
+| Manual workflow trigger | workflow_dispatch only for v0.1; tag triggers after validation | ✓ Good |
+| Draft-first releases | All releases created as drafts for human review | ✓ Good |
 
 ## Previous Release
 
-**v5.0 Large Depot Scale** (shipped 2026-02-05)
+**v6.0 Public Launch Preparation** (shipped 2026-02-06)
 
-All P0 and P1 scalability bottlenecks resolved. App handles 10,000+ file workspaces with progressive loading, instant search, incremental updates, and efficient batch operations.
+Repository secured and prepared for public GitHub release. Application rebranded to "Depot" with MIT license, comprehensive documentation, and automated release workflow producing functional installers.
 
 ## Milestones
 
@@ -165,8 +166,9 @@ All P0 and P1 scalability bottlenecks resolved. App handles 10,000+ file workspa
 | v3.0 Daily Driver | Complete | 2026-02-01 |
 | v4.0 Road to P4V Killer | Complete | 2026-02-03 |
 | v5.0 Large Depot Scale | Complete | 2026-02-05 |
+| v6.0 Public Launch Preparation | Complete | 2026-02-06 |
 
 See `.planning/milestones/` for archived roadmaps and requirements.
 
 ---
-*Last updated: 2026-02-05 after v6.0 milestone started*
+*Last updated: 2026-02-06 after v6.0 milestone completion*

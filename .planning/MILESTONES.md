@@ -1,4 +1,33 @@
-# Project Milestones: P4Now
+# Project Milestones: Depot (P4Now)
+
+## v6.0 Public Launch Preparation (Shipped: 2026-02-06)
+
+**Delivered:** Prepare Depot (renamed from P4Now) for public GitHub release with security audit, MIT licensing, comprehensive documentation, and automated release workflow.
+
+**Phases completed:** 26-30 (12 plans total)
+
+**Key accomplishments:**
+
+- Security cleared for public release: Gitleaks and TruffleHog scanned 522 commits with zero credentials detected
+- Application rebranded to "Depot" with MIT license and permanent bundle identifier (com.depot.app)
+- Comprehensive README with project overview, quick start guide, P4V comparison table, and alpha disclaimer
+- GitHub Actions release workflow validated with functional NSIS and MSI installers
+- Manual verification complete: core features tested in built application
+- .planning/ directory preserved as showcase of agentic development methodology
+
+**Stats:**
+
+- 136 files modified
+- +10,967 / -1,833 lines
+- 5 phases, 12 plans
+- 2 days (2026-02-05 → 2026-02-06)
+- ~63 commits
+
+**Git range:** `feat(26)` → `docs(30)`
+
+**What's next:** Public v0.1.0 release to GitHub with early testing phase
+
+---
 
 ## v5.0 Large Depot Scale (Shipped: 2026-02-05)
 
