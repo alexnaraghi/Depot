@@ -162,13 +162,13 @@ Plans:
   1. Version number displayed in app UI (About or settings) reading from tauri.conf.json automatically
   2. Release binary tested on clean Windows VM with successful installation
   3. All core features smoke tested (connection, file tree with 10K+ files, changelists, shelving, conflict resolution)
-  4. Settings persistence verified with new identifier (com.depot.app)
+  4. Settings persistence verified with new identifier (com.depot.client)
   5. Installer SmartScreen bypass process validated and matches README guidance
 
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 30-01: TBD
+- [x] 30-01-PLAN.md - Manual verification and smoke testing
 
 ## Progress
 
@@ -181,7 +181,7 @@ Phases execute in numeric order: 26 → 27 → 28 → 29 → 30
 | 27. Application Rename | v6.0 | 4/4 | Complete | 2026-02-06 |
 | 28. Documentation | v6.0 | 3/3 | Complete | 2026-02-06 |
 | 29. Release Automation | v6.0 | 2/2 | Complete | 2026-02-06 |
-| 30. Final Validation | v6.0 | 0/0 | Not started | - |
+| 30. Final Validation | v6.0 | 1/1 | Complete | 2026-02-06 |
 
 ---
 
