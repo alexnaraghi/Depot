@@ -4,6 +4,11 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
+// Windows-specific import for hiding console windows
+#[cfg(target_os = "windows")]
+#[allow(unused_imports)] // Trait is used via creation_flags() method
+use std::os::windows::process::CommandExt;
+
 /// Tracks active p4.exe processes for cancellation and cleanup.
 /// Uses tokio::sync::Mutex because we hold across await points.
 /// Wrapped in Arc for cloning into event handlers.
@@ -36,10 +41,10 @@ impl ProcessManager {
             #[cfg(target_os = "windows")]
             {
                 if let Some(pid) = child.id() {
-                    let _ = tokio::process::Command::new("taskkill")
-                        .args(["/F", "/T", "/PID", &pid.to_string()])
-                        .output()
-                        .await;
+                    let mut cmd = tokio::process::Command::new("taskkill");
+                    cmd.args(["/F", "/T", "/PID", &pid.to_string()]);
+                    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+                    let _ = cmd.output().await;
                 }
             }
             child.kill().await.map_err(|e| e.to_string())?;
@@ -57,10 +62,10 @@ impl ProcessManager {
             #[cfg(target_os = "windows")]
             {
                 if let Some(pid) = child.id() {
-                    let _ = tokio::process::Command::new("taskkill")
-                        .args(["/F", "/T", "/PID", &pid.to_string()])
-                        .output()
-                        .await;
+                    let mut cmd = tokio::process::Command::new("taskkill");
+                    cmd.args(["/F", "/T", "/PID", &pid.to_string()]);
+                    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+                    let _ = cmd.output().await;
                 }
             }
             let _ = child.kill().await;

@@ -954,7 +954,7 @@ pub async fn p4_print_content(
     client: Option<String>,
 ) -> Result<String, String> {
     // First, check file size using p4 fstat to prevent memory exhaustion
-    let mut fstat_cmd = Command::new("p4");
+    let mut fstat_cmd = create_p4_command();
     apply_connection_args(&mut fstat_cmd, &server, &user, &client);
     fstat_cmd.args(["-ztag", "fstat"]);
     fstat_cmd.arg(format!("{}#{}", depot_path, revision));
@@ -1050,7 +1050,7 @@ pub async fn p4_annotate(
     client: Option<String>,
 ) -> Result<Vec<P4AnnotationLine>, String> {
     // First, check file size using p4 fstat to prevent memory exhaustion
-    let mut fstat_cmd = Command::new("p4");
+    let mut fstat_cmd = create_p4_command();
     apply_connection_args(&mut fstat_cmd, &server, &user, &client);
     fstat_cmd.args(["-ztag", "fstat"]);
     fstat_cmd.arg(format!("{}#{}", depot_path, revision));

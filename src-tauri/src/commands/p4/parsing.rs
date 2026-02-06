@@ -2,6 +2,11 @@ use std::collections::HashMap;
 
 use super::types::*;
 
+// Windows-specific import for hiding console windows
+#[cfg(target_os = "windows")]
+#[allow(unused_imports)] // Trait is used via creation_flags() method
+use std::os::windows::process::CommandExt;
+
 /// Apply optional connection args to a p4 Command.
 /// When explicit args are provided, overrides P4 environment variables
 /// and clears P4CONFIG to ensure complete isolation from DVCS/local config.
@@ -767,6 +772,10 @@ pub(super) async fn update_changelist_description(
     apply_connection_args(&mut cmd, &server, &user, &client);
     cmd.args(["change", "-o", &changelist.to_string()]);
 
+    // On Windows, hide the console window (CREATE_NO_WINDOW flag)
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(0x08000000);
+
     let output = cmd
         .output()
         .await
@@ -808,6 +817,10 @@ pub(super) async fn update_changelist_description(
     cmd.stdin(Stdio::piped());
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
+
+    // On Windows, hide the console window (CREATE_NO_WINDOW flag)
+    #[cfg(target_os = "windows")]
+    cmd.creation_flags(0x08000000);
 
     let mut child = cmd
         .spawn()
